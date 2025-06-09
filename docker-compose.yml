@@ -6,19 +6,30 @@ services:
     restart: unless-stopped
     command: server --address ":9000" --console-address ":9001" /data
     ports:
-      - '2898:9000'
-      - '2899:9001'
+      - '9000:9000'
+      - '9001:9001'
     environment:
       MINIO_ROOT_USER: 'minio-root'
       MINIO_ROOT_PASSWORD: 'minio-root'
 
-  doc-watcher:
-    build:
-      dockerfile: Dockerfile
-    restart: on-failure
-    env_file:
-      - '.env.production'
-    ports:
-      - '2893:2893'
+  rabbitmq:
+    image: rabbitmq:4-management
+    restart: unless-stopped
     volumes:
-      - './doc-watcher/indexer/:/app/indexer'
+      - './rabbitmq-data:/var/lib/rabbitmq'
+    ports:
+      - '5552:5552'
+      - '5672:5672'
+      - '15672:15672'
+
+  redis:
+    image: redis:alpine
+    restart: on-failure
+    environment:
+      REDIS_USER: 'redis'
+      REDIS_PASSWORD: 'redis'
+      REDIS_USER_PASSWORD: 'redis'
+    ports:
+      - '6379:6379'
+    volumes:
+      - './redis-data:/data'

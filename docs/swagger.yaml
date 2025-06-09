@@ -1,11 +1,47 @@
 definitions:
-  httpserv.AttachDirectoryForm:
+  dto.TaskEvent:
+    properties:
+      bucket:
+        type: string
+      created_at:
+        type: string
+      file_path:
+        type: string
+      file_size:
+        type: integer
+      id:
+        type: string
+      modified_at:
+        type: string
+      status:
+        $ref: '#/definitions/dto.TaskStatus'
+      status_text:
+        type: string
+    type: object
+  dto.TaskStatus:
+    enum:
+    - -1
+    - 0
+    - 1
+    - 2
+    - 3
+    type: integer
+    x-enum-varnames:
+    - Failed
+    - Received
+    - Pending
+    - Processing
+    - Successful
+  httpserver.AttachDirectoryForm:
     properties:
       bucket_name:
         example: test-folder
         type: string
+      directory:
+        example: /directory
+        type: string
     type: object
-  httpserv.BadRequestForm:
+  httpserver.BadRequestForm:
     properties:
       message:
         example: Bad Request message
@@ -14,16 +50,22 @@ definitions:
         example: 400
         type: integer
     type: object
-  httpserv.FetchDocumentsList:
+  httpserver.FetchAllDocuments:
     properties:
-      file_names:
-        example:
-        - test-file.docx
-        items:
-          type: string
-        type: array
+      bucket_name:
+        example: test-folder
+        type: string
     type: object
-  httpserv.ResponseForm:
+  httpserver.FetchDocumentsList:
+    properties:
+      bucket_name:
+        example: test-folder
+        type: string
+      status:
+        example: Pending
+        type: string
+    type: object
+  httpserver.ResponseForm:
     properties:
       message:
         example: Done
@@ -32,7 +74,7 @@ definitions:
         example: 200
         type: integer
     type: object
-  httpserv.ServerErrorForm:
+  httpserver.ServerErrorForm:
     properties:
       message:
         example: Server Error message
@@ -41,25 +83,76 @@ definitions:
         example: 503
         type: integer
     type: object
-  watcher.ProcessingDocuments:
-    properties:
-      done:
-        items:
-          type: string
-        type: array
-      processing:
-        items:
-          type: string
-        type: array
-      unrecognized:
-        items:
-          type: string
-        type: array
-    type: object
 info:
   contact: {}
+  description: Watchtower is a project designed to provide processing files created
+    into cloud by events.
+  title: Watchtower service
+  version: 0.0.1
 paths:
-  /watcher/{bucket}/detach:
+  /tasks/all:
+    post:
+      consumes:
+      - application/json
+      description: Get all processing documents
+      operationId: get-processing-documents
+      parameters:
+      - description: File names to fetch processing status
+        in: body
+        name: jsonQuery
+        required: true
+        schema:
+          $ref: '#/definitions/httpserver.FetchAllDocuments'
+      responses:
+        "200":
+          description: Ok
+          schema:
+            $ref: '#/definitions/httpserver.ResponseForm'
+        "400":
+          description: Bad Request message
+          schema:
+            $ref: '#/definitions/httpserver.BadRequestForm'
+        "503":
+          description: Server does not available
+          schema:
+            $ref: '#/definitions/httpserver.ServerErrorForm'
+      summary: Get all processing documents
+      tags:
+      - tasks
+  /tasks/fetch:
+    post:
+      consumes:
+      - application/json
+      description: Load processing/unrecognized/done documents by names list
+      operationId: fetch-documents
+      parameters:
+      - description: File names to fetch processing status
+        in: body
+        name: jsonQuery
+        required: true
+        schema:
+          $ref: '#/definitions/httpserver.FetchDocumentsList'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ok
+          schema:
+            items:
+              $ref: '#/definitions/dto.TaskEvent'
+            type: array
+        "400":
+          description: Bad Request message
+          schema:
+            $ref: '#/definitions/httpserver.BadRequestForm'
+        "503":
+          description: Server does not available
+          schema:
+            $ref: '#/definitions/httpserver.ServerErrorForm'
+      summary: Fetch processing documents
+      tags:
+      - tasks
+  /watcher/{bucket}:
     delete:
       consumes:
       - application/json
@@ -77,20 +170,20 @@ paths:
         "200":
           description: Ok
           schema:
-            $ref: '#/definitions/httpserv.ResponseForm'
+            $ref: '#/definitions/httpserver.ResponseForm'
         "400":
           description: Bad Request message
           schema:
-            $ref: '#/definitions/httpserv.BadRequestForm'
+            $ref: '#/definitions/httpserver.BadRequestForm'
         "503":
           description: Server does not available
           schema:
-            $ref: '#/definitions/httpserv.ServerErrorForm'
+            $ref: '#/definitions/httpserver.ServerErrorForm'
       summary: Attach new directory to watcher
       tags:
       - watcher
   /watcher/attach:
-    put:
+    post:
       consumes:
       - application/json
       description: Attach new directory to watcher
@@ -101,127 +194,28 @@ paths:
         name: jsonQuery
         required: true
         schema:
-          $ref: '#/definitions/httpserv.AttachDirectoryForm'
+          $ref: '#/definitions/httpserver.AttachDirectoryForm'
       produces:
       - application/json
       responses:
         "200":
           description: Ok
           schema:
-            $ref: '#/definitions/httpserv.ResponseForm'
+            $ref: '#/definitions/httpserver.ResponseForm'
         "400":
           description: Bad Request message
           schema:
-            $ref: '#/definitions/httpserv.BadRequestForm'
+            $ref: '#/definitions/httpserver.BadRequestForm'
         "503":
           description: Server does not available
           schema:
-            $ref: '#/definitions/httpserv.ServerErrorForm'
+            $ref: '#/definitions/httpserver.ServerErrorForm'
       summary: Attach new directory to watcher
       tags:
       - watcher
-  /watcher/processing/clean:
-    post:
-      consumes:
-      - application/json
-      description: Clean processing documents
-      operationId: clean-documents
-      parameters:
-      - description: File names to clean processing status
-        in: body
-        name: jsonQuery
-        required: true
-        schema:
-          $ref: '#/definitions/httpserv.FetchDocumentsList'
-      responses:
-        "200":
-          description: Ok
-          schema:
-            $ref: '#/definitions/httpserv.ResponseForm'
-        "400":
-          description: Bad Request message
-          schema:
-            $ref: '#/definitions/httpserv.BadRequestForm'
-        "503":
-          description: Server does not available
-          schema:
-            $ref: '#/definitions/httpserv.ServerErrorForm'
-      summary: Clean processing documents
-      tags:
-      - watcher
-  /watcher/processing/fetch:
-    post:
-      consumes:
-      - application/json
-      description: Load processing/unrecognized/done documents by names list
-      operationId: fetch-documents
-      parameters:
-      - description: File names to fetch processing status
-        in: body
-        name: jsonQuery
-        required: true
-        schema:
-          $ref: '#/definitions/httpserv.FetchDocumentsList'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Ok
-          schema:
-            $ref: '#/definitions/watcher.ProcessingDocuments'
-        "400":
-          description: Bad Request message
-          schema:
-            $ref: '#/definitions/httpserv.BadRequestForm'
-        "503":
-          description: Server does not available
-          schema:
-            $ref: '#/definitions/httpserv.ServerErrorForm'
-      summary: Fetch processing documents
-      tags:
-      - watcher
-  /watcher/run:
-    get:
-      description: Run all watchers
-      operationId: watcher-run
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Ok
-          schema:
-            $ref: '#/definitions/httpserv.ResponseForm'
-        "400":
-          description: Bad Request message
-          schema:
-            $ref: '#/definitions/httpserv.BadRequestForm'
-        "503":
-          description: Server does not available
-          schema:
-            $ref: '#/definitions/httpserv.ServerErrorForm'
-      summary: Run all watchers
-      tags:
-      - watcher
-  /watcher/stop:
-    get:
-      description: Stop all watchers
-      operationId: watcher-stop
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Ok
-          schema:
-            $ref: '#/definitions/httpserv.ResponseForm'
-        "400":
-          description: Bad Request message
-          schema:
-            $ref: '#/definitions/httpserv.BadRequestForm'
-        "503":
-          description: Server does not available
-          schema:
-            $ref: '#/definitions/httpserv.ServerErrorForm'
-      summary: Stop all watchers
-      tags:
-      - watcher
 swagger: "2.0"
+tags:
+- description: APIs to manage cloud watchers
+  name: watcher
+- description: APIs to get status tasks
+  name: tasks
