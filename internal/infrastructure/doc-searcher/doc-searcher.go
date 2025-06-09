@@ -27,7 +27,7 @@ func New(config *Config) *DocSearcherClient {
 
 func (dsc *DocSearcherClient) Store(doc *dto.Document) error {
 	if err := dsc.storeDocument(doc); err != nil {
-		return fmt.Errorf("failed to store document: %w", err)
+		return fmt.Errorf("failed to store document: %v", err)
 	}
 
 	if err := dsc.storeTokens(doc); err != nil {
@@ -40,7 +40,7 @@ func (dsc *DocSearcherClient) Store(doc *dto.Document) error {
 func (dsc *DocSearcherClient) storeDocument(doc *dto.Document) error {
 	jsonData, err := json.Marshal(doc)
 	if err != nil {
-		return fmt.Errorf("failed while marshaling doc: %w", err)
+		return fmt.Errorf("failed while marshaling doc: %v", err)
 	}
 
 	buildURL := strings.Builder{}
@@ -67,7 +67,7 @@ func (dsc *DocSearcherClient) storeDocument(doc *dto.Document) error {
 func (dsc *DocSearcherClient) storeTokens(doc *dto.Document) error {
 	jsonData, err := json.Marshal(doc)
 	if err != nil {
-		return fmt.Errorf("failed while marshaling doc: %w", err)
+		return fmt.Errorf("failed while marshaling doc: %v", err)
 	}
 
 	folderID := fmt.Sprintf("%s-vector", doc.FolderID)

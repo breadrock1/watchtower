@@ -103,17 +103,17 @@ func FromFile(filePath string) (*Config, error) {
 	)
 
 	if err != nil {
-		confErr := fmt.Errorf("failed while binding env vars: %w", err)
+		confErr := fmt.Errorf("failed while binding env vars: %v", err)
 		return config, confErr
 	}
 
 	if err := viperInstance.ReadInConfig(); err != nil {
-		confErr := fmt.Errorf("failed while reading config file %s: %w", filePath, err)
+		confErr := fmt.Errorf("failed while reading config file %s: %v", filePath, err)
 		return config, confErr
 	}
 
 	if err := viperInstance.Unmarshal(config); err != nil {
-		confErr := fmt.Errorf("failed while unmarshaling config file %s: %w", filePath, err)
+		confErr := fmt.Errorf("failed while unmarshaling config file %s: %v", filePath, err)
 		return config, confErr
 	}
 

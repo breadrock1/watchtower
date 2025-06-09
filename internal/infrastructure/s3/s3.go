@@ -38,7 +38,7 @@ func New(config *Config) (*S3Client, error) {
 
 	mc, err := minio.New(config.Address, opts)
 	if err != nil {
-		return nil, fmt.Errorf("failed while connecting to s3: %w", err)
+		return nil, fmt.Errorf("failed while connecting to s3: %v", err)
 	}
 
 	client := &S3Client{
@@ -105,12 +105,12 @@ func (s *S3Client) LaunchWatcher(ctx context.Context, dirs []dto.Directory) erro
 	for _, dir := range dirs {
 		go func() {
 			if err = s.startBucketListener(dir); err != nil {
-				log.Printf("failed to start bucket listener for %s: %w", dir.Bucket, err)
+				log.Printf("failed to start bucket listener for %s: %v", dir.Bucket, err)
 			}
 
 			<-ctx.Done()
 			if err = s.TerminateWatcher(ctx); err != nil {
-				log.Printf("failed to terminate s3 watchers: %w", err)
+				log.Printf("failed to terminate s3 watchers: %v", err)
 			}
 		}()
 	}

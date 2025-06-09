@@ -30,7 +30,7 @@ func (rs *RedisClient) GetAll(ctx context.Context, bucket string) ([]*dto.TaskEv
 	key := rs.buildKey(bucket, "*")
 	status := rs.rsConn.Scan(ctx, 0, key, -1)
 	if status.Err() != nil {
-		return nil, fmt.Errorf("failed to get tasks: %w", status.Err())
+		return nil, fmt.Errorf("failed to get tasks: %v", status.Err())
 	}
 
 	rKeys, _ := status.Val()
@@ -39,19 +39,19 @@ func (rs *RedisClient) GetAll(ctx context.Context, bucket string) ([]*dto.TaskEv
 		cmd := rs.rsConn.Get(ctx, rKey)
 		data, err := cmd.Bytes()
 		if err != nil {
-			log.Printf("failed to get task: %w", err)
+			log.Printf("failed to get task: %v", err)
 			continue
 		}
 
 		value := &RedisValue{}
 		if err = json.Unmarshal(data, &value); err != nil {
-			log.Printf("failed to unmarshal task: %w", err)
+			log.Printf("failed to unmarshal task: %v", err)
 			continue
 		}
 
 		taskEvent, err := value.ConvertToTaskEvent()
 		if err != nil {
-			log.Printf("failed to unmarshal task: %w", err)
+			log.Printf("failed to unmarshal task: %v", err)
 			continue
 		}
 
@@ -65,22 +65,22 @@ func (rs *RedisClient) Get(ctx context.Context, bucket, file string) (*dto.TaskE
 	key := rs.buildKey(bucket, file)
 	cmd := rs.rsConn.Get(ctx, key)
 	if cmd.Err() != nil {
-		return nil, fmt.Errorf("failed to get tasks: %w", cmd.Err())
+		return nil, fmt.Errorf("failed to get tasks: %v", cmd.Err())
 	}
 
 	data, err := cmd.Bytes()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get task: %w", err)
+		return nil, fmt.Errorf("failed to get task: %v", err)
 	}
 
 	value := &RedisValue{}
 	if err = json.Unmarshal(data, &value); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal task: %w", err)
+		return nil, fmt.Errorf("failed to unmarshal task: %v", err)
 	}
 
 	taskEvent, err := value.ConvertToTaskEvent()
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal task: %w", err)
+		return nil, fmt.Errorf("failed to unmarshal task: %v", err)
 	}
 
 	return taskEvent, nil
@@ -92,12 +92,12 @@ func (rs *RedisClient) Push(ctx context.Context, task *dto.TaskEvent) error {
 	value := ConvertFromTaskEvent(task)
 	jsonData, err := json.Marshal(value)
 	if err != nil {
-		return fmt.Errorf("failed to marshal task: %w", err)
+		return fmt.Errorf("failed to marshal task: %v", err)
 	}
 
 	status := rs.rsConn.Set(ctx, key, jsonData, rs.config.Expired*time.Second)
 	if status.Err() != nil {
-		return fmt.Errorf("redis set task status failed, %w", status.Err())
+		return fmt.Errorf("redis set task status failed, %v", status.Err())
 	}
 
 	return nil

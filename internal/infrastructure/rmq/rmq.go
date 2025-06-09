@@ -26,12 +26,12 @@ func New(config *Config) (*RmqClient, error) {
 
 	conn, err := amqp.DialConfig(config.Address, rmqConfig)
 	if err != nil {
-		return nil, fmt.Errorf("failed while connecting to rmq: %w", err)
+		return nil, fmt.Errorf("failed while connecting to rmq: %v", err)
 	}
 
 	ch, err := conn.Channel()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create rmq channel: %w", err)
+		return nil, fmt.Errorf("failed to create rmq channel: %v", err)
 	}
 
 	client := &RmqClient{
@@ -52,7 +52,7 @@ func (r *RmqClient) GetConsumerChannel() chan dto.Message {
 func (r *RmqClient) Publish(_ context.Context, msg dto.Message) error {
 	body, err := json.Marshal(msg)
 	if err != nil {
-		return fmt.Errorf("failed while marshalling rmq body: %w", err)
+		return fmt.Errorf("failed while marshalling rmq body: %v", err)
 	}
 
 	err = r.channel.Publish(
@@ -67,7 +67,7 @@ func (r *RmqClient) Publish(_ context.Context, msg dto.Message) error {
 	)
 
 	if err != nil {
-		return fmt.Errorf("failed while publishing rmq message: %w", err)
+		return fmt.Errorf("failed while publishing rmq message: %v", err)
 	}
 
 	return nil
@@ -85,7 +85,7 @@ func (r *RmqClient) Consume(_ context.Context) error {
 	)
 
 	if err != nil {
-		return fmt.Errorf("failed to init rmq consumer: %w", err)
+		return fmt.Errorf("failed to init rmq consumer: %v", err)
 	}
 
 	go r.handle(deliveries, r.done)
@@ -95,11 +95,11 @@ func (r *RmqClient) Consume(_ context.Context) error {
 
 func (r *RmqClient) StopConsuming(_ context.Context) error {
 	if err := r.channel.Cancel(ConsumerName, true); err != nil {
-		return fmt.Errorf("consumer cancel failed: %w", err)
+		return fmt.Errorf("consumer cancel failed: %v", err)
 	}
 
 	if err := r.conn.Close(); err != nil {
-		return fmt.Errorf("amqp connection close error: %w", err)
+		return fmt.Errorf("amqp connection close error: %v", err)
 	}
 
 	// wait for handle() to exit
@@ -124,7 +124,7 @@ func (r *RmqClient) handle(deliveries <-chan amqp.Delivery, done chan error) {
 func (r *RmqClient) CreateExchange(name string) error {
 	err := r.channel.ExchangeDeclare(name, "direct", true, false, false, false, nil)
 	if err != nil {
-		return fmt.Errorf("failed while declaring exchange: %w", err)
+		return fmt.Errorf("failed while declaring exchange: %v", err)
 	}
 
 	return nil
@@ -133,12 +133,12 @@ func (r *RmqClient) CreateExchange(name string) error {
 func (r *RmqClient) CreateQueue(exchange, queue, routingKey string) error {
 	_, err := r.channel.QueueDeclare(queue, true, false, false, false, nil)
 	if err != nil {
-		return fmt.Errorf("failed while declaring queue: %w", err)
+		return fmt.Errorf("failed while declaring queue: %v", err)
 	}
 
 	err = r.channel.QueueBind(queue, routingKey, exchange, false, nil)
 	if err != nil {
-		return fmt.Errorf("failed while binding queue: %w", err)
+		return fmt.Errorf("failed while binding queue: %v", err)
 	}
 
 	return nil

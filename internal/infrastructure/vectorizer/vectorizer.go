@@ -40,7 +40,7 @@ func (vc *VectorizerClient) Load(inputText string) (*dto.Tokens, error) {
 
 	jsonData, err := json.Marshal(textVectors)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal tokens: %w", err)
+		return nil, fmt.Errorf("failed to marshal tokens: %v", err)
 	}
 
 	reqBody := bytes.NewBuffer(jsonData)
@@ -49,13 +49,13 @@ func (vc *VectorizerClient) Load(inputText string) (*dto.Tokens, error) {
 	targetURL := utils.BuildTargetURL(vc.config.EnableSSL, vc.config.Address, EmbeddingsAssistantURL)
 	respData, err := utils.POST(reqBody, targetURL, mimeType, timeoutReq)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load embeddings: %w", err)
+		return nil, fmt.Errorf("failed to load embeddings: %v", err)
 	}
 
 	tokensResult := &dto.Tokens{}
 	err = json.Unmarshal(respData, &tokensResult)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal embeddings: %w", err)
+		return nil, fmt.Errorf("failed to unmarshal embeddings: %v", err)
 	}
 
 	if tokensResult.Chunks < 1 {
@@ -74,7 +74,7 @@ func (vc *VectorizerClient) LoadByOwnChunked(inputText string) (*dto.Tokens, err
 
 		result, err := vc.Load(textData)
 		if err != nil {
-			log.Printf("failed to load tokens: %w", err)
+			log.Printf("failed to load tokens: %v", err)
 			continue
 		}
 

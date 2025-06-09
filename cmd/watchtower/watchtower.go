@@ -40,19 +40,19 @@ func main() {
 
 	rmqServ, err := rmq.New(&servConfig.Queue.Rmq)
 	if err != nil {
-		log.Fatalf("rmq connection failed: %w", err)
+		log.Fatalf("rmq connection failed: %v", err)
 	}
 	launchTasksConsumer(ctx, rmqServ)
 
 	s3Serv, err := s3.New(&servConfig.Cloud.Minio)
 	if err != nil {
-		log.Fatalf("s3 connection failed: %w", err)
+		log.Fatalf("s3 connection failed: %v", err)
 	}
 	launchBucketListeners(ctx, s3Serv, servConfig.Cloud.Minio.WatchedDirs)
 
 	httpServer := httpserver.New(&servConfig.Server.Http, redisServ, s3Serv)
 	if err = httpServer.Start(ctx); err != nil {
-		log.Fatalf("http server start failed: %w", err)
+		log.Fatalf("http server start failed: %v", err)
 	}
 
 	cCtx, cancel := context.WithCancel(ctx)
@@ -80,13 +80,13 @@ func launchBucketListeners(ctx context.Context, s3Serv *s3.S3Client, dirs []stri
 	}
 
 	if err := s3Serv.LaunchWatcher(ctx, watchDirs); err != nil {
-		log.Printf("failed to start s3 bucket listers: %w", err)
+		log.Printf("failed to start s3 bucket listers: %v", err)
 	}
 }
 
 func launchTasksConsumer(ctx context.Context, rmqServ *rmq.RmqClient) {
 	if err := rmqServ.Consume(ctx); err != nil {
-		log.Fatalf("rmq consumer launching failed: %w", err)
+		log.Fatalf("rmq consumer launching failed: %v", err)
 	}
 }
 

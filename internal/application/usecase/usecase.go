@@ -59,7 +59,7 @@ func (uc *UseCase) LaunchProcessing(ctx context.Context) {
 				status, msg := dto.Pending, EmptyMessage
 				if err := uc.publishToQueue(ctx, taskEvent); err != nil {
 					status, msg = dto.Failed, err.Error()
-					log.Printf("failed to pulish task to queue: %w", err)
+					log.Printf("failed to pulish task to queue: %v", err)
 				}
 
 				uc.updateTaskStatus(ctx, &taskEvent, status, msg)
@@ -67,7 +67,7 @@ func (uc *UseCase) LaunchProcessing(ctx context.Context) {
 				status, msg := dto.Successful, EmptyMessage
 				if err := uc.processing(ctx, cMsg); err != nil {
 					status, msg = dto.Failed, err.Error()
-					log.Printf("failed while processing file: %w", err)
+					log.Printf("failed while processing file: %v", err)
 				}
 
 				uc.updateTaskStatus(ctx, &cMsg.Body, status, msg)
@@ -87,7 +87,7 @@ func (uc *UseCase) publishToQueue(ctx context.Context, taskEvent dto.TaskEvent) 
 func (uc *UseCase) updateTaskStatus(ctx context.Context, taskEvent *dto.TaskEvent, status dto.TaskStatus, msg string) {
 	taskEvent.Status, taskEvent.StatusText = status, msg
 	if err := uc.cacher.Push(ctx, taskEvent); err != nil {
-		log.Printf("failed to store task to cache: %w", err)
+		log.Printf("failed to store task to cache: %v", err)
 	}
 }
 
@@ -97,7 +97,7 @@ func (uc *UseCase) processing(ctx context.Context, msg dto.Message) error {
 
 	fileData, err := uc.watcher.DownloadFile(ctx, taskEvent.Bucket, taskEvent.FilePath)
 	if err != nil {
-		return fmt.Errorf("failed to download file: %w", err)
+		return fmt.Errorf("failed to download file: %v", err)
 	}
 
 	inputFile := dto.InputFile{
@@ -106,13 +106,13 @@ func (uc *UseCase) processing(ctx context.Context, msg dto.Message) error {
 	}
 	recData, err := uc.recognizer.Recognize(inputFile)
 	if err != nil {
-		return fmt.Errorf("failed to recognize: %w", err)
+		return fmt.Errorf("failed to recognize: %v", err)
 	}
 
 	var tokensRes *dto.Tokens
 	tokensRes, err = uc.tokenizer.Load(recData.Text)
 	if err != nil {
-		log.Printf("failed to load tokens: %w", err)
+		log.Printf("failed to load tokens: %v", err)
 	}
 
 	doc := &dto.Document{
@@ -131,7 +131,7 @@ func (uc *UseCase) processing(ctx context.Context, msg dto.Message) error {
 	doc.ComputeSsdeepHash()
 
 	if err = uc.storage.Store(doc); err != nil {
-		return fmt.Errorf("failed to store doc %s: %w", doc.DocumentName, err)
+		return fmt.Errorf("failed to store doc %s: %v", doc.DocumentName, err)
 	}
 
 	return nil
