@@ -23,9 +23,9 @@ expired=360
 
 [queue.rmq]
 address="amqp://localhost:5672"
-exchange="watchtower"
-routing_key="task"
-queue_name="watchtower-tasks"
+exchange="test-watchtower"
+routing_key="test-task"
+queue_name="test-watchtower-tasks"
 
 [cloud.minio]
 address="localhost:9000"
