@@ -3,15 +3,16 @@ package tests
 import (
 	"bytes"
 	"context"
-	"github.com/google/uuid"
 	"os"
 	"path"
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"watchtower/internal/application/dto"
 	"watchtower/internal/application/usecase"
+	"watchtower/internal/domain/core/structures"
 	"watchtower/internal/infrastructure/config"
 	"watchtower/internal/infrastructure/redis"
 	"watchtower/internal/infrastructure/rmq"
@@ -81,14 +82,13 @@ func TestProcessing(t *testing.T) {
 
 		task, err := redisServ.Get(ctx, TestBucketName, path.Base(TestInputFilePath))
 		assert.NoError(t, err, "failed to get task from redis")
-		assert.Equal(t, dto.Successful, task.Status)
+		assert.Equal(t, domain.Successful, task.Status)
 		assert.Equal(t, TestBucketName, task.Bucket)
 		assert.Equal(t, path.Base(TestInputFilePath), task.FilePath)
 
 		doc := searcherServ.GetDocuments()[0]
 		assert.NotEmpty(t, doc, "stored documents is empty")
-		assert.Equal(t, TestBucketName, doc.FolderID)
-		assert.Equal(t, ".", doc.FolderPath)
+		assert.Equal(t, TestInputFilePath, doc.FilePath)
 		assert.Equal(t, dataStr, doc.Content)
 
 		cancel()
@@ -117,7 +117,7 @@ func TestProcessing(t *testing.T) {
 			FileSize:   0,
 			CreatedAt:  time.Now(),
 			ModifiedAt: time.Now(),
-			Status:     dto.Pending,
+			Status:     1,
 			StatusText: "",
 		}
 
@@ -130,7 +130,7 @@ func TestProcessing(t *testing.T) {
 
 		task, err := redisServ.Get(ctx, TestBucketName, TestInputFilePath)
 		assert.NoError(t, err, "failed to get task from redis")
-		assert.Equal(t, dto.Failed, task.Status)
+		assert.Equal(t, domain.Failed, task.Status)
 		assert.Equal(t, TestBucketName, task.Bucket)
 		assert.Equal(t, TestInputFilePath, task.FilePath)
 
