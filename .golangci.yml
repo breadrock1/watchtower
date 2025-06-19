@@ -1,0 +1,111 @@
+version: "2"
+linters:
+  enable:
+    - asasalint
+    - asciicheck
+    - bidichk
+    - containedctx
+    - cyclop
+    - decorder
+    - dogsled
+    - dupl
+    - dupword
+    - errchkjson
+    - errname
+    - errorlint
+    - exhaustive
+    - forbidigo
+    - gocognit
+    - goconst
+    - gocritic
+    - gocyclo
+    - godox
+    - goheader
+    - gomoddirectives
+    - gomodguard
+    - goprintffuncname
+    - gosec
+    - grouper
+    - importas
+    - interfacebloat
+    - ireturn
+    - lll
+    - loggercheck
+    - maintidx
+    - makezero
+    - misspell
+    - nakedret
+    - nestif
+    - nilerr
+    - nilnil
+    - noctx
+    - nolintlint
+    - nonamedreturns
+    - nosprintfhostport
+    - paralleltest
+    - prealloc
+    - predeclared
+    - promlinter
+    - reassign
+    - revive
+    - rowserrcheck
+    - sqlclosecheck
+    - testableexamples
+    - testpackage
+    - thelper
+    - tparallel
+    - unconvert
+    - unparam
+    - usestdlibvars
+    - varnamelen
+    - wastedassign
+    - whitespace
+    - wsl
+  disable:
+    - bodyclose
+    - contextcheck
+    - depguard
+    - durationcheck
+    - exhaustruct
+    - forcetypeassert
+    - funlen
+    - gochecknoinits
+    - gochecknoglobals
+    - godot
+    - nlreturn
+    - tagliatelle
+    - wrapcheck
+    - wsl
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+  settings:
+    revive:
+      severity: warning
+      rules:
+        - name: atomic
+        - name: line-length-limit
+          severity: error
+          arguments: [ 120 ]
+    gosec:
+      severity: high
+      excludes:
+        - G401
+    paralleltest:
+      ignore-missing: true
+
+formatters:
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

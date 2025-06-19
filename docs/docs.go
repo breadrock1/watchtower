@@ -15,8 +15,102 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/tasks/all": {
+            "post": {
+                "description": "Get all processing documents",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tasks"
+                ],
+                "summary": "Get all processing documents",
+                "operationId": "get-processing-documents",
+                "parameters": [
+                    {
+                        "description": "File names to fetch processing status",
+                        "name": "jsonQuery",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.FetchAllDocuments"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Ok",
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.ResponseForm"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request message",
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.BadRequestForm"
+                        }
+                    },
+                    "503": {
+                        "description": "Server does not available",
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.ServerErrorForm"
+                        }
+                    }
+                }
+            }
+        },
+        "/tasks/fetch": {
+            "post": {
+                "description": "Load processing/unrecognized/done documents by names list",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tasks"
+                ],
+                "summary": "Fetch processing documents",
+                "operationId": "fetch-documents",
+                "parameters": [
+                    {
+                        "description": "File names to fetch processing status",
+                        "name": "jsonQuery",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.FetchDocumentsList"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Ok",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dto.TaskEvent"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request message",
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.BadRequestForm"
+                        }
+                    },
+                    "503": {
+                        "description": "Server does not available",
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.ServerErrorForm"
+                        }
+                    }
+                }
+            }
+        },
         "/watcher/attach": {
-            "put": {
+            "post": {
                 "description": "Attach new directory to watcher",
                 "consumes": [
                     "application/json"
@@ -36,7 +130,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/httpserv.AttachDirectoryForm"
+                            "$ref": "#/definitions/httpserver.AttachDirectoryForm"
                         }
                     }
                 ],
@@ -44,182 +138,25 @@ const docTemplate = `{
                     "200": {
                         "description": "Ok",
                         "schema": {
-                            "$ref": "#/definitions/httpserv.ResponseForm"
+                            "$ref": "#/definitions/httpserver.ResponseForm"
                         }
                     },
                     "400": {
                         "description": "Bad Request message",
                         "schema": {
-                            "$ref": "#/definitions/httpserv.BadRequestForm"
+                            "$ref": "#/definitions/httpserver.BadRequestForm"
                         }
                     },
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/httpserv.ServerErrorForm"
+                            "$ref": "#/definitions/httpserver.ServerErrorForm"
                         }
                     }
                 }
             }
         },
-        "/watcher/processing/clean": {
-            "post": {
-                "description": "Clean processing documents",
-                "consumes": [
-                    "application/json"
-                ],
-                "tags": [
-                    "watcher"
-                ],
-                "summary": "Clean processing documents",
-                "operationId": "clean-documents",
-                "parameters": [
-                    {
-                        "description": "File names to clean processing status",
-                        "name": "jsonQuery",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/httpserv.FetchDocumentsList"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Ok",
-                        "schema": {
-                            "$ref": "#/definitions/httpserv.ResponseForm"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request message",
-                        "schema": {
-                            "$ref": "#/definitions/httpserv.BadRequestForm"
-                        }
-                    },
-                    "503": {
-                        "description": "Server does not available",
-                        "schema": {
-                            "$ref": "#/definitions/httpserv.ServerErrorForm"
-                        }
-                    }
-                }
-            }
-        },
-        "/watcher/processing/fetch": {
-            "post": {
-                "description": "Load processing/unrecognized/done documents by names list",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "watcher"
-                ],
-                "summary": "Fetch processing documents",
-                "operationId": "fetch-documents",
-                "parameters": [
-                    {
-                        "description": "File names to fetch processing status",
-                        "name": "jsonQuery",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/httpserv.FetchDocumentsList"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Ok",
-                        "schema": {
-                            "$ref": "#/definitions/watcher.ProcessingDocuments"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request message",
-                        "schema": {
-                            "$ref": "#/definitions/httpserv.BadRequestForm"
-                        }
-                    },
-                    "503": {
-                        "description": "Server does not available",
-                        "schema": {
-                            "$ref": "#/definitions/httpserv.ServerErrorForm"
-                        }
-                    }
-                }
-            }
-        },
-        "/watcher/run": {
-            "get": {
-                "description": "Run all watchers",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "watcher"
-                ],
-                "summary": "Run all watchers",
-                "operationId": "watcher-run",
-                "responses": {
-                    "200": {
-                        "description": "Ok",
-                        "schema": {
-                            "$ref": "#/definitions/httpserv.ResponseForm"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request message",
-                        "schema": {
-                            "$ref": "#/definitions/httpserv.BadRequestForm"
-                        }
-                    },
-                    "503": {
-                        "description": "Server does not available",
-                        "schema": {
-                            "$ref": "#/definitions/httpserv.ServerErrorForm"
-                        }
-                    }
-                }
-            }
-        },
-        "/watcher/stop": {
-            "get": {
-                "description": "Stop all watchers",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "watcher"
-                ],
-                "summary": "Stop all watchers",
-                "operationId": "watcher-stop",
-                "responses": {
-                    "200": {
-                        "description": "Ok",
-                        "schema": {
-                            "$ref": "#/definitions/httpserv.ResponseForm"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request message",
-                        "schema": {
-                            "$ref": "#/definitions/httpserv.BadRequestForm"
-                        }
-                    },
-                    "503": {
-                        "description": "Server does not available",
-                        "schema": {
-                            "$ref": "#/definitions/httpserv.ServerErrorForm"
-                        }
-                    }
-                }
-            }
-        },
-        "/watcher/{bucket}/detach": {
+        "/watcher/{bucket}": {
             "delete": {
                 "description": "Attach new directory to watcher",
                 "consumes": [
@@ -246,19 +183,19 @@ const docTemplate = `{
                     "200": {
                         "description": "Ok",
                         "schema": {
-                            "$ref": "#/definitions/httpserv.ResponseForm"
+                            "$ref": "#/definitions/httpserver.ResponseForm"
                         }
                     },
                     "400": {
                         "description": "Bad Request message",
                         "schema": {
-                            "$ref": "#/definitions/httpserv.BadRequestForm"
+                            "$ref": "#/definitions/httpserver.BadRequestForm"
                         }
                     },
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/httpserv.ServerErrorForm"
+                            "$ref": "#/definitions/httpserver.ServerErrorForm"
                         }
                     }
                 }
@@ -266,16 +203,66 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "httpserv.AttachDirectoryForm": {
+        "dto.TaskEvent": {
+            "type": "object",
+            "properties": {
+                "bucket": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "file_path": {
+                    "type": "string"
+                },
+                "file_size": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "modified_at": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/dto.TaskStatus"
+                },
+                "status_text": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.TaskStatus": {
+            "type": "integer",
+            "enum": [
+                -1,
+                0,
+                1,
+                2,
+                3
+            ],
+            "x-enum-varnames": [
+                "Failed",
+                "Received",
+                "Pending",
+                "Processing",
+                "Successful"
+            ]
+        },
+        "httpserver.AttachDirectoryForm": {
             "type": "object",
             "properties": {
                 "bucket_name": {
                     "type": "string",
                     "example": "test-folder"
+                },
+                "directory": {
+                    "type": "string",
+                    "example": "/directory"
                 }
             }
         },
-        "httpserv.BadRequestForm": {
+        "httpserver.BadRequestForm": {
             "type": "object",
             "properties": {
                 "message": {
@@ -288,21 +275,29 @@ const docTemplate = `{
                 }
             }
         },
-        "httpserv.FetchDocumentsList": {
+        "httpserver.FetchAllDocuments": {
             "type": "object",
             "properties": {
-                "file_names": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    },
-                    "example": [
-                        "test-file.docx"
-                    ]
+                "bucket_name": {
+                    "type": "string",
+                    "example": "test-folder"
                 }
             }
         },
-        "httpserv.ResponseForm": {
+        "httpserver.FetchDocumentsList": {
+            "type": "object",
+            "properties": {
+                "bucket_name": {
+                    "type": "string",
+                    "example": "test-folder"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "Pending"
+                }
+            }
+        },
+        "httpserver.ResponseForm": {
             "type": "object",
             "properties": {
                 "message": {
@@ -315,7 +310,7 @@ const docTemplate = `{
                 }
             }
         },
-        "httpserv.ServerErrorForm": {
+        "httpserver.ServerErrorForm": {
             "type": "object",
             "properties": {
                 "message": {
@@ -327,41 +322,28 @@ const docTemplate = `{
                     "example": 503
                 }
             }
-        },
-        "watcher.ProcessingDocuments": {
-            "type": "object",
-            "properties": {
-                "done": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "processing": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "unrecognized": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                }
-            }
         }
-    }
+    },
+    "tags": [
+        {
+            "description": "APIs to manage cloud watchers",
+            "name": "watcher"
+        },
+        {
+            "description": "APIs to get status tasks",
+            "name": "tasks"
+        }
+    ]
 }`
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "",
+	Version:          "0.0.1",
 	Host:             "",
 	BasePath:         "",
 	Schemes:          []string{},
-	Title:            "",
-	Description:      "",
+	Title:            "Watchtower service",
+	Description:      "Watchtower is a project designed to provide processing files created into cloud by events.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

@@ -1,13 +1,13 @@
 BIN_LINTER := "${GOPATH}/bin/golangci-lint"
-BIN_MINIO_NOTIFIER := "./bin/doc-watcher"
+SERVICE_BIN_FILE_PATH := "./bin/watchtower"
 
 GIT_HASH := $(shell git log --format="%h" -n 1)
 
 build:
-	go build -v -o $(BIN_MINIO_NOTIFIER) ./cmd/minio
+	go build -v -o $(SERVICE_BIN_FILE_PATH) ./cmd/watchtower
 
 run: build
-	$(BIN_MINIO_NOTIFIER) -c ./configs/production.toml
+	$(SERVICE_BIN_FILE_PATH) -c ./configs/config.toml
 
 test:
 	go test -race ./tests/...
