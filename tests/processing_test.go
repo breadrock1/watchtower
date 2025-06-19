@@ -38,11 +38,6 @@ func TestProcessing(t *testing.T) {
 	redisServ := redis.New(&servConfig.Cacher.Redis)
 	rmqServ, initErr := rmq.New(&servConfig.Queue.Rmq)
 	assert.NoError(t, initErr, "failed to init rmq client")
-	rmqConfig := servConfig.Queue.Rmq
-	initErr = rmqServ.CreateExchange(rmqConfig.Exchange)
-	assert.NoError(t, initErr, "failed to init rmq exchange")
-	initErr = rmqServ.CreateQueue(rmqConfig.Exchange, rmqConfig.QueueName, rmqConfig.RoutingKey)
-	assert.NoError(t, initErr, "failed to init rmq queue")
 	initErr = rmqServ.Consume(ctx)
 	assert.NoError(t, initErr, "failed to start consuming rmq client")
 

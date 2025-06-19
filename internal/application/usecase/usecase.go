@@ -103,6 +103,11 @@ func (uc *UseCase) processing(ctx context.Context, msg dto.Message) error {
 		return fmt.Errorf("failed to download file: %w", err)
 	}
 
+	ssdeepHash, err := utils.ComputeSSDEEP(fileData.Bytes())
+	if err != nil {
+		log.Printf("failed to compute SSDEEP hash: %v", err)
+	}
+
 	inputFile := dto.InputFile{
 		Name: path.Base(taskEvent.FilePath),
 		Data: fileData,
@@ -114,11 +119,6 @@ func (uc *UseCase) processing(ctx context.Context, msg dto.Message) error {
 
 	var tokensRes *dto.ComputedTokens
 	tokensRes, err = uc.tokenizer.Load(ctx, recData.Text)
-	if err != nil {
-		log.Printf("failed to load tokens: %v", err)
-	}
-
-	ssdeepHash, err := utils.ComputeSSDEEP(fileData.Bytes())
 	if err != nil {
 		log.Printf("failed to load tokens: %v", err)
 	}
