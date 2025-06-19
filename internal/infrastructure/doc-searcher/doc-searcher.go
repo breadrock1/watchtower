@@ -25,19 +25,19 @@ func New(config *Config) *DocSearcherClient {
 	}
 }
 
-func (dsc *DocSearcherClient) Store(doc *dto.Document) error {
-	if err := dsc.storeDocument(doc); err != nil {
+func (dsc *DocSearcherClient) Store(folder string, doc *dto.StorageDocument) error {
+	if err := dsc.storeDocument(folder, doc); err != nil {
 		return fmt.Errorf("failed to store document: %v", err)
 	}
 
-	if err := dsc.storeTokens(doc); err != nil {
+	if err := dsc.storeTokens(folder, doc); err != nil {
 		log.Printf("failed to store tokens: %v", err)
 	}
 
 	return nil
 }
 
-func (dsc *DocSearcherClient) storeDocument(doc *dto.Document) error {
+func (dsc *DocSearcherClient) storeDocument(folder string, doc *dto.StorageDocument) error {
 	jsonData, err := json.Marshal(doc)
 	if err != nil {
 		return fmt.Errorf("failed while marshaling doc: %v", err)
@@ -48,11 +48,11 @@ func (dsc *DocSearcherClient) storeDocument(doc *dto.Document) error {
 	buildURL.WriteString("://")
 	buildURL.WriteString(dsc.config.Address)
 	buildURL.WriteString("/storage/folders/")
-	buildURL.WriteString(doc.FolderID)
+	buildURL.WriteString(folder)
 	buildURL.WriteString("/documents/create")
 	targetURL := buildURL.String()
 
-	log.Printf("storing document %s to index %s", doc.DocumentID, doc.FolderID)
+	log.Printf("storing document %s to index %s", doc.ID, folder)
 
 	reqBody := bytes.NewBuffer(jsonData)
 	timeoutReq := time.Duration(300) * time.Second
@@ -64,13 +64,13 @@ func (dsc *DocSearcherClient) storeDocument(doc *dto.Document) error {
 	return nil
 }
 
-func (dsc *DocSearcherClient) storeTokens(doc *dto.Document) error {
+func (dsc *DocSearcherClient) storeTokens(folder string, doc *dto.StorageDocument) error {
 	jsonData, err := json.Marshal(doc)
 	if err != nil {
 		return fmt.Errorf("failed while marshaling doc: %v", err)
 	}
 
-	folderID := fmt.Sprintf("%s-vector", doc.FolderID)
+	folderID := fmt.Sprintf("%s-vector", folder)
 
 	buildURL := strings.Builder{}
 	buildURL.WriteString(utils.GetHttpSchema(dsc.config.EnableSSL))
@@ -82,7 +82,7 @@ func (dsc *DocSearcherClient) storeTokens(doc *dto.Document) error {
 	buildURL.WriteString("?folder_type=vectors")
 	targetURL := buildURL.String()
 
-	log.Printf("storing document %s to index %s", doc.DocumentID, doc.FolderID)
+	log.Printf("storing document %s to index %s", doc.ID, folder)
 
 	reqBody := bytes.NewBuffer(jsonData)
 	timeoutReq := time.Duration(300) * time.Second

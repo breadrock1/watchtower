@@ -145,7 +145,7 @@ func (s *S3Client) startBucketListener(dir dto.Directory) error {
 					FileSize:   s3Object.Object.Size,
 					CreatedAt:  time.Now(),
 					ModifiedAt: time.Now(),
-					Status:     dto.Received,
+					Status:     0,
 				}
 			}
 

@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"encoding/json"
+	"watchtower/internal/application/mapping"
 
 	"github.com/labstack/echo/v4"
 	"watchtower/internal/application/dto"
@@ -109,9 +110,9 @@ func (s *Server) FetchDocumentsByStatus(c echo.Context) error {
 
 	foundedTasks := make([]*dto.TaskEvent, 0)
 	//json
-	inputTaskStatus := dto.TaskStatusFromString(jsonForm.Status)
+	inputTaskStatus := mapping.TaskStatusFromString(jsonForm.Status)
 	for _, task := range tasks {
-		if task.Status == inputTaskStatus {
+		if task.Status == mapping.TaskStatusToInt(inputTaskStatus) {
 			foundedTasks = append(foundedTasks, task)
 		}
 	}

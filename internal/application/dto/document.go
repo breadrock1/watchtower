@@ -1,43 +1,16 @@
 package dto
 
-import (
-	"time"
+import "time"
 
-	"watchtower/internal/application/utils"
-)
-
-type Document struct {
-	FolderID          string    `json:"folder_id"`
-	FolderPath        string    `json:"folder_path"`
-	Content           string    `json:"content"`
-	DocumentID        string    `json:"document_id"`
-	DocumentSSDEEP    string    `json:"document_ssdeep"`
-	DocumentName      string    `json:"document_name"`
-	DocumentPath      string    `json:"document_path"`
-	DocumentClass     string    `json:"document_class"`
-	DocumentSize      int64     `json:"document_size"`
-	DocumentExtension string    `json:"document_extension"`
-	Tokens            Tokens    `json:"embeddings"`
-	DocumentCreated   time.Time `json:"document_created"`
-	DocumentModified  time.Time `json:"document_modified"`
-}
-
-func (d *Document) SetDocumentClass(class string) {
-	if len(class) > 0 {
-		d.DocumentClass = class
-	} else {
-		d.DocumentClass = "unknown"
-	}
-}
-
-func (d *Document) ComputeMd5Hash() {
-	data := []byte(d.Content)
-	res := utils.ComputeMd5(data)
-	d.DocumentID = res
-}
-
-func (d *Document) ComputeSsdeepHash() {
-	data := []byte(d.Content)
-	res, _ := utils.ComputeSSDEEP(data)
-	d.DocumentSSDEEP = res
+type StorageDocument struct {
+	Content    string         `json:"content"`
+	SSDEEP     string         `json:"ssdeep"`
+	ID         string         `json:"id"`
+	Class      string         `json:"class"`
+	FileName   string         `json:"file_name"`
+	FilePath   string         `json:"file_path"`
+	FileSize   uint64         `json:"file_size"`
+	CreatedAt  time.Time      `json:"created_at"`
+	ModifiedAt time.Time      `json:"modified_at"`
+	Tokens     ComputedTokens `json:"embeddings"`
 }

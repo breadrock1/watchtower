@@ -27,12 +27,12 @@ func New(config *Config) *VectorizerClient {
 	}
 }
 
-func (vc *VectorizerClient) Load(inputText string) (*dto.Tokens, error) {
+func (vc *VectorizerClient) Load(inputText string) (*dto.ComputedTokens, error) {
 	if vc.config.ChunkBySelf {
 		return vc.LoadByOwnChunked(inputText)
 	}
 
-	textVectors := &dto.TokensInputForm{
+	textVectors := &dto.ComputeTokensForm{
 		Inputs:    inputText,
 		Truncate:  false,
 		Normalize: true,
@@ -52,24 +52,24 @@ func (vc *VectorizerClient) Load(inputText string) (*dto.Tokens, error) {
 		return nil, fmt.Errorf("failed to load embeddings: %v", err)
 	}
 
-	tokensResult := &dto.Tokens{}
+	tokensResult := &dto.ComputedTokens{}
 	err = json.Unmarshal(respData, &tokensResult)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal embeddings: %v", err)
 	}
 
-	if tokensResult.Chunks < 1 {
+	if tokensResult.ChunksCount < 1 {
 		return nil, errors.New("returned empty tokens from tokenizer service")
 	}
 
 	return tokensResult, nil
 }
 
-func (vc *VectorizerClient) LoadByOwnChunked(inputText string) (*dto.Tokens, error) {
+func (vc *VectorizerClient) LoadByOwnChunked(inputText string) (*dto.ComputedTokens, error) {
 	contentData := strings.ReplaceAll(inputText, "\n", " ")
 	chunkedText := vc.splitContent(contentData, vc.config.ChunkSize)
 
-	tokensResult := &dto.Tokens{}
+	tokensResult := &dto.ComputedTokens{}
 	for _, textData := range chunkedText {
 
 		result, err := vc.Load(textData)
@@ -78,7 +78,7 @@ func (vc *VectorizerClient) LoadByOwnChunked(inputText string) (*dto.Tokens, err
 			continue
 		}
 
-		tokensResult.Chunks++
+		tokensResult.ChunksCount++
 		tokensResult.Vectors = append(tokensResult.Vectors, result.Vectors[0])
 		tokensResult.ChunkedText = append(tokensResult.ChunkedText, result.ChunkedText[0])
 	}

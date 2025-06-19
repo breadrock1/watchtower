@@ -7,12 +7,15 @@ import (
 	"path"
 
 	"watchtower/internal/application/dto"
+	"watchtower/internal/application/mapping"
 	"watchtower/internal/application/services/doc-storage"
 	"watchtower/internal/application/services/recognizer"
 	"watchtower/internal/application/services/task-manager"
 	"watchtower/internal/application/services/task-queue"
 	"watchtower/internal/application/services/tokenizer"
 	"watchtower/internal/application/services/watcher"
+	"watchtower/internal/application/utils"
+	"watchtower/internal/domain/core/structures"
 )
 
 const EmptyMessage = ""
@@ -56,17 +59,17 @@ func (uc *UseCase) LaunchProcessing(ctx context.Context) {
 		for {
 			select {
 			case taskEvent := <-uc.watcherCh:
-				status, msg := dto.Pending, EmptyMessage
+				status, msg := domain.Pending, EmptyMessage
 				if err := uc.publishToQueue(ctx, taskEvent); err != nil {
-					status, msg = dto.Failed, err.Error()
+					status, msg = domain.Failed, err.Error()
 					log.Printf("failed to pulish task to queue: %v", err)
 				}
 
 				uc.updateTaskStatus(ctx, &taskEvent, status, msg)
 			case cMsg := <-uc.consumerCh:
-				status, msg := dto.Successful, EmptyMessage
+				status, msg := domain.Successful, EmptyMessage
 				if err := uc.processing(ctx, cMsg); err != nil {
-					status, msg = dto.Failed, err.Error()
+					status, msg = domain.Failed, err.Error()
 					log.Printf("failed while processing file: %v", err)
 				}
 
@@ -84,8 +87,8 @@ func (uc *UseCase) publishToQueue(ctx context.Context, taskEvent dto.TaskEvent) 
 	return uc.queue.Publish(ctx, msg)
 }
 
-func (uc *UseCase) updateTaskStatus(ctx context.Context, taskEvent *dto.TaskEvent, status dto.TaskStatus, msg string) {
-	taskEvent.Status, taskEvent.StatusText = status, msg
+func (uc *UseCase) updateTaskStatus(ctx context.Context, taskEvent *dto.TaskEvent, status domain.TaskStatus, msg string) {
+	taskEvent.Status, taskEvent.StatusText = mapping.TaskStatusToInt(status), msg
 	if err := uc.cacher.Push(ctx, taskEvent); err != nil {
 		log.Printf("failed to store task to cache: %v", err)
 	}
@@ -93,7 +96,7 @@ func (uc *UseCase) updateTaskStatus(ctx context.Context, taskEvent *dto.TaskEven
 
 func (uc *UseCase) processing(ctx context.Context, msg dto.Message) error {
 	taskEvent := msg.Body
-	uc.updateTaskStatus(ctx, &taskEvent, dto.Processing, EmptyMessage)
+	uc.updateTaskStatus(ctx, &taskEvent, domain.Processing, EmptyMessage)
 
 	fileData, err := uc.watcher.DownloadFile(ctx, taskEvent.Bucket, taskEvent.FilePath)
 	if err != nil {
@@ -109,29 +112,32 @@ func (uc *UseCase) processing(ctx context.Context, msg dto.Message) error {
 		return fmt.Errorf("failed to recognize: %v", err)
 	}
 
-	var tokensRes *dto.Tokens
+	var tokensRes *dto.ComputedTokens
 	tokensRes, err = uc.tokenizer.Load(recData.Text)
 	if err != nil {
 		log.Printf("failed to load tokens: %v", err)
 	}
 
-	doc := &dto.Document{
-		FolderID:          taskEvent.Bucket,
-		FolderPath:        path.Dir(taskEvent.FilePath),
-		Content:           recData.Text,
-		DocumentName:      path.Base(taskEvent.FilePath),
-		DocumentPath:      taskEvent.FilePath,
-		DocumentSize:      int64(fileData.Len()),
-		DocumentExtension: path.Ext(taskEvent.FilePath),
-		DocumentCreated:   taskEvent.CreatedAt,
-		DocumentModified:  taskEvent.ModifiedAt,
-		Tokens:            *tokensRes,
+	ssdeepHash, err := utils.ComputeSSDEEP(fileData.Bytes())
+	if err != nil {
+		log.Printf("failed to load tokens: %v", err)
 	}
-	doc.ComputeMd5Hash()
-	doc.ComputeSsdeepHash()
 
-	if err = uc.storage.Store(doc); err != nil {
-		return fmt.Errorf("failed to store doc %s: %v", doc.DocumentName, err)
+	doc := &dto.StorageDocument{
+		Content:    recData.Text,
+		SSDEEP:     ssdeepHash,
+		ID:         utils.ComputeMd5(fileData.Bytes()),
+		Class:      "unknown",
+		FileName:   path.Base(taskEvent.FilePath),
+		FilePath:   taskEvent.FilePath,
+		FileSize:   uint64(fileData.Len()),
+		CreatedAt:  taskEvent.CreatedAt,
+		ModifiedAt: taskEvent.ModifiedAt,
+		Tokens:     *tokensRes,
+	}
+
+	if err = uc.storage.Store(taskEvent.Bucket, doc); err != nil {
+		return fmt.Errorf("failed to store doc %s: %v", doc.FileName, err)
 	}
 
 	return nil

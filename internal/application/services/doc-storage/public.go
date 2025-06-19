@@ -1,9 +1,7 @@
 package doc_storage
 
-import (
-	"watchtower/internal/application/dto"
-)
+import "watchtower/internal/application/dto"
 
 type IDocumentStorage interface {
-	Store(document *dto.Document) error
+	Store(folder string, document *dto.StorageDocument) error
 }

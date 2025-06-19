@@ -25,7 +25,6 @@ func (rv *RedisValue) ConvertToTaskEvent() (*dto.TaskEvent, error) {
 		return nil, fmt.Errorf("failed to deserialize task id: %s", rv.Id)
 	}
 
-	status := dto.TaskStatus(rv.Status)
 	modDt := time.Unix(rv.ModifiedAt, 0)
 	createDt := time.Unix(rv.CreatedAt, 0)
 
@@ -36,7 +35,7 @@ func (rv *RedisValue) ConvertToTaskEvent() (*dto.TaskEvent, error) {
 		FileSize:   rv.FileSize,
 		CreatedAt:  createDt,
 		ModifiedAt: modDt,
-		Status:     status,
+		Status:     rv.Status,
 		StatusText: rv.StatusText,
 	}
 
@@ -51,6 +50,6 @@ func ConvertFromTaskEvent(te *dto.TaskEvent) *RedisValue {
 		FileSize:   te.FileSize,
 		CreatedAt:  te.CreatedAt.Unix(),
 		ModifiedAt: te.ModifiedAt.Unix(),
-		Status:     te.Status.TaskStatusToInt(),
+		Status:     te.Status,
 	}
 }
