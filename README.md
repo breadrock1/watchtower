@@ -6,6 +6,8 @@ Watchtower is a project designed to monitor S3 file events for further AI proces
 for listening creating/uploading new files into cloud storage to download it and start processing to extract text content,
 build and store knowledge graph of content entities and store to ELK system.
 
+![architecture.png](docs/architecture.png)
+
 ## Features
 
  - S3 event monitoring - listen for file creation and copy events.
