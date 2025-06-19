@@ -1,6 +1,8 @@
 package mocks
 
 import (
+	"context"
+
 	"watchtower/internal/application/dto"
 )
 
@@ -10,9 +12,9 @@ var (
 
 type MockVectorizerClient struct{}
 
-func (vc *MockVectorizerClient) Load(inputText string) (*dto.Tokens, error) {
-	tokensResult := &dto.Tokens{
-		Chunks:      1,
+func (vc *MockVectorizerClient) Load(_ context.Context, inputText string) (*dto.ComputedTokens, error) {
+	tokensResult := &dto.ComputedTokens{
+		ChunksCount: 1,
 		ChunkedText: []string{inputText},
 		Vectors:     InputTextTokens,
 	}
@@ -20,6 +22,6 @@ func (vc *MockVectorizerClient) Load(inputText string) (*dto.Tokens, error) {
 	return tokensResult, nil
 }
 
-func (vc *MockVectorizerClient) LoadByOwnChunked(inputText string) (*dto.Tokens, error) {
-	return vc.Load(inputText)
+func (vc *MockVectorizerClient) LoadByOwnChunked(ctx context.Context, inputText string) (*dto.ComputedTokens, error) {
+	return vc.Load(ctx, inputText)
 }

@@ -1,6 +1,7 @@
 package mocks
 
 import (
+	"context"
 	"sync"
 
 	"watchtower/internal/application/dto"
@@ -18,7 +19,7 @@ func NewMockDocSearcherClient() *MockDocSearcherClient {
 	}
 }
 
-func (dsc *MockDocSearcherClient) Store(_ string, doc *dto.StorageDocument) error {
+func (dsc *MockDocSearcherClient) Store(_ context.Context, _ string, doc *dto.StorageDocument) error {
 	dsc.mu.Lock()
 	defer dsc.mu.Unlock()
 	dsc.storage[doc.ID] = doc
@@ -30,9 +31,12 @@ func (dsc *MockDocSearcherClient) Get(id string) (*dto.StorageDocument, error) {
 }
 
 func (dsc *MockDocSearcherClient) GetDocuments() []*dto.StorageDocument {
-	var docs []*dto.StorageDocument
+	docs := make([]*dto.StorageDocument, len(dsc.storage))
+
+	index := 0
 	for _, val := range dsc.storage {
-		docs = append(docs, val)
+		docs[index] = val
+		index++
 	}
 	return docs
 }

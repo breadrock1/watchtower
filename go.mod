@@ -1,8 +1,6 @@
 module watchtower
 
-go 1.23.0
-
-toolchain go1.23.9
+go 1.24.0
 
 require (
 	github.com/glaslos/ssdeep v0.3.3

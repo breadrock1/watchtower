@@ -2,6 +2,7 @@ package vectorizer
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -15,7 +16,7 @@ import (
 	"watchtower/internal/application/utils"
 )
 
-const EmbeddingsAssistantURL = "/embed"
+const EmbeddingsURL = "/embed"
 
 type VectorizerClient struct {
 	config *Config
@@ -27,9 +28,9 @@ func New(config *Config) *VectorizerClient {
 	}
 }
 
-func (vc *VectorizerClient) Load(inputText string) (*dto.ComputedTokens, error) {
+func (vc *VectorizerClient) Load(ctx context.Context, inputText string) (*dto.ComputedTokens, error) {
 	if vc.config.ChunkBySelf {
-		return vc.LoadByOwnChunked(inputText)
+		return vc.LoadByOwnChunked(ctx, inputText)
 	}
 
 	textVectors := &dto.ComputeTokensForm{
@@ -40,22 +41,22 @@ func (vc *VectorizerClient) Load(inputText string) (*dto.ComputedTokens, error) 
 
 	jsonData, err := json.Marshal(textVectors)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal tokens: %v", err)
+		return nil, fmt.Errorf("failed to marshal tokens: %w", err)
 	}
 
 	reqBody := bytes.NewBuffer(jsonData)
 	mimeType := echo.MIMEApplicationJSON
 	timeoutReq := time.Duration(300) * time.Second
-	targetURL := utils.BuildTargetURL(vc.config.EnableSSL, vc.config.Address, EmbeddingsAssistantURL)
-	respData, err := utils.POST(reqBody, targetURL, mimeType, timeoutReq)
+	targetURL := utils.BuildTargetURL(vc.config.EnableSSL, vc.config.Address, EmbeddingsURL)
+	respData, err := utils.POST(ctx, reqBody, targetURL, mimeType, timeoutReq)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load embeddings: %v", err)
+		return nil, fmt.Errorf("failed to load embeddings: %w", err)
 	}
 
 	tokensResult := &dto.ComputedTokens{}
 	err = json.Unmarshal(respData, &tokensResult)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal embeddings: %v", err)
+		return nil, fmt.Errorf("failed to unmarshal embeddings: %w", err)
 	}
 
 	if tokensResult.ChunksCount < 1 {
@@ -65,14 +66,13 @@ func (vc *VectorizerClient) Load(inputText string) (*dto.ComputedTokens, error) 
 	return tokensResult, nil
 }
 
-func (vc *VectorizerClient) LoadByOwnChunked(inputText string) (*dto.ComputedTokens, error) {
+func (vc *VectorizerClient) LoadByOwnChunked(ctx context.Context, inputText string) (*dto.ComputedTokens, error) {
 	contentData := strings.ReplaceAll(inputText, "\n", " ")
 	chunkedText := vc.splitContent(contentData, vc.config.ChunkSize)
 
 	tokensResult := &dto.ComputedTokens{}
 	for _, textData := range chunkedText {
-
-		result, err := vc.Load(textData)
+		result, err := vc.Load(ctx, textData)
 		if err != nil {
 			log.Printf("failed to load tokens: %v", err)
 			continue
@@ -91,14 +91,14 @@ func (vc *VectorizerClient) splitContent(content string, chunkSize int) []string
 	splitLength := int(math.Ceil(float64(strLength) / float64(chunkSize)))
 	splitString := make([]string, splitLength)
 	var start, stop int
-	for i := 0; i < splitLength; i++ {
-		start = i * chunkSize
+	for charIndex := 0; charIndex < splitLength; charIndex++ {
+		start = charIndex * chunkSize
 		stop = start + chunkSize
 		if stop > strLength {
 			stop = strLength
 		}
 
-		splitString[i] = content[start:stop]
+		splitString[charIndex] = content[start:stop]
 	}
 
 	return splitString

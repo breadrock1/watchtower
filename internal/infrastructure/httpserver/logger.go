@@ -67,33 +67,33 @@ func InitLokiLogger(config LoggerConfig) SlogLokiLogger {
 
 func (sll *SlogLokiLogger) LokiLoggerMW() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
-			if slices.Contains(sll.filterURI, c.Path()) {
-				return next(c)
+		return func(eCtx echo.Context) error {
+			if slices.Contains(sll.filterURI, eCtx.Path()) {
+				return next(eCtx)
 			}
 
 			start := time.Now()
 
-			err := next(c)
+			err := next(eCtx)
 			if err != nil {
-				c.Error(err)
+				eCtx.Error(err)
 			}
 
 			latency := time.Since(start)
 
 			logMessage := map[string]interface{}{
-				"message":    c.Response().Status,
+				"message":    eCtx.Response().Status,
 				"latency":    latency.String(),
-				"status":     c.Response().Status,
-				"method":     c.Request().Method,
-				"uri":        c.Path(),
-				"client_ip":  c.RealIP(),
-				"user_agent": c.Request().UserAgent(),
+				"status":     eCtx.Response().Status,
+				"method":     eCtx.Request().Method,
+				"uri":        eCtx.Path(),
+				"client_ip":  eCtx.RealIP(),
+				"user_agent": eCtx.Request().UserAgent(),
 			}
 			jsonMessage, _ := json.Marshal(logMessage)
 
 			var logLevel slog.Level
-			statusCategory := c.Response().Status / 100
+			statusCategory := eCtx.Response().Status / 100
 			if statusCategory < 3 && statusCategory >= 2 {
 				logLevel = slog.LevelInfo
 			} else {

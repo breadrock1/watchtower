@@ -1,8 +1,12 @@
 package tokenizer
 
-import "watchtower/internal/application/dto"
+import (
+	"context"
+
+	"watchtower/internal/application/dto"
+)
 
 type ITokenizer interface {
-	Load(inputText string) (*dto.ComputedTokens, error)
-	LoadByOwnChunked(inputText string) (*dto.ComputedTokens, error)
+	Load(ctx context.Context, inputText string) (*dto.ComputedTokens, error)
+	LoadByOwnChunked(ctx context.Context, inputText string) (*dto.ComputedTokens, error)
 }

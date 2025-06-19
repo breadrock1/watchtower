@@ -36,13 +36,13 @@ func New(config *Config) (*S3Client, error) {
 		Secure: config.EnableSSL,
 	}
 
-	mc, err := minio.New(config.Address, opts)
+	s3Client, err := minio.New(config.Address, opts)
 	if err != nil {
-		return nil, fmt.Errorf("failed while connecting to s3: %v", err)
+		return nil, fmt.Errorf("failed while connecting to s3: %w", err)
 	}
 
 	client := &S3Client{
-		mc:          mc,
+		mc:          s3Client,
 		bindBuckets: &sync.Map{},
 		eventsCh:    make(chan dto.TaskEvent),
 	}
@@ -57,7 +57,7 @@ func (s *S3Client) GetEventsChannel() chan dto.TaskEvent {
 func (s *S3Client) GetWatchedDirs(ctx context.Context) ([]dto.Directory, error) {
 	buckets, err := s.mc.ListBuckets(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get list buskets: %w", err)
 	}
 
 	directories := make([]dto.Directory, len(buckets))
@@ -119,7 +119,7 @@ func (s *S3Client) LaunchWatcher(ctx context.Context, dirs []dto.Directory) erro
 }
 
 func (s *S3Client) TerminateWatcher(_ context.Context) error {
-	s.bindBuckets.Range(func(key, value interface{}) bool {
+	s.bindBuckets.Range(func(_, value interface{}) bool {
 		value.(context.CancelFunc)()
 		return true
 	})
@@ -148,7 +148,6 @@ func (s *S3Client) startBucketListener(dir dto.Directory) error {
 					Status:     0,
 				}
 			}
-
 		}
 	}
 
@@ -159,7 +158,10 @@ func (s *S3Client) UploadFile(ctx context.Context, bucket, filePath string, data
 	opts := minio.PutObjectOptions{}
 	dataLen := int64(data.Len())
 	_, err := s.mc.PutObject(ctx, bucket, filePath, data, dataLen, opts)
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to upload file to s3: %w", err)
+	}
+	return nil
 }
 
 func (s *S3Client) DownloadFile(ctx context.Context, bucket, filePath string) (bytes.Buffer, error) {
@@ -168,12 +170,12 @@ func (s *S3Client) DownloadFile(ctx context.Context, bucket, filePath string) (b
 	opts := minio.GetObjectOptions{}
 	obj, err := s.mc.GetObject(ctx, bucket, filePath, opts)
 	if err != nil {
-		return objBody, err
+		return objBody, fmt.Errorf("failed to get object from s3: %w", err)
 	}
 
 	_, err = objBody.ReadFrom(obj)
 	if err != nil {
-		return objBody, err
+		return objBody, fmt.Errorf("failed to read loaded object from s3: %w", err)
 	}
 
 	return objBody, nil

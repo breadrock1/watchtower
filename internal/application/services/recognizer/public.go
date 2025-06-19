@@ -1,7 +1,11 @@
 package recognizer
 
-import "watchtower/internal/application/dto"
+import (
+	"context"
+
+	"watchtower/internal/application/dto"
+)
 
 type IRecognizer interface {
-	Recognize(inputFile dto.InputFile) (*dto.Recognized, error)
+	Recognize(ctx context.Context, inputFile dto.InputFile) (*dto.Recognized, error)
 }

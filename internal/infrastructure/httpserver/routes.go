@@ -38,9 +38,9 @@ func (s *Server) CreateTasksGroup() error {
 // @Failure	400 {object} BadRequestForm "Bad Request message"
 // @Failure	503 {object} ServerErrorForm "Server does not available"
 // @Router /watcher/attach [post]
-func (s *Server) AttachDirectory(c echo.Context) error {
+func (s *Server) AttachDirectory(eCtx echo.Context) error {
 	jsonForm := &AttachDirectoryForm{}
-	decoder := json.NewDecoder(c.Request().Body)
+	decoder := json.NewDecoder(eCtx.Request().Body)
 	err := decoder.Decode(jsonForm)
 	if err != nil {
 		return err
@@ -51,13 +51,13 @@ func (s *Server) AttachDirectory(c echo.Context) error {
 		Path:   jsonForm.Directory,
 	}
 
-	ctx := c.Request().Context()
+	ctx := eCtx.Request().Context()
 	err = s.watcher.AttachWatchedDir(ctx, dir)
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(200, createStatusResponse(200, "Ok"))
+	return eCtx.JSON(200, createStatusResponse(200, "Ok"))
 }
 
 // DetachDirectory
@@ -72,15 +72,15 @@ func (s *Server) AttachDirectory(c echo.Context) error {
 // @Failure	400 {object} BadRequestForm "Bad Request message"
 // @Failure	503 {object} ServerErrorForm "Server does not available"
 // @Router /watcher/{bucket} [delete]
-func (s *Server) DetachDirectory(c echo.Context) error {
-	bucket := c.Param("bucket")
+func (s *Server) DetachDirectory(eCtx echo.Context) error {
+	bucket := eCtx.Param("bucket")
 
-	ctx := c.Request().Context()
+	ctx := eCtx.Request().Context()
 	if err := s.watcher.DetachWatchedDir(ctx, bucket); err != nil {
 		return err
 	}
 
-	return c.JSON(200, createStatusResponse(200, "Ok"))
+	return eCtx.JSON(200, createStatusResponse(200, "Ok"))
 }
 
 // FetchDocumentsByStatus
@@ -95,21 +95,20 @@ func (s *Server) DetachDirectory(c echo.Context) error {
 // @Failure	400 {object} BadRequestForm "Bad Request message"
 // @Failure	503 {object} ServerErrorForm "Server does not available"
 // @Router /tasks/fetch [post]
-func (s *Server) FetchDocumentsByStatus(c echo.Context) error {
+func (s *Server) FetchDocumentsByStatus(eCtx echo.Context) error {
 	jsonForm := &FetchDocumentsList{}
-	decoder := json.NewDecoder(c.Request().Body)
+	decoder := json.NewDecoder(eCtx.Request().Body)
 	if err := decoder.Decode(jsonForm); err != nil {
 		return err
 	}
 
-	ctx := c.Request().Context()
+	ctx := eCtx.Request().Context()
 	tasks, err := s.taskManager.GetAll(ctx, jsonForm.BucketName)
 	if err != nil {
 		return err
 	}
 
 	foundedTasks := make([]*dto.TaskEvent, 0)
-	//json
 	inputTaskStatus := mapping.TaskStatusFromString(jsonForm.Status)
 	for _, task := range tasks {
 		if task.Status == mapping.TaskStatusToInt(inputTaskStatus) {
@@ -117,7 +116,7 @@ func (s *Server) FetchDocumentsByStatus(c echo.Context) error {
 		}
 	}
 
-	return c.JSON(200, foundedTasks)
+	return eCtx.JSON(200, foundedTasks)
 }
 
 // GetAllProcessingDocuments
@@ -131,18 +130,18 @@ func (s *Server) FetchDocumentsByStatus(c echo.Context) error {
 // @Failure	400 {object} BadRequestForm "Bad Request message"
 // @Failure	503 {object} ServerErrorForm "Server does not available"
 // @Router /tasks/all [post]
-func (s *Server) GetAllProcessingDocuments(c echo.Context) error {
+func (s *Server) GetAllProcessingDocuments(eCtx echo.Context) error {
 	jsonForm := &FetchAllDocuments{}
-	decoder := json.NewDecoder(c.Request().Body)
+	decoder := json.NewDecoder(eCtx.Request().Body)
 	if err := decoder.Decode(jsonForm); err != nil {
 		return err
 	}
 
-	ctx := c.Request().Context()
+	ctx := eCtx.Request().Context()
 	documents, err := s.taskManager.GetAll(ctx, jsonForm.BucketName)
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(200, documents)
+	return eCtx.JSON(200, documents)
 }

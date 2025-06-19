@@ -54,7 +54,7 @@ func (s *Server) setupServer() {
 func (s *Server) Start(_ context.Context) error {
 	s.setupServer()
 	if err := s.server.Start(s.config.Address); err != nil {
-		return fmt.Errorf("failed to start server: %v", err)
+		return fmt.Errorf("failed to start server: %w", err)
 	}
 
 	return nil

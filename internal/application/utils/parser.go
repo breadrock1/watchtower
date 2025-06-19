@@ -5,6 +5,8 @@ import (
 	"strings"
 )
 
+const DocumentStatic = "document"
+
 var (
 	documentMimes = []string{
 		"csv", "msword", "html", "json", "pdf",
@@ -27,20 +29,20 @@ func ParseDocumentType(extension string) string {
 	case "video":
 		return "video"
 	case "text":
-		return "document"
+		return DocumentStatic
 	case "application":
 		return extractApplicationMimeType(attributes[1])
 	default:
-		return "document"
+		return DocumentStatic
 	}
 }
 
 func extractApplicationMimeType(attribute string) string {
 	for _, mimeType := range documentMimes {
 		if mimeType == attribute {
-			return "document"
+			return DocumentStatic
 		}
 	}
 
-	return "document"
+	return DocumentStatic
 }

@@ -2,6 +2,7 @@ package dedoc
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"mime/multipart"
@@ -23,17 +24,17 @@ func New(config *Config) *DedocClient {
 	}
 }
 
-func (dc *DedocClient) Recognize(inputFile dto.InputFile) (*dto.Recognized, error) {
+func (dc *DedocClient) Recognize(ctx context.Context, inputFile dto.InputFile) (*dto.Recognized, error) {
 	var buf bytes.Buffer
 
 	mpw := multipart.NewWriter(&buf)
 	fileForm, err := mpw.CreateFormFile("file", inputFile.Name)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create form file for dedoc: %w", err)
 	}
 
 	if _, err = fileForm.Write(inputFile.Data.Bytes()); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to write form file for dedoc: %w", err)
 	}
 
 	if err = mpw.Close(); err != nil {
@@ -44,9 +45,9 @@ func (dc *DedocClient) Recognize(inputFile dto.InputFile) (*dto.Recognized, erro
 	timeoutReq := dc.config.Timeout * time.Second
 	targetURL := utils.BuildTargetURL(dc.config.EnableSSL, dc.config.Address, RecognitionURL)
 
-	respData, err := utils.POST(&buf, targetURL, mimeType, timeoutReq)
+	respData, err := utils.POST(ctx, &buf, targetURL, mimeType, timeoutReq)
 	if err != nil {
-		return nil, fmt.Errorf("failed send request: %v", err)
+		return nil, fmt.Errorf("failed send request: %w", err)
 	}
 
 	var recData dto.Recognized

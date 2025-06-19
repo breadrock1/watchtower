@@ -9,7 +9,7 @@ import (
 )
 
 type RedisValue struct {
-	Id         string `json:"id"`
+	ID         string `json:"id"`
 	Bucket     string `json:"bucket"`
 	FilePath   string `json:"file_path"`
 	FileSize   int64  `json:"file_size"`
@@ -20,16 +20,16 @@ type RedisValue struct {
 }
 
 func (rv *RedisValue) ConvertToTaskEvent() (*dto.TaskEvent, error) {
-	id, err := uuid.Parse(rv.Id)
+	taskID, err := uuid.Parse(rv.ID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to deserialize task id: %s", rv.Id)
+		return nil, fmt.Errorf("failed to deserialize task id: %s", rv.ID)
 	}
 
 	modDt := time.Unix(rv.ModifiedAt, 0)
 	createDt := time.Unix(rv.CreatedAt, 0)
 
 	event := &dto.TaskEvent{
-		Id:         id,
+		Id:         taskID,
 		Bucket:     rv.Bucket,
 		FilePath:   rv.FilePath,
 		FileSize:   rv.FileSize,
@@ -42,14 +42,14 @@ func (rv *RedisValue) ConvertToTaskEvent() (*dto.TaskEvent, error) {
 	return event, nil
 }
 
-func ConvertFromTaskEvent(te *dto.TaskEvent) *RedisValue {
+func ConvertFromTaskEvent(taskEvent *dto.TaskEvent) *RedisValue {
 	return &RedisValue{
-		Id:         te.Id.String(),
-		Bucket:     te.Bucket,
-		FilePath:   te.FilePath,
-		FileSize:   te.FileSize,
-		CreatedAt:  te.CreatedAt.Unix(),
-		ModifiedAt: te.ModifiedAt.Unix(),
-		Status:     te.Status,
+		ID:         taskEvent.Id.String(),
+		Bucket:     taskEvent.Bucket,
+		FilePath:   taskEvent.FilePath,
+		FileSize:   taskEvent.FileSize,
+		CreatedAt:  taskEvent.CreatedAt.Unix(),
+		ModifiedAt: taskEvent.ModifiedAt.Unix(),
+		Status:     taskEvent.Status,
 	}
 }

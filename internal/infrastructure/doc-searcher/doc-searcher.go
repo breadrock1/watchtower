@@ -2,6 +2,7 @@ package doc_searcher
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -25,22 +26,22 @@ func New(config *Config) *DocSearcherClient {
 	}
 }
 
-func (dsc *DocSearcherClient) Store(folder string, doc *dto.StorageDocument) error {
-	if err := dsc.storeDocument(folder, doc); err != nil {
-		return fmt.Errorf("failed to store document: %v", err)
+func (dsc *DocSearcherClient) Store(ctx context.Context, folder string, doc *dto.StorageDocument) error {
+	if err := dsc.storeDocument(ctx, folder, doc); err != nil {
+		return fmt.Errorf("failed to store document: %w", err)
 	}
 
-	if err := dsc.storeTokens(folder, doc); err != nil {
+	if err := dsc.storeTokens(ctx, folder, doc); err != nil {
 		log.Printf("failed to store tokens: %v", err)
 	}
 
 	return nil
 }
 
-func (dsc *DocSearcherClient) storeDocument(folder string, doc *dto.StorageDocument) error {
+func (dsc *DocSearcherClient) storeDocument(ctx context.Context, folder string, doc *dto.StorageDocument) error {
 	jsonData, err := json.Marshal(doc)
 	if err != nil {
-		return fmt.Errorf("failed while marshaling doc: %v", err)
+		return fmt.Errorf("failed while marshaling doc: %w", err)
 	}
 
 	buildURL := strings.Builder{}
@@ -56,18 +57,18 @@ func (dsc *DocSearcherClient) storeDocument(folder string, doc *dto.StorageDocum
 
 	reqBody := bytes.NewBuffer(jsonData)
 	timeoutReq := time.Duration(300) * time.Second
-	_, err = utils.PUT(reqBody, targetURL, DocumentJsonMime, timeoutReq)
+	_, err = utils.PUT(ctx, reqBody, targetURL, DocumentJsonMime, timeoutReq)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to store document to storage: %w", err)
 	}
 
 	return nil
 }
 
-func (dsc *DocSearcherClient) storeTokens(folder string, doc *dto.StorageDocument) error {
+func (dsc *DocSearcherClient) storeTokens(ctx context.Context, folder string, doc *dto.StorageDocument) error {
 	jsonData, err := json.Marshal(doc)
 	if err != nil {
-		return fmt.Errorf("failed while marshaling doc: %v", err)
+		return fmt.Errorf("failed while marshaling doc: %w", err)
 	}
 
 	folderID := fmt.Sprintf("%s-vector", folder)
@@ -86,9 +87,9 @@ func (dsc *DocSearcherClient) storeTokens(folder string, doc *dto.StorageDocumen
 
 	reqBody := bytes.NewBuffer(jsonData)
 	timeoutReq := time.Duration(300) * time.Second
-	_, err = utils.PUT(reqBody, targetURL, DocumentJsonMime, timeoutReq)
+	_, err = utils.PUT(ctx, reqBody, targetURL, DocumentJsonMime, timeoutReq)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to store vectors to storage: %w", err)
 	}
 
 	return nil

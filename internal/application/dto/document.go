@@ -9,7 +9,7 @@ type StorageDocument struct {
 	Class      string         `json:"class"`
 	FileName   string         `json:"file_name"`
 	FilePath   string         `json:"file_path"`
-	FileSize   uint64         `json:"file_size"`
+	FileSize   int            `json:"file_size"`
 	CreatedAt  time.Time      `json:"created_at"`
 	ModifiedAt time.Time      `json:"modified_at"`
 	Tokens     ComputedTokens `json:"embeddings"`

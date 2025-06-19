@@ -1,4 +1,4 @@
-package tests
+package processing_test
 
 import (
 	"bytes"

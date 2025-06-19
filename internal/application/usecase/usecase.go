@@ -87,9 +87,9 @@ func (uc *UseCase) publishToQueue(ctx context.Context, taskEvent dto.TaskEvent) 
 	return uc.queue.Publish(ctx, msg)
 }
 
-func (uc *UseCase) updateTaskStatus(ctx context.Context, taskEvent *dto.TaskEvent, status domain.TaskStatus, msg string) {
-	taskEvent.Status, taskEvent.StatusText = mapping.TaskStatusToInt(status), msg
-	if err := uc.cacher.Push(ctx, taskEvent); err != nil {
+func (uc *UseCase) updateTaskStatus(ctx context.Context, task *dto.TaskEvent, status domain.TaskStatus, msg string) {
+	task.Status, task.StatusText = mapping.TaskStatusToInt(status), msg
+	if err := uc.cacher.Push(ctx, task); err != nil {
 		log.Printf("failed to store task to cache: %v", err)
 	}
 }
@@ -100,20 +100,20 @@ func (uc *UseCase) processing(ctx context.Context, msg dto.Message) error {
 
 	fileData, err := uc.watcher.DownloadFile(ctx, taskEvent.Bucket, taskEvent.FilePath)
 	if err != nil {
-		return fmt.Errorf("failed to download file: %v", err)
+		return fmt.Errorf("failed to download file: %w", err)
 	}
 
 	inputFile := dto.InputFile{
 		Name: path.Base(taskEvent.FilePath),
 		Data: fileData,
 	}
-	recData, err := uc.recognizer.Recognize(inputFile)
+	recData, err := uc.recognizer.Recognize(ctx, inputFile)
 	if err != nil {
-		return fmt.Errorf("failed to recognize: %v", err)
+		return fmt.Errorf("failed to recognize: %w", err)
 	}
 
 	var tokensRes *dto.ComputedTokens
-	tokensRes, err = uc.tokenizer.Load(recData.Text)
+	tokensRes, err = uc.tokenizer.Load(ctx, recData.Text)
 	if err != nil {
 		log.Printf("failed to load tokens: %v", err)
 	}
@@ -130,14 +130,14 @@ func (uc *UseCase) processing(ctx context.Context, msg dto.Message) error {
 		Class:      "unknown",
 		FileName:   path.Base(taskEvent.FilePath),
 		FilePath:   taskEvent.FilePath,
-		FileSize:   uint64(fileData.Len()),
+		FileSize:   fileData.Len(),
 		CreatedAt:  taskEvent.CreatedAt,
 		ModifiedAt: taskEvent.ModifiedAt,
 		Tokens:     *tokensRes,
 	}
 
-	if err = uc.storage.Store(taskEvent.Bucket, doc); err != nil {
-		return fmt.Errorf("failed to store doc %s: %v", doc.FileName, err)
+	if err = uc.storage.Store(ctx, taskEvent.Bucket, doc); err != nil {
+		return fmt.Errorf("failed to store doc %s: %w", doc.FileName, err)
 	}
 
 	return nil
