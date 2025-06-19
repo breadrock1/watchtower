@@ -8,6 +8,8 @@ services:
     ports:
       - '9000:9000'
       - '9001:9001'
+    volumes:
+      - ./minio-data:/data
     environment:
       MINIO_ROOT_USER: 'minio-root'
       MINIO_ROOT_PASSWORD: 'minio-root'
@@ -16,7 +18,9 @@ services:
     image: rabbitmq:4-management
     restart: unless-stopped
     volumes:
-      - './rabbitmq-data:/var/lib/rabbitmq'
+      - ./rabbitmq-data:/var/lib/rabbitmq
+      - ./tests/config/rmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./tests/config/rmq/definitions.json:/etc/rabbitmq/definitions.json:ro
     ports:
       - '5552:5552'
       - '5672:5672'
@@ -32,4 +36,4 @@ services:
     ports:
       - '6379:6379'
     volumes:
-      - './redis-data:/data'
+      - ./redis-data:/data

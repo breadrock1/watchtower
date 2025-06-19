@@ -1,9 +1,9 @@
-name: Create package release
+name: Create release package
 
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
     paths:
       - 'src/**'
       - '.github/workflows/create-package.yaml'
