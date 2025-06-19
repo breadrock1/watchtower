@@ -2,9 +2,10 @@ name: Pull-Request
 
 on:
   push:
-    branches: [ "master" ]
-  pull_request_target:
-    types: [ assigned, opened, synchronize ]
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -16,7 +17,7 @@ jobs:
         with:
           go-version: '1.24'
       - name: Build
-        run: go build -v -o ./bin/watchtower ./cmd/watchtower
+        run: go build -v -o ./bin/watchtower ./cmd/watchtower/watchtower.go
 
   lint:
     runs-on: ubuntu-latest
