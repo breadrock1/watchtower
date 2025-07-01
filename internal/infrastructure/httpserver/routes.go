@@ -111,7 +111,7 @@ func (s *Server) FetchDocumentsByStatus(eCtx echo.Context) error {
 	foundedTasks := make([]*dto.TaskEvent, 0)
 	inputTaskStatus := mapping.TaskStatusFromString(jsonForm.Status)
 	for _, task := range tasks {
-		if task.Status == mapping.TaskStatusToInt(inputTaskStatus) {
+		if task.Status == inputTaskStatus {
 			foundedTasks = append(foundedTasks, task)
 		}
 	}

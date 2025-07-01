@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log"
 	"path"
+
 	"watchtower/internal/application/dto"
-	"watchtower/internal/application/mapping"
 	"watchtower/internal/application/services/doc-storage"
 	"watchtower/internal/application/services/recognizer"
 	"watchtower/internal/application/services/task-manager"
@@ -14,7 +14,6 @@ import (
 	"watchtower/internal/application/services/tokenizer"
 	"watchtower/internal/application/services/watcher"
 	"watchtower/internal/application/utils"
-	"watchtower/internal/domain/core/structures"
 )
 
 const EmptyMessage = ""
@@ -61,17 +60,17 @@ func (uc *UseCase) LaunchProcessing(ctx context.Context) {
 		for {
 			select {
 			case taskEvent := <-uc.watcherCh:
-				status, msg := domain.Pending, EmptyMessage
+				status, msg := dto.Pending, EmptyMessage
 				if err := uc.publishToQueue(ctx, taskEvent); err != nil {
-					status, msg = domain.Failed, err.Error()
+					status, msg = dto.Failed, err.Error()
 					log.Printf("failed to pulish task to queue: %v", err)
 				}
 
 				uc.updateTaskStatus(ctx, &taskEvent, status, msg)
 			case cMsg := <-uc.consumerCh:
-				status, msg := domain.Successful, EmptyMessage
-				if err := uc.processing(ctx, cMsg); err != nil {
-					status, msg = domain.Failed, err.Error()
+				status, msg := dto.Successful, EmptyMessage
+				if err := uc.Processing(ctx, cMsg); err != nil {
+					status, msg = dto.Failed, err.Error()
 					log.Printf("failed while processing file: %v", err)
 				}
 
@@ -89,17 +88,52 @@ func (uc *UseCase) publishToQueue(ctx context.Context, taskEvent dto.TaskEvent) 
 	return uc.queue.Publish(ctx, msg)
 }
 
-func (uc *UseCase) updateTaskStatus(ctx context.Context, task *dto.TaskEvent, status domain.TaskStatus, msg string) {
-	task.Status, task.StatusText = mapping.TaskStatusToInt(status), msg
+func (uc *UseCase) updateTaskStatus(ctx context.Context, task *dto.TaskEvent, status dto.TaskStatus, msg string) {
+	task.Status, task.StatusText = status, msg
 	if err := uc.cacher.Push(ctx, task); err != nil {
 		log.Printf("failed to store task to cache: %v", err)
 	}
 }
 
-func (uc *UseCase) processing(ctx context.Context, msg dto.Message) error {
+func (uc *UseCase) Processing(ctx context.Context, msg dto.Message) error {
 	taskEvent := msg.Body
-	uc.updateTaskStatus(ctx, &taskEvent, domain.Processing, EmptyMessage)
+	uc.updateTaskStatus(ctx, &taskEvent, dto.Processing, EmptyMessage)
 
+	var callback func(ctx context.Context, task dto.TaskEvent) error
+	switch taskEvent.EventType {
+	case dto.CreateFile:
+		callback = uc.processFile
+
+	case dto.CreateBucket:
+		callback = uc.createBucket
+
+	case dto.DeleteBucket:
+		callback = uc.deleteBucket
+	default:
+		return fmt.Errorf("unknown task event type: %v", taskEvent.EventType)
+	}
+
+	err := callback(ctx, taskEvent)
+	return err
+}
+
+func (uc *UseCase) createBucket(ctx context.Context, taskEvent dto.TaskEvent) error {
+	err := uc.storage.CreateIndex(ctx, taskEvent.Bucket)
+	if err != nil {
+		return fmt.Errorf("failed to create index: %v", err)
+	}
+	return nil
+}
+
+func (uc *UseCase) deleteBucket(ctx context.Context, taskEvent dto.TaskEvent) error {
+	err := uc.storage.DeleteIndex(ctx, taskEvent.Bucket)
+	if err != nil {
+		return fmt.Errorf("failed to delete index: %v", err)
+	}
+	return nil
+}
+
+func (uc *UseCase) processFile(ctx context.Context, taskEvent dto.TaskEvent) error {
 	fileData, err := uc.watcher.DownloadFile(ctx, taskEvent.Bucket, taskEvent.FilePath)
 	if err != nil {
 		return fmt.Errorf("failed to download file: %w", err)
@@ -138,7 +172,7 @@ func (uc *UseCase) processing(ctx context.Context, msg dto.Message) error {
 		Tokens:     *tokensRes,
 	}
 
-	if err = uc.storage.Store(ctx, taskEvent.Bucket, doc); err != nil {
+	if err = uc.storage.StoreDocument(ctx, taskEvent.Bucket, doc); err != nil {
 		return fmt.Errorf("failed to store doc %s: %w", doc.FileName, err)
 	}
 

@@ -26,7 +26,7 @@ func New(config *Config) *DocSearcherClient {
 	}
 }
 
-func (dsc *DocSearcherClient) Store(ctx context.Context, folder string, doc *dto.StorageDocument) error {
+func (dsc *DocSearcherClient) StoreDocument(ctx context.Context, folder string, doc *dto.StorageDocument) error {
 	if err := dsc.storeDocument(ctx, folder, doc); err != nil {
 		return fmt.Errorf("failed to store document: %w", err)
 	}
@@ -92,5 +92,21 @@ func (dsc *DocSearcherClient) storeTokens(ctx context.Context, folder string, do
 		return fmt.Errorf("failed to store vectors to storage: %w", err)
 	}
 
+	return nil
+}
+
+func (dsc *DocSearcherClient) UpdateDocument(ctx context.Context, folder string, document *dto.StorageDocument) error {
+	return nil
+}
+
+func (dsc *DocSearcherClient) DeleteDocument(ctx context.Context, folder string, id string) error {
+	return nil
+}
+
+func (dsc *DocSearcherClient) CreateIndex(ctx context.Context, folder string) error {
+	return nil
+}
+
+func (dsc *DocSearcherClient) DeleteIndex(ctx context.Context, folder string) error {
 	return nil
 }

@@ -19,7 +19,7 @@ func NewMockDocSearcherClient() *MockDocSearcherClient {
 	}
 }
 
-func (dsc *MockDocSearcherClient) Store(_ context.Context, _ string, doc *dto.StorageDocument) error {
+func (dsc *MockDocSearcherClient) StoreDocument(_ context.Context, _ string, doc *dto.StorageDocument) error {
 	dsc.mu.Lock()
 	defer dsc.mu.Unlock()
 	dsc.storage[doc.ID] = doc

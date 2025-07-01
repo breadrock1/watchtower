@@ -28,27 +28,27 @@ func FromTokens(tokens *domain.Tokens) dto.ComputedTokens {
 	}
 }
 
-func TaskStatusFromString(enumVal string) domain.TaskStatus {
+func TaskStatusFromString(enumVal string) dto.TaskStatus {
 	switch enumVal {
 	case "received":
-		return domain.Received
+		return dto.Received
 	case "pending":
-		return domain.Pending
+		return dto.Pending
 	case "processing":
-		return domain.Processing
+		return dto.Processing
 	case "successful":
-		return domain.Successful
+		return dto.Successful
 	case "failed":
-		return domain.Failed
+		return dto.Failed
 	default:
-		return domain.Pending
+		return dto.Pending
 	}
 }
 
-func TaskStatusToInt(ts domain.TaskStatus) int {
+func TaskStatusToInt(ts dto.TaskStatus) int {
 	return int(ts)
 }
 
-func TaskStatusFromInt(enum int) domain.TaskStatus {
-	return domain.TaskStatus(enum)
+func TaskStatusFromInt(enum int) dto.TaskStatus {
+	return dto.TaskStatus(enum)
 }

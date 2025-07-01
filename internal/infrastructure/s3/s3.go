@@ -18,8 +18,13 @@ import (
 var (
 	suffix       = ""
 	eventsFilter = []string{
-		"s3:ObjectCreated:*",
-		"s3:ObjectRemoved:*",
+		"s3:ObjectCreated:Post",
+		"s3:ObjectCreated:Put",
+		// TODO: Implement this operations
+		//"s3:ObjectCreated:Copy",
+		//"s3:ObjectRemoved:Delete",
+		"s3:BucketCreated:*",
+		"s3:BucketRemoved:*",
 	}
 )
 
@@ -134,21 +139,49 @@ func (s *S3Client) startBucketListener(dir dto.Directory) error {
 	}()
 
 	for event := range s.mc.ListenBucketNotification(ctx, dir.Bucket, dir.Path, suffix, eventsFilter) {
-		if event.Err == nil {
-			for _, record := range event.Records {
-				s3Object := record.S3
-				bucketName := s3Object.Bucket.Name
-				s.eventsCh <- dto.TaskEvent{
-					Id:         uuid.New(),
-					Bucket:     bucketName,
-					FilePath:   s3Object.Object.Key,
-					FileSize:   s3Object.Object.Size,
-					CreatedAt:  time.Now(),
-					ModifiedAt: time.Now(),
-					Status:     0,
-				}
+		if event.Err != nil {
+			log.Printf("caughet error event: %v", event.Err)
+			continue
+		}
+
+		var eventType dto.EventType
+		for _, record := range event.Records {
+			switch record.EventName {
+			case "s3:ObjectCreated:Put":
+				eventType = dto.CreateFile
+
+			case "s3:ObjectCreated:Post":
+				eventType = dto.CreateFile
+
+			case "s3:ObjectCreated:Copy":
+				eventType = dto.CopyFile
+
+			case "s3:ObjectRemoved:Delete":
+				eventType = dto.DeleteFile
+
+			case "s3:BucketCreated:*":
+				eventType = dto.CreateBucket
+
+			case "s3:BucketRemoved:*":
+				eventType = dto.DeleteBucket
+			}
+
+			log.Printf("[%s]: s3 %s event type: %v", dir.Bucket, record.EventName, eventType)
+
+			s3Object := record.S3
+			bucketName := s3Object.Bucket.Name
+			s.eventsCh <- dto.TaskEvent{
+				Id:         uuid.New(),
+				Bucket:     bucketName,
+				FilePath:   s3Object.Object.Key,
+				FileSize:   s3Object.Object.Size,
+				CreatedAt:  time.Now(),
+				ModifiedAt: time.Now(),
+				Status:     dto.Pending,
+				EventType:  eventType,
 			}
 		}
+
 	}
 
 	return nil
