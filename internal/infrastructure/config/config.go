@@ -48,7 +48,7 @@ type TokenizerConfig struct {
 }
 
 type CloudConfig struct {
-	Minio s3.Config `mapstructure:"minio"`
+	Minio s3.Config `mapstructure:"s3"`
 }
 
 type QueueConfig struct {
@@ -69,60 +69,70 @@ func FromFile(filePath string) (*Config, error) {
 	config := &Config{}
 
 	viperInstance := viper.New()
-	viperInstance.SetConfigFile(filePath)
-	viperInstance.SetConfigType("toml")
+	//viperInstance.SetConfigFile(filePath)
+	//viperInstance.SetConfigType("toml")
 
-	viperInstance.SetEnvKeyReplacer(strings.NewReplacer(".", "__"))
 	viperInstance.AutomaticEnv()
+	viperInstance.SetEnvPrefix("watchtower")
+	viperInstance.SetEnvKeyReplacer(strings.NewReplacer(".", "__"))
 
-	err := viperInstance.BindEnv(
-		"server.http.address",
-		"server.http.logger.level",
-		"server.http.logger.enableloki",
-		"server.http.logger.address",
+	// Http server config
+	err := viperInstance.BindEnv("server.http.address", "WATCHTOWER__SERVER__HTTP__ADDRESS")
+	err = viperInstance.BindEnv("server.http.logger.level", "WATCHTOWER__SERVER__HTTP__LOGGER__LEVEL")
+	err = viperInstance.BindEnv("server.http.logger.address", "WATCHTOWER__SERVER__HTTP__LOGGER__ADDRESS")
+	err = viperInstance.BindEnv("server.http.logger.enable_loki", "WATCHTOWER__SERVER__HTTP__LOGGER__ENABLE_LOKI")
 
-		"ocr.dedoc.address",
-		"ocr.dedoc.timeout",
-		"ocr.dedoc.enable_ssl",
+	// OCR config
+	err = viperInstance.BindEnv("ocr.dedoc.address", "WATCHTOWER__OCR__DEDOC__ADDRESS")
+	err = viperInstance.BindEnv("ocr.dedoc.timeout", "WATCHTOWER__OCR__DEDOC__TIMEOUT")
 
-		"storage.doc_searcher.address",
-		"storage.doc_searcher.enable_ssl",
+	// Storage doc-searcher config
+	err = viperInstance.BindEnv("storage.docsearcher.address", "WATCHTOWER__STORAGE__DOC_SEARCHER__ADDRESS")
 
-		"cacher.redis.address",
-		"cacher.redis.username",
-		"cacher.redis.password",
-		"cacher.redis.expired",
+	// Pg watched dirs config
+	err = viperInstance.BindEnv("watcher.storage.pg.host", "WATCHTOWER__WATCHER__STORAGE__PG__HOST")
+	err = viperInstance.BindEnv("watcher.storage.pg.port", "WATCHTOWER__WATCHER__STORAGE__PG__PORT")
+	err = viperInstance.BindEnv("watcher.storage.pg.username", "WATCHTOWER__WATCHER__STORAGE__PG__USER")
+	err = viperInstance.BindEnv("watcher.storage.pg.password", "WATCHTOWER__WATCHER__STORAGE__PG__PASSWORD")
+	err = viperInstance.BindEnv("watcher.storage.pg.dbname", "WATCHTOWER__WATCHER__STORAGE__PG__DBNAME")
+	err = viperInstance.BindEnv("watcher.storage.pg.ssl_mode", "WATCHTOWER__WATCHER__STORAGE__PG__SSL_MODE")
 
-		"queue.rmq.address",
-		"queue.rmq.exchange",
-		"queue.rmq.routing_key",
-		"queue.rmq.queue_name",
+	// Cache redis config
+	err = viperInstance.BindEnv("cacher.redis.address", "WATCHTOWER__CACHER__REDIS__ADDRESS")
+	err = viperInstance.BindEnv("cacher.redis.username", "WATCHTOWER__CACHER__REDIS__USERNAME")
+	err = viperInstance.BindEnv("cacher.redis.password", "WATCHTOWER__CACHER__REDIS__PASSWORD")
+	err = viperInstance.BindEnv("cacher.redis.expired", "WATCHTOWER__CACHER__REDIS__EXPIRED")
 
-		"cloud.minio.address",
-		"cloud.minio.access_id",
-		"cloud.minio.secret_key",
-		"cloud.minio.enable_ssl",
-		"cloud.minio.token",
+	// Queue emq config
+	err = viperInstance.BindEnv("queue.rmq.address", "WATCHTOWER__QUEUE__RMQ__ADDRESS")
+	err = viperInstance.BindEnv("queue.rmq.exchange", "WATCHTOWER__QUEUE__RMQ__EXCHANGE")
+	err = viperInstance.BindEnv("queue.rmq.routing_key", "WATCHTOWER__QUEUE__RMQ__ROUTING_KEY")
+	err = viperInstance.BindEnv("queue.rmq.queue", "WATCHTOWER__QUEUE__RMQ__QUEUE")
 
-		"tokenizer.vectorizer.address",
-		"tokenizer.vectorizer.enable_ssl",
-		"tokenizer.vectorizer.chunk_size",
-		"tokenizer.vectorizer.chunk_overlap",
-		"tokenizer.vectorizer.return_chunks",
-		"tokenizer.vectorizer.chunks_by_self",
+	// MinIO config
+	err = viperInstance.BindEnv("cloud.s3.address", "WATCHTOWER__CLOUD__S3__ADDRESS")
+	err = viperInstance.BindEnv("cloud.s3.access_id", "WATCHTOWER__CLOUD__S3__ACCESS_ID")
+	err = viperInstance.BindEnv("cloud.s3.secret_key", "WATCHTOWER__CLOUD__S3__SECRET_KEY")
+	err = viperInstance.BindEnv("cloud.s3.enable_ssl", "WATCHTOWER__CLOUD__S3__ENABLE_SSL")
+	err = viperInstance.BindEnv("cloud.s3.token", "WATCHTOWER__CLOUD__S3__TOKEN")
+	err = viperInstance.BindEnv("cloud.s3.watched_dirs", "WATCHTOWER__CLOUD__S3__WATCHED_DIRS")
 
-		"watcher.storage.pg",
-	)
+	// Embeddings config
+	err = viperInstance.BindEnv("tokenizer.vectorizer.address", "WATCHTOWER__TOKENIZER__VECTORIZER__ADDRESS")
+	err = viperInstance.BindEnv("tokenizer.vectorizer.chunk_size", "WATCHTOWER__TOKENIZER__VECTORIZER__CHUNK_SIZE")
+	err = viperInstance.BindEnv("tokenizer.vectorizer.chunk_overlap", "WATCHTOWER__TOKENIZER__VECTORIZER__CHUNK_OVERLAP")
+	err = viperInstance.BindEnv("tokenizer.vectorizer.return_chunks", "WATCHTOWER__TOKENIZER__VECTORIZER__RETURN_CHUNKS")
+	err = viperInstance.BindEnv("tokenizer.vectorizer.chunks_by_self", "WATCHTOWER__TOKENIZER__VECTORIZER__CHUNKS_BY_SELF")
 
 	if err != nil {
 		confErr := fmt.Errorf("failed while binding env vars: %w", err)
 		return config, confErr
 	}
 
-	if err := viperInstance.ReadInConfig(); err != nil {
-		confErr := fmt.Errorf("failed while reading config file %s: %w", filePath, err)
-		return config, confErr
-	}
+	//if err := viperInstance.ReadInConfig(); err != nil {
+	//	confErr := fmt.Errorf("failed while reading config file %s: %w", filePath, err)
+	//	return config, confErr
+	//}
 
 	if err := viperInstance.Unmarshal(config); err != nil {
 		confErr := fmt.Errorf("failed while unmarshaling config file %s: %w", filePath, err)

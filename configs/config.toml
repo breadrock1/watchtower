@@ -3,17 +3,15 @@ address="0.0.0.0:2893"
 
 [server.http.logger]
 level="info"
-enable_loki=false
+enable_loki=true
 address="loki:3100"
 
 [ocr.dedoc]
-address="dedoc:8004"
-enable_ssl=false
+address="http://dedoc:8004"
 timeout=300
 
 [storage.docsearcher]
-address="doc-searcher:2892"
-enable_ssl=false
+address="http://doc-searcher:2892"
 
 [watcher.storage.pg]
 host = "localhost"
@@ -33,18 +31,20 @@ expired=3600
 address="amqp://localhost:5672"
 exchange="watchtower"
 routing_key="task"
-queue_name="watchtower-tasks"
+queue="watchtower-tasks"
 
-[cloud.minio]
+[cloud.s3]
 address="cloud-storage:9000"
 access_id="minio-root"
 secret_key="minio-root"
 enable_ssl=false
 token=""
+watched_dirs=[
+    "common-folder"
+]
 
 [tokenizer.vectorizer]
-address="vectorizer:8001"
-enable_ssl=false
+address="http://vectorizer:8001"
 chunk_size=800
 chunk_overlap=100
 return_chunks=false
