@@ -25,3 +25,10 @@ type IFileStorage interface {
 	UploadFile(ctx context.Context, bucket, filePath string, data *bytes.Buffer) error
 	DownloadFile(ctx context.Context, bucket, filePath string) (bytes.Buffer, error)
 }
+
+type IConfigStorage interface {
+	LoadAllWatcherDirs(ctx context.Context) ([]dto.Directory, error)
+	StoreWatcherDir(ctx context.Context, dir dto.Directory) error
+	DeleteWatcherDir(ctx context.Context, bucket, filePath string) error
+	DeleteAllWatcherDirs(ctx context.Context) error
+}

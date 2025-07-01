@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"path"
-
 	"watchtower/internal/application/dto"
 	"watchtower/internal/application/mapping"
 	"watchtower/internal/application/services/doc-storage"
@@ -24,12 +23,13 @@ type UseCase struct {
 	watcherCh  <-chan dto.TaskEvent
 	consumerCh <-chan dto.Message
 
-	queue      task_queue.ITaskQueue
-	cacher     task_manager.ITaskManager
-	watcher    watcher.IWatcher
-	recognizer recognizer.IRecognizer
-	tokenizer  tokenizer.ITokenizer
-	storage    doc_storage.IDocumentStorage
+	queue        task_queue.ITaskQueue
+	cacher       task_manager.ITaskManager
+	watcher      watcher.IWatcher
+	recognizer   recognizer.IRecognizer
+	tokenizer    tokenizer.ITokenizer
+	storage      doc_storage.IDocumentStorage
+	watchStorage watcher.IConfigStorage
 }
 
 func New(
@@ -41,16 +41,18 @@ func New(
 	recognizer recognizer.IRecognizer,
 	tokenizer tokenizer.ITokenizer,
 	storage doc_storage.IDocumentStorage,
+	watchStorage watcher.IConfigStorage,
 ) *UseCase {
 	return &UseCase{
-		watcherCh:  watcherCh,
-		consumerCh: consumerCh,
-		queue:      queue,
-		cacher:     cacher,
-		watcher:    watcher,
-		recognizer: recognizer,
-		tokenizer:  tokenizer,
-		storage:    storage,
+		watcherCh:    watcherCh,
+		consumerCh:   consumerCh,
+		queue:        queue,
+		cacher:       cacher,
+		watcher:      watcher,
+		recognizer:   recognizer,
+		tokenizer:    tokenizer,
+		storage:      storage,
+		watchStorage: watchStorage,
 	}
 }
 
@@ -141,4 +143,32 @@ func (uc *UseCase) processing(ctx context.Context, msg dto.Message) error {
 	}
 
 	return nil
+}
+
+func (uc *UseCase) LoadAndLaunchWatchedDirs(ctx context.Context) {
+	dirs, err := uc.watchStorage.LoadAllWatcherDirs(ctx)
+	if err != nil {
+		log.Printf("failed to load all watcher dirs: %v", err)
+	}
+
+	for _, dir := range dirs {
+		err = uc.watcher.AttachWatchedDir(ctx, dir)
+		if err != nil {
+			log.Printf("failed to attach watcher dir %s: %v", dir, err)
+		}
+	}
+}
+
+func (uc *UseCase) StoreWatchedDirs(ctx context.Context) {
+	dirs, err := uc.watcher.GetWatchedDirs(ctx)
+	if err != nil {
+		log.Printf("failed to get all watcher dirs: %v", err)
+	}
+
+	for _, dir := range dirs {
+		err = uc.watchStorage.StoreWatcherDir(ctx, dir)
+		if err != nil {
+			log.Printf("failed to store watcher dir %s: %v", dir, err)
+		}
+	}
 }
