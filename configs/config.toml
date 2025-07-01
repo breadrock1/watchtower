@@ -15,6 +15,14 @@ timeout=300
 address="doc-searcher:2892"
 enable_ssl=false
 
+[watcher.storage.pg]
+host = "localhost"
+port = 5432
+user = "postgres"
+password = "postgres"
+dbname   = "watchtower"
+ssl_mode   = "disable"
+
 [cacher.redis]
 address="redis:6379"
 username="redis"
@@ -22,8 +30,8 @@ password="redis"
 expired=3600
 
 [queue.rmq]
-address="amqp://rabbitmq:5672"
-exchange="watchtowerr"
+address="amqp://localhost:5672"
+exchange="watchtower"
 routing_key="task"
 queue_name="watchtower-tasks"
 

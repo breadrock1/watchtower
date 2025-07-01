@@ -15,6 +15,14 @@ timeout=300
 address="localhost:2892"
 enable_ssl=false
 
+[storage.pg]
+host = "localhost"
+port = 5432
+user = "postgres"
+password = "postgres"
+dbname   = "watchtower"
+ssl_mode   = "disable"
+
 [cacher.redis]
 address="localhost:6379"
 username="redis"

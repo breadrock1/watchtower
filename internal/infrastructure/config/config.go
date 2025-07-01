@@ -9,6 +9,7 @@ import (
 	"watchtower/internal/infrastructure/dedoc"
 	"watchtower/internal/infrastructure/doc-searcher"
 	"watchtower/internal/infrastructure/httpserver"
+	"watchtower/internal/infrastructure/pg"
 	"watchtower/internal/infrastructure/redis"
 	"watchtower/internal/infrastructure/rmq"
 	"watchtower/internal/infrastructure/s3"
@@ -23,6 +24,7 @@ type Config struct {
 	Tokenizer TokenizerConfig `mapstructure:"tokenizer"`
 	Cloud     CloudConfig     `mapstructure:"cloud"`
 	Queue     QueueConfig     `mapstructure:"queue"`
+	Watcher   WatcherConfig   `mapstructure:"watcher"`
 }
 
 type OcrConfig struct {
@@ -51,6 +53,14 @@ type CloudConfig struct {
 
 type QueueConfig struct {
 	Rmq rmq.Config `mapstructure:"rmq"`
+}
+
+type WatcherConfig struct {
+	Storage WatcherStorageConfig `mapstructure:"storage"`
+}
+
+type WatcherStorageConfig struct {
+	Pg pg.Config `mapstructure:"pg"`
 }
 
 func FromFile(filePath string) (*Config, error) {
@@ -100,6 +110,8 @@ func FromFile(filePath string) (*Config, error) {
 		"tokenizer.vectorizer.chunk_overlap",
 		"tokenizer.vectorizer.return_chunks",
 		"tokenizer.vectorizer.chunks_by_self",
+
+		"watcher.storage.pg",
 	)
 
 	if err != nil {
