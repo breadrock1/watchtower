@@ -32,6 +32,7 @@ func TestProcessing(t *testing.T) {
 	servConfig, initErr := config.FromFile(TestConfigFilePath)
 	assert.NoError(t, initErr, "failed to load testing config")
 
+	pgServ := &mocks.MockPgClient{}
 	dedocServ := &mocks.MockDedocClient{}
 	vectorizerServ := &mocks.MockVectorizerClient{}
 
@@ -61,6 +62,7 @@ func TestProcessing(t *testing.T) {
 			dedocServ,
 			vectorizerServ,
 			searcherServ,
+			pgServ,
 		)
 		useCase.LaunchProcessing(cCtx)
 
@@ -101,6 +103,7 @@ func TestProcessing(t *testing.T) {
 			dedocServ,
 			vectorizerServ,
 			searcherServ,
+			pgServ,
 		)
 		useCase.LaunchProcessing(cCtx)
 

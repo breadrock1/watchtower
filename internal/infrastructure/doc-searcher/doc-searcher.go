@@ -99,7 +99,7 @@ func (dsc *DocSearcherClient) UpdateDocument(ctx context.Context, folder string,
 	return nil
 }
 
-func (dsc *DocSearcherClient) DeleteDocument(ctx context.Context, folder string, id string) error {
+func (dsc *DocSearcherClient) DeleteDocument(ctx context.Context, folder, id string) error {
 	return nil
 }
 

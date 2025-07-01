@@ -40,3 +40,19 @@ func (dsc *MockDocSearcherClient) GetDocuments() []*dto.StorageDocument {
 	}
 	return docs
 }
+
+func (dsc *MockDocSearcherClient) UpdateDocument(_ context.Context, _ string, _ *dto.StorageDocument) error {
+	return nil
+}
+
+func (dsc *MockDocSearcherClient) DeleteDocument(_ context.Context, _, _ string) error {
+	return nil
+}
+
+func (dsc *MockDocSearcherClient) CreateIndex(_ context.Context, _ string) error {
+	return nil
+}
+
+func (dsc *MockDocSearcherClient) DeleteIndex(_ context.Context, _ string) error {
+	return nil
+}
