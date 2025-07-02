@@ -3,7 +3,6 @@ package s3
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"sync"
@@ -17,12 +16,12 @@ import (
 
 var (
 	suffix       = ""
+	prefix       = ""
 	eventsFilter = []string{
 		"s3:ObjectCreated:Post",
 		"s3:ObjectCreated:Put",
-		// TODO: Implement this operations
-		//"s3:ObjectCreated:Copy",
-		//"s3:ObjectRemoved:Delete",
+		"s3:ObjectCreated:Copy",
+		"s3:ObjectRemoved:Delete",
 		"s3:BucketCreated:*",
 		"s3:BucketRemoved:*",
 	}
@@ -59,86 +58,55 @@ func (s *S3Client) GetEventsChannel() chan dto.TaskEvent {
 	return s.eventsCh
 }
 
-func (s *S3Client) GetWatchedDirs(ctx context.Context) ([]dto.Directory, error) {
-	buckets, err := s.mc.ListBuckets(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get list buskets: %w", err)
-	}
+func (s *S3Client) GetWatchedDirs(_ context.Context) ([]dto.Directory, error) {
+	var watchedDirs []dto.Directory
+	s.bindBuckets.Range(func(k, v interface{}) bool {
+		dir := v.(dto.Directory)
+		watchedDirs = append(watchedDirs, dir)
+		return true
+	})
 
-	directories := make([]dto.Directory, len(buckets))
-	for index, info := range buckets {
-		directories[index] = dto.Directory{
-			Bucket:    info.Name,
-			Path:      "/",
-			CreatedAt: info.CreationDate,
-		}
-	}
-
-	return directories, nil
+	return watchedDirs, nil
 }
 
 func (s *S3Client) AttachWatchedDir(_ context.Context, dir dto.Directory) error {
-	_, ok := s.bindBuckets.Load(dir)
-	if ok {
-		return fmt.Errorf("directory already attached: %s", dir.Path)
-	}
-
-	go func() {
-		err := s.startBucketListener(dir)
-		if err != nil {
-			log.Printf("failed to start bucket listener: %v", err)
-		}
-	}()
-
+	s.bindBuckets.Store(dir.Bucket, dir)
 	return nil
 }
 
 func (s *S3Client) DetachWatchedDir(_ context.Context, path string) error {
-	ch, ok := s.bindBuckets.Load(path)
-	if !ok {
-		return errors.New("there is no such bucket to detach")
-	}
-
-	cancel := ch.(context.CancelFunc)
-	cancel()
-
+	s.bindBuckets.Delete(path)
 	return nil
 }
 
 func (s *S3Client) LaunchWatcher(ctx context.Context, dirs []dto.Directory) error {
-	var err error
 	for _, dir := range dirs {
-		go func() {
-			if err = s.startBucketListener(dir); err != nil {
-				log.Printf("failed to start bucket listener for %s: %v", dir.Bucket, err)
-			}
-
-			<-ctx.Done()
-			if err = s.TerminateWatcher(ctx); err != nil {
-				log.Printf("failed to terminate s3 watchers: %v", err)
-			}
-		}()
+		err := s.AttachWatchedDir(ctx, dir)
+		if err != nil {
+			log.Printf("failed to launch watcher for directory %s: %v", dir.Bucket, err)
+		}
 	}
+
+	go func() {
+		if err := s.startBucketListener(ctx); err != nil {
+			log.Printf("failed to start bucket listener: %v", err)
+		}
+
+		<-ctx.Done()
+		if err := s.TerminateWatcher(ctx); err != nil {
+			log.Printf("failed to terminate s3 watchers: %v", err)
+		}
+	}()
 
 	return nil
 }
 
 func (s *S3Client) TerminateWatcher(_ context.Context) error {
-	s.bindBuckets.Range(func(_, value interface{}) bool {
-		value.(context.CancelFunc)()
-		return true
-	})
 	return nil
 }
 
-func (s *S3Client) startBucketListener(dir dto.Directory) error {
-	ctx, cancel := context.WithCancel(context.Background())
-	s.bindBuckets.Store(dir, cancel)
-	defer func() {
-		s.bindBuckets.Delete(dir)
-	}()
-
-	for event := range s.mc.ListenBucketNotification(ctx, dir.Bucket, dir.Path, suffix, eventsFilter) {
+func (s *S3Client) startBucketListener(ctx context.Context) error {
+	for event := range s.mc.ListenNotification(ctx, prefix, suffix, eventsFilter) {
 		if event.Err != nil {
 			log.Printf("caughet error event: %v", event.Err)
 			continue
@@ -146,30 +114,49 @@ func (s *S3Client) startBucketListener(dir dto.Directory) error {
 
 		var eventType dto.EventType
 		for _, record := range event.Records {
+			s3Object := record.S3
+			bucketName := s3Object.Bucket.Name
+
+			_, ok := s.bindBuckets.Load(bucketName)
+
 			switch record.EventName {
-			case "s3:ObjectCreated:Put":
-				eventType = dto.CreateFile
-
-			case "s3:ObjectCreated:Post":
-				eventType = dto.CreateFile
-
-			case "s3:ObjectCreated:Copy":
-				eventType = dto.CopyFile
-
-			case "s3:ObjectRemoved:Delete":
-				eventType = dto.DeleteFile
-
 			case "s3:BucketCreated:*":
 				eventType = dto.CreateBucket
 
 			case "s3:BucketRemoved:*":
 				eventType = dto.DeleteBucket
+
+			case "s3:ObjectCreated:Put":
+				if !ok {
+					continue
+				}
+				eventType = dto.CreateFile
+
+			case "s3:ObjectCreated:Post":
+				if !ok {
+					continue
+				}
+				eventType = dto.CreateFile
+
+			case "s3:ObjectCreated:Copy":
+				if !ok {
+					continue
+				}
+				eventType = dto.CopyFile
+
+			case "s3:ObjectRemoved:Delete":
+				if !ok {
+					continue
+				}
+				eventType = dto.DeleteFile
+
+			default:
+				log.Printf("unknown event: %v", record.EventName)
+				continue
 			}
 
-			log.Printf("[%s]: s3 %s event type: %v", dir.Bucket, record.EventName, eventType)
+			log.Printf("[%s]: s3 event type: %s", bucketName, record.EventName)
 
-			s3Object := record.S3
-			bucketName := s3Object.Bucket.Name
 			s.eventsCh <- dto.TaskEvent{
 				Id:         uuid.New(),
 				Bucket:     bucketName,
