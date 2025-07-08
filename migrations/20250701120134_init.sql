@@ -10,5 +10,5 @@ CREATE TABLE IF NOT EXISTS watched_directories(
 
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE IF EXISTS watcher_directories;
+DROP TABLE IF EXISTS watched_directories;
 -- +goose StatementEnd
