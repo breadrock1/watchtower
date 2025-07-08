@@ -5,7 +5,6 @@ import "time"
 type StorageDocument struct {
 	Content    string         `json:"content"`
 	SSDEEP     string         `json:"ssdeep"`
-	ID         string         `json:"id"`
 	Class      string         `json:"class"`
 	FileName   string         `json:"file_name"`
 	FilePath   string         `json:"file_path"`

@@ -9,7 +9,6 @@ func FromDocument(doc *domain.Document) dto.StorageDocument {
 	return dto.StorageDocument{
 		Content:    doc.Content,
 		SSDEEP:     doc.SSDEEP,
-		ID:         doc.ID,
 		Class:      doc.Class,
 		FileName:   doc.FileName,
 		FilePath:   doc.FilePath,

@@ -34,10 +34,10 @@ func (dsc *DocSearcherClient) StoreDocument(ctx context.Context, folder string, 
 
 	buildURL := strings.Builder{}
 	buildURL.WriteString(dsc.config.Address)
-	buildURL.WriteString(fmt.Sprintf("/storage/%s/%s", folder, doc.ID))
+	buildURL.WriteString(fmt.Sprintf("/storage/%s/create", folder))
 	targetURL := buildURL.String()
 
-	log.Printf("storing document %s to index %s", doc.ID, folder)
+	log.Printf("storing document to index %s", folder)
 
 	reqBody := bytes.NewBuffer(jsonData)
 	timeoutReq := time.Duration(300) * time.Second

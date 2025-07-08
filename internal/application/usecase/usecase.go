@@ -162,7 +162,6 @@ func (uc *UseCase) processFile(ctx context.Context, taskEvent dto.TaskEvent) err
 	doc := &dto.StorageDocument{
 		Content:    recData.Text,
 		SSDEEP:     ssdeepHash,
-		ID:         utils.ComputeMd5(fileData.Bytes()),
 		Class:      "unknown",
 		FileName:   path.Base(taskEvent.FilePath),
 		FilePath:   taskEvent.FilePath,
