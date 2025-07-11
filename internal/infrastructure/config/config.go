@@ -13,18 +13,16 @@ import (
 	"watchtower/internal/infrastructure/redis"
 	"watchtower/internal/infrastructure/rmq"
 	"watchtower/internal/infrastructure/s3"
-	"watchtower/internal/infrastructure/vectorizer"
 )
 
 type Config struct {
-	Ocr       OcrConfig       `mapstructure:"ocr"`
-	Cacher    CacherConfig    `mapstructure:"cacher"`
-	Storage   StorageConfig   `mapstructure:"storage"`
-	Server    ServerConfig    `mapstructure:"server"`
-	Tokenizer TokenizerConfig `mapstructure:"tokenizer"`
-	Cloud     CloudConfig     `mapstructure:"cloud"`
-	Queue     QueueConfig     `mapstructure:"queue"`
-	Watcher   WatcherConfig   `mapstructure:"watcher"`
+	Ocr     OcrConfig     `mapstructure:"ocr"`
+	Cacher  CacherConfig  `mapstructure:"cacher"`
+	Storage StorageConfig `mapstructure:"storage"`
+	Server  ServerConfig  `mapstructure:"server"`
+	Cloud   CloudConfig   `mapstructure:"cloud"`
+	Queue   QueueConfig   `mapstructure:"queue"`
+	Watcher WatcherConfig `mapstructure:"watcher"`
 }
 
 type OcrConfig struct {
@@ -41,10 +39,6 @@ type StorageConfig struct {
 
 type ServerConfig struct {
 	Http httpserver.Config `mapstructure:"http"`
-}
-
-type TokenizerConfig struct {
-	Vectorizer vectorizer.Config `mapstructure:"vectorizer"`
 }
 
 type CloudConfig struct {
@@ -117,22 +111,15 @@ func FromFile(filePath string) (*Config, error) {
 	err = viperInstance.BindEnv("cloud.s3.token", "WATCHTOWER__CLOUD__S3__TOKEN")
 	err = viperInstance.BindEnv("cloud.s3.watched_dirs", "WATCHTOWER__CLOUD__S3__WATCHED_DIRS")
 
-	// Embeddings config
-	err = viperInstance.BindEnv("tokenizer.vectorizer.address", "WATCHTOWER__TOKENIZER__VECTORIZER__ADDRESS")
-	err = viperInstance.BindEnv("tokenizer.vectorizer.chunk_size", "WATCHTOWER__TOKENIZER__VECTORIZER__CHUNK_SIZE")
-	err = viperInstance.BindEnv("tokenizer.vectorizer.chunk_overlap", "WATCHTOWER__TOKENIZER__VECTORIZER__CHUNK_OVERLAP")
-	err = viperInstance.BindEnv("tokenizer.vectorizer.return_chunks", "WATCHTOWER__TOKENIZER__VECTORIZER__RETURN_CHUNKS")
-	err = viperInstance.BindEnv("tokenizer.vectorizer.chunks_by_self", "WATCHTOWER__TOKENIZER__VECTORIZER__CHUNKS_BY_SELF")
-
 	if err != nil {
 		confErr := fmt.Errorf("failed while binding env vars: %w", err)
 		return config, confErr
 	}
 
-	//if err := viperInstance.ReadInConfig(); err != nil {
-	//	confErr := fmt.Errorf("failed while reading config file %s: %w", filePath, err)
-	//	return config, confErr
-	//}
+	if err := viperInstance.ReadInConfig(); err != nil {
+		confErr := fmt.Errorf("failed while reading config file %s: %w", filePath, err)
+		return config, confErr
+	}
 
 	if err := viperInstance.Unmarshal(config); err != nil {
 		confErr := fmt.Errorf("failed while unmarshaling config file %s: %w", filePath, err)

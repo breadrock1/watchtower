@@ -7,23 +7,12 @@ import (
 
 func FromDocument(doc *domain.Document) dto.StorageDocument {
 	return dto.StorageDocument{
-		Content:    doc.Content,
-		SSDEEP:     doc.SSDEEP,
-		Class:      doc.Class,
 		FileName:   doc.FileName,
 		FilePath:   doc.FilePath,
 		FileSize:   doc.FileSize,
+		Content:    doc.Content,
 		CreatedAt:  doc.CreatedAt,
 		ModifiedAt: doc.ModifiedAt,
-		Tokens:     FromTokens(&doc.Tokens),
-	}
-}
-
-func FromTokens(tokens *domain.Tokens) dto.ComputedTokens {
-	return dto.ComputedTokens{
-		ChunksCount: tokens.ChunksCount,
-		ChunkedText: tokens.ChunkedText,
-		Vectors:     tokens.Vectors,
 	}
 }
 

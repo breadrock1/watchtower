@@ -11,9 +11,7 @@ import (
 	"watchtower/internal/application/services/recognizer"
 	"watchtower/internal/application/services/task-manager"
 	"watchtower/internal/application/services/task-queue"
-	"watchtower/internal/application/services/tokenizer"
 	"watchtower/internal/application/services/watcher"
-	"watchtower/internal/application/utils"
 )
 
 const EmptyMessage = ""
@@ -26,7 +24,6 @@ type UseCase struct {
 	cacher       task_manager.ITaskManager
 	watcher      watcher.IWatcher
 	recognizer   recognizer.IRecognizer
-	tokenizer    tokenizer.ITokenizer
 	storage      doc_storage.IDocumentStorage
 	watchStorage watcher.IConfigStorage
 }
@@ -38,7 +35,6 @@ func New(
 	cacher task_manager.ITaskManager,
 	watcher watcher.IWatcher,
 	recognizer recognizer.IRecognizer,
-	tokenizer tokenizer.ITokenizer,
 	storage doc_storage.IDocumentStorage,
 	watchStorage watcher.IConfigStorage,
 ) *UseCase {
@@ -49,7 +45,6 @@ func New(
 		cacher:       cacher,
 		watcher:      watcher,
 		recognizer:   recognizer,
-		tokenizer:    tokenizer,
 		storage:      storage,
 		watchStorage: watchStorage,
 	}
@@ -139,11 +134,6 @@ func (uc *UseCase) processFile(ctx context.Context, taskEvent dto.TaskEvent) err
 		return fmt.Errorf("failed to download file: %w", err)
 	}
 
-	ssdeepHash, err := utils.ComputeSSDEEP(fileData.Bytes())
-	if err != nil {
-		log.Printf("failed to compute SSDEEP hash: %v", err)
-	}
-
 	inputFile := dto.InputFile{
 		Name: path.Base(taskEvent.FilePath),
 		Data: fileData,
@@ -153,22 +143,13 @@ func (uc *UseCase) processFile(ctx context.Context, taskEvent dto.TaskEvent) err
 		return fmt.Errorf("failed to recognize: %w", err)
 	}
 
-	var tokensRes *dto.ComputedTokens
-	tokensRes, err = uc.tokenizer.Load(ctx, recData.Text)
-	if err != nil {
-		log.Printf("failed to load tokens: %v", err)
-	}
-
 	doc := &dto.StorageDocument{
-		Content:    recData.Text,
-		SSDEEP:     ssdeepHash,
-		Class:      "unknown",
 		FileName:   path.Base(taskEvent.FilePath),
 		FilePath:   taskEvent.FilePath,
 		FileSize:   fileData.Len(),
+		Content:    recData.Text,
 		CreatedAt:  taskEvent.CreatedAt,
 		ModifiedAt: taskEvent.ModifiedAt,
-		Tokens:     *tokensRes,
 	}
 
 	if err = uc.storage.StoreDocument(ctx, taskEvent.Bucket, doc); err != nil {

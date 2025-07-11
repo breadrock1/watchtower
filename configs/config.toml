@@ -42,10 +42,3 @@ token=""
 watched_dirs=[
     "common-folder"
 ]
-
-[tokenizer.vectorizer]
-address="http://vectorizer:8001"
-chunk_size=800
-chunk_overlap=100
-return_chunks=false
-chunks_by_self=false

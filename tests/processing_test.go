@@ -34,7 +34,6 @@ func TestProcessing(t *testing.T) {
 
 	pgServ := &mocks.MockPgClient{}
 	dedocServ := &mocks.MockDedocClient{}
-	vectorizerServ := &mocks.MockVectorizerClient{}
 
 	redisServ := redis.New(&servConfig.Cacher.Redis)
 	rmqServ, initErr := rmq.New(&servConfig.Queue.Rmq)
@@ -60,7 +59,6 @@ func TestProcessing(t *testing.T) {
 			redisServ,
 			s3Serv,
 			dedocServ,
-			vectorizerServ,
 			searcherServ,
 			pgServ,
 		)
@@ -101,7 +99,6 @@ func TestProcessing(t *testing.T) {
 			redisServ,
 			s3Serv,
 			dedocServ,
-			vectorizerServ,
 			searcherServ,
 			pgServ,
 		)

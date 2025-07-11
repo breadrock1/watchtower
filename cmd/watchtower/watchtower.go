@@ -17,7 +17,6 @@ import (
 	"watchtower/internal/infrastructure/redis"
 	"watchtower/internal/infrastructure/rmq"
 	"watchtower/internal/infrastructure/s3"
-	"watchtower/internal/infrastructure/vectorizer"
 )
 
 // @title          Watchtower service
@@ -37,7 +36,6 @@ func main() {
 	dedocServ := dedoc.New(&servConfig.Ocr.Dedoc)
 	redisServ := redis.New(&servConfig.Cacher.Redis)
 	searcherServ := doc_searcher.New(&servConfig.Storage.Docsearcher)
-	vectorizerServ := vectorizer.New(&servConfig.Tokenizer.Vectorizer)
 
 	rmqServ, err := rmq.New(&servConfig.Queue.Rmq)
 	if err != nil {
@@ -64,7 +62,6 @@ func main() {
 		redisServ,
 		s3Serv,
 		dedocServ,
-		vectorizerServ,
 		searcherServ,
 		pgStorage,
 	)
