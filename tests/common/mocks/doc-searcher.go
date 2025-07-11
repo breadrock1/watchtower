@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/google/uuid"
 	"watchtower/internal/application/dto"
 )
 
@@ -19,11 +20,12 @@ func NewMockDocSearcherClient() *MockDocSearcherClient {
 	}
 }
 
-func (dsc *MockDocSearcherClient) StoreDocument(_ context.Context, _ string, doc *dto.StorageDocument) error {
+func (dsc *MockDocSearcherClient) StoreDocument(_ context.Context, _ string, doc *dto.StorageDocument) (string, error) {
+	id := uuid.New().String()
 	dsc.mu.Lock()
 	defer dsc.mu.Unlock()
-	dsc.storage[doc.ID] = doc
-	return nil
+	dsc.storage[id] = doc
+	return id, nil
 }
 
 func (dsc *MockDocSearcherClient) Get(id string) (*dto.StorageDocument, error) {

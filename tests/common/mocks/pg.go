@@ -13,9 +13,9 @@ type MockPgClient struct{}
 
 func (pc *MockPgClient) LoadAllWatcherDirs(_ context.Context) ([]dto.Directory, error) {
 	dir := dto.Directory{
-		"test-bucket",
-		"./",
-		time.Now(),
+		Bucket:    "test-bucket",
+		Path:      "./",
+		CreatedAt: time.Now(),
 	}
 
 	return []dto.Directory{dir}, nil

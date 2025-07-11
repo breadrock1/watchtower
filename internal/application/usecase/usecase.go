@@ -104,6 +104,13 @@ func (uc *UseCase) Processing(ctx context.Context, msg dto.Message) error {
 
 	case dto.DeleteBucket:
 		callback = uc.deleteBucket
+
+	case dto.DeleteFile:
+		fallthrough
+
+	case dto.CopyFile:
+		fallthrough
+
 	default:
 		return fmt.Errorf("unknown task event type: %v", taskEvent.EventType)
 	}
@@ -115,7 +122,7 @@ func (uc *UseCase) Processing(ctx context.Context, msg dto.Message) error {
 func (uc *UseCase) createBucket(ctx context.Context, taskEvent dto.TaskEvent) error {
 	err := uc.storage.CreateIndex(ctx, taskEvent.Bucket)
 	if err != nil {
-		return fmt.Errorf("failed to create index: %v", err)
+		return fmt.Errorf("failed to create index: %w", err)
 	}
 	return nil
 }
@@ -123,7 +130,7 @@ func (uc *UseCase) createBucket(ctx context.Context, taskEvent dto.TaskEvent) er
 func (uc *UseCase) deleteBucket(ctx context.Context, taskEvent dto.TaskEvent) error {
 	err := uc.storage.DeleteIndex(ctx, taskEvent.Bucket)
 	if err != nil {
-		return fmt.Errorf("failed to delete index: %v", err)
+		return fmt.Errorf("failed to delete index: %w", err)
 	}
 	return nil
 }
@@ -152,10 +159,12 @@ func (uc *UseCase) processFile(ctx context.Context, taskEvent dto.TaskEvent) err
 		ModifiedAt: taskEvent.ModifiedAt,
 	}
 
-	if err = uc.storage.StoreDocument(ctx, taskEvent.Bucket, doc); err != nil {
+	id, err := uc.storage.StoreDocument(ctx, taskEvent.Bucket, doc)
+	if err != nil {
 		return fmt.Errorf("failed to store doc %s: %w", doc.FileName, err)
 	}
 
+	log.Printf("successfully stored document: %s", id)
 	return nil
 }
 

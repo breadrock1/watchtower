@@ -26,10 +26,14 @@ func New(config *Config) *DocSearcherClient {
 	}
 }
 
-func (dsc *DocSearcherClient) StoreDocument(ctx context.Context, folder string, doc *dto.StorageDocument) error {
+func (dsc *DocSearcherClient) StoreDocument(
+	ctx context.Context,
+	folder string,
+	doc *dto.StorageDocument,
+) (string, error) {
 	jsonData, err := json.Marshal(doc)
 	if err != nil {
-		return fmt.Errorf("failed while marshaling doc: %w", err)
+		return "", fmt.Errorf("failed while marshaling doc: %w", err)
 	}
 
 	buildURL := strings.Builder{}
@@ -43,10 +47,16 @@ func (dsc *DocSearcherClient) StoreDocument(ctx context.Context, folder string, 
 	timeoutReq := time.Duration(300) * time.Second
 	_, err = utils.PUT(ctx, reqBody, targetURL, DocumentJsonMime, timeoutReq)
 	if err != nil {
-		return fmt.Errorf("failed to store document to storage: %w", err)
+		return "", fmt.Errorf("failed to store document to storage: %w", err)
 	}
 
-	return nil
+	status := &StoreDocumentResult{}
+	err = json.Unmarshal(reqBody.Bytes(), status)
+	if err != nil {
+		return "", fmt.Errorf("failed to unmarshal response body: %w", err)
+	}
+
+	return status.Message, nil
 }
 
 func (dsc *DocSearcherClient) UpdateDocument(ctx context.Context, folder string, document *dto.StorageDocument) error {
@@ -59,7 +69,7 @@ func (dsc *DocSearcherClient) DeleteDocument(ctx context.Context, folder, id str
 	buildURL.WriteString(fmt.Sprintf("/storage/%s/%s", folder, id))
 	targetURL := buildURL.String()
 
-	req, err := http.NewRequestWithContext(ctx, "DELETE", targetURL, bytes.NewReader([]byte{}))
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, targetURL, bytes.NewReader([]byte{}))
 	if err != nil {
 		return fmt.Errorf("failed while creating new request: %w", err)
 	}
@@ -94,7 +104,7 @@ func (dsc *DocSearcherClient) CreateIndex(ctx context.Context, folder string) er
 	buildURL.WriteString(fmt.Sprintf("/storage/%s", folder))
 	targetURL := buildURL.String()
 
-	req, err := http.NewRequestWithContext(ctx, "POST", targetURL, bytes.NewReader(data))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, targetURL, bytes.NewReader(data))
 	if err != nil {
 		return fmt.Errorf("failed while creating new request: %w", err)
 	}
@@ -119,7 +129,7 @@ func (dsc *DocSearcherClient) DeleteIndex(ctx context.Context, folder string) er
 	buildURL.WriteString(fmt.Sprintf("/storage/%s", folder))
 	targetURL := buildURL.String()
 
-	req, err := http.NewRequestWithContext(ctx, "DELETE", targetURL, bytes.NewReader([]byte{}))
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, targetURL, bytes.NewReader([]byte{}))
 	if err != nil {
 		return fmt.Errorf("failed while creating new request: %w", err)
 	}

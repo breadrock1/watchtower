@@ -88,10 +88,7 @@ func (s *S3Client) LaunchWatcher(ctx context.Context, dirs []dto.Directory) erro
 	}
 
 	go func() {
-		if err := s.startBucketListener(ctx); err != nil {
-			log.Printf("failed to start bucket listener: %v", err)
-		}
-
+		s.startBucketListener(ctx)
 		<-ctx.Done()
 		if err := s.TerminateWatcher(ctx); err != nil {
 			log.Printf("failed to terminate s3 watchers: %v", err)
@@ -105,7 +102,7 @@ func (s *S3Client) TerminateWatcher(_ context.Context) error {
 	return nil
 }
 
-func (s *S3Client) startBucketListener(ctx context.Context) error {
+func (s *S3Client) startBucketListener(ctx context.Context) {
 	for event := range s.mc.ListenNotification(ctx, prefix, suffix, eventsFilter) {
 		if event.Err != nil {
 			log.Printf("caughet error event: %v", event.Err)
@@ -117,7 +114,7 @@ func (s *S3Client) startBucketListener(ctx context.Context) error {
 			s3Object := record.S3
 			bucketName := s3Object.Bucket.Name
 
-			_, ok := s.bindBuckets.Load(bucketName)
+			_, exists := s.bindBuckets.Load(bucketName)
 
 			switch record.EventName {
 			case "s3:BucketCreated:*":
@@ -127,25 +124,25 @@ func (s *S3Client) startBucketListener(ctx context.Context) error {
 				eventType = dto.DeleteBucket
 
 			case "s3:ObjectCreated:Put":
-				if !ok {
+				if !exists {
 					continue
 				}
 				eventType = dto.CreateFile
 
 			case "s3:ObjectCreated:Post":
-				if !ok {
+				if !exists {
 					continue
 				}
 				eventType = dto.CreateFile
 
 			case "s3:ObjectCreated:Copy":
-				if !ok {
+				if !exists {
 					continue
 				}
 				eventType = dto.CopyFile
 
 			case "s3:ObjectRemoved:Delete":
-				if !ok {
+				if !exists {
 					continue
 				}
 				eventType = dto.DeleteFile
@@ -168,10 +165,7 @@ func (s *S3Client) startBucketListener(ctx context.Context) error {
 				EventType:  eventType,
 			}
 		}
-
 	}
-
-	return nil
 }
 
 func (s *S3Client) UploadFile(ctx context.Context, bucket, filePath string, data *bytes.Buffer) error {

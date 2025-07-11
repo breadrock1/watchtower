@@ -7,7 +7,7 @@ import (
 )
 
 type IDocumentStorage interface {
-	StoreDocument(ctx context.Context, folder string, document *dto.StorageDocument) error
+	StoreDocument(ctx context.Context, folder string, document *dto.StorageDocument) (string, error)
 	UpdateDocument(ctx context.Context, folder string, document *dto.StorageDocument) error
 	DeleteDocument(ctx context.Context, folder, id string) error
 	CreateIndex(ctx context.Context, folder string) error

@@ -20,41 +20,47 @@ func NewPgClient(config *Config) (*PgClient, error) {
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
 		config.Host, config.Port, config.User, config.Password, config.DbName, config.SSLMode)
 
-	db, err := sqlx.Connect("postgres", psqlInfo)
+	conn, err := sqlx.Connect("postgres", psqlInfo)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to pg: %w", err)
 	}
 
-	err = db.Ping()
+	err = conn.Ping()
 	if err != nil {
 		return nil, fmt.Errorf("failed to ping pg: %w", err)
 	}
 
-	db.SetMaxOpenConns(3)                  // Maximum number of open connections
-	db.SetMaxIdleConns(3)                  // Maximum number of idle connections
-	db.SetConnMaxLifetime(5 * time.Minute) // Maximum amount of time a connection may be reused
+	conn.SetMaxOpenConns(3)                  // Maximum number of open connections
+	conn.SetMaxIdleConns(3)                  // Maximum number of idle connections
+	conn.SetConnMaxLifetime(5 * time.Minute) // Maximum amount of time a connection may be reused
 
-	return &PgClient{conn: db}, nil
+	return &PgClient{conn: conn}, nil
 }
 
 func (pc *PgClient) LoadAllWatcherDirs(ctx context.Context) ([]dto.Directory, error) {
 	query := `SELECT bucket, path, created_at FROM watched_directories`
 
 	rows, err := pc.conn.QueryxContext(ctx, query)
+	defer func() {
+		err := rows.Close()
+		if err != nil {
+			log.Printf("failed to close rows: %v", err)
+		}
+	}()
 	if err != nil {
 		return nil, fmt.Errorf("failed to select watched dirs: %w", err)
 	}
 
 	var allDirs []dto.Directory
 	for rows.Next() {
-		var p dto.Directory
-		err = rows.StructScan(&p)
+		var dir dto.Directory
+		err = rows.StructScan(&dir)
 		if err != nil {
 			log.Printf("failed to scan directory rows: %v", err)
 			continue
 		}
 
-		allDirs = append(allDirs, p)
+		allDirs = append(allDirs, dir)
 	}
 
 	return allDirs, nil
