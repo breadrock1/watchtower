@@ -76,7 +76,7 @@ func TestProcessing(t *testing.T) {
 
 		task, err := redisServ.Get(ctx, TestBucketName, path.Base(TestInputFilePath))
 		assert.NoError(t, err, "failed to get task from redis")
-		assert.Equal(t, 3, task.Status)
+		assert.Equal(t, dto.TaskStatus(3), task.Status)
 		assert.Equal(t, TestBucketName, task.Bucket)
 		assert.Equal(t, path.Base(TestInputFilePath), task.FilePath)
 
@@ -124,7 +124,7 @@ func TestProcessing(t *testing.T) {
 
 		task, err := redisServ.Get(ctx, TestBucketName, TestInputFilePath)
 		assert.NoError(t, err, "failed to get task from redis")
-		assert.Equal(t, -1, task.Status)
+		assert.Equal(t, dto.TaskStatus(-1), task.Status)
 		assert.Equal(t, TestBucketName, task.Bucket)
 		assert.Equal(t, TestInputFilePath, task.FilePath)
 
