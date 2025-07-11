@@ -5,7 +5,6 @@ linters:
     - asciicheck
     - bidichk
     - containedctx
-    - cyclop
     - decorder
     - dogsled
     - dupl
@@ -64,9 +63,11 @@ linters:
   disable:
     - bodyclose
     - contextcheck
+    - cyclop
     - depguard
     - durationcheck
     - exhaustruct
+    - ineffassign
     - forcetypeassert
     - funlen
     - gochecknoinits

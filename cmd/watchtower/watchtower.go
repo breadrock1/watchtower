@@ -13,10 +13,10 @@ import (
 	"watchtower/internal/infrastructure/dedoc"
 	"watchtower/internal/infrastructure/doc-searcher"
 	"watchtower/internal/infrastructure/httpserver"
+	"watchtower/internal/infrastructure/pg"
 	"watchtower/internal/infrastructure/redis"
 	"watchtower/internal/infrastructure/rmq"
 	"watchtower/internal/infrastructure/s3"
-	"watchtower/internal/infrastructure/vectorizer"
 )
 
 // @title          Watchtower service
@@ -36,7 +36,6 @@ func main() {
 	dedocServ := dedoc.New(&servConfig.Ocr.Dedoc)
 	redisServ := redis.New(&servConfig.Cacher.Redis)
 	searcherServ := doc_searcher.New(&servConfig.Storage.Docsearcher)
-	vectorizerServ := vectorizer.New(&servConfig.Tokenizer.Vectorizer)
 
 	rmqServ, err := rmq.New(&servConfig.Queue.Rmq)
 	if err != nil {
@@ -50,9 +49,9 @@ func main() {
 	}
 	launchBucketListeners(ctx, s3Serv, servConfig.Cloud.Minio.WatchedDirs)
 
-	httpServer := httpserver.New(&servConfig.Server.Http, redisServ, s3Serv)
-	if err = httpServer.Start(ctx); err != nil {
-		log.Fatalf("http server start failed: %v", err)
+	pgStorage, err := pg.NewPgClient(&servConfig.Watcher.Storage.Pg)
+	if err != nil {
+		log.Printf("failed to connect to pg: %v", err)
 	}
 
 	cCtx, cancel := context.WithCancel(ctx)
@@ -63,14 +62,30 @@ func main() {
 		redisServ,
 		s3Serv,
 		dedocServ,
-		vectorizerServ,
 		searcherServ,
+		pgStorage,
 	)
 	useCase.LaunchProcessing(cCtx)
 
-	go awaitSystemSignals(cancel)
-	<-cCtx.Done()
+	if pgStorage != nil {
+		useCase.LoadAndLaunchWatchedDirs(cCtx)
+	}
+
+	httpServer := httpserver.New(&servConfig.Server.Http, redisServ, s3Serv)
+	go func() {
+		if err := httpServer.Start(ctx); err != nil {
+			log.Fatalf("http server start failed: %v", err)
+		}
+	}()
+
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
+	<-ch
 	cancel()
+
+	if pgStorage != nil {
+		useCase.StoreWatchedDirs(cCtx)
+	}
 }
 
 func launchBucketListeners(ctx context.Context, s3Serv *s3.S3Client, dirs []string) {
@@ -88,11 +103,4 @@ func launchTasksConsumer(ctx context.Context, rmqServ *rmq.RmqClient) {
 	if err := rmqServ.Consume(ctx); err != nil {
 		log.Fatalf("rmq consumer launching failed: %v", err)
 	}
-}
-
-func awaitSystemSignals(cancel context.CancelFunc) {
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
-	<-ch
-	cancel()
 }

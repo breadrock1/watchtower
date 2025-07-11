@@ -7,13 +7,19 @@ enable_loki=false
 address="localhost:3100"
 
 [ocr.dedoc]
-address="localhost:8004"
-enable_ssl=false
+address="http://localhost:8004"
 timeout=300
 
 [storage.docsearcher]
-address="localhost:2892"
-enable_ssl=false
+address="http://localhost:2892"
+
+[watcher.storage.pg]
+host = "localhost"
+port = 5432
+username = "postgres"
+password = "postgres"
+dbname   = "watchtower"
+ssl_mode   = "disable"
 
 [cacher.redis]
 address="localhost:6379"
@@ -25,9 +31,9 @@ expired=360
 address="amqp://localhost:5672"
 exchange="test-watchtower"
 routing_key="test-task"
-queue_name="test-watchtower-tasks"
+queue="test-watchtower-tasks"
 
-[cloud.minio]
+[cloud.s3]
 address="localhost:9000"
 access_id="minio-root"
 secret_key="minio-root"
@@ -36,11 +42,3 @@ token=""
 watched_dirs=[
     "test-bucket"
 ]
-
-[tokenizer.vectorizer]
-address="localhost:8001"
-enable_ssl=false
-chunk_size=800
-chunk_overlap=100
-return_chunks=false
-chunks_by_self=false

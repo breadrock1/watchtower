@@ -17,6 +17,7 @@ type RedisValue struct {
 	ModifiedAt int64  `json:"modified_at"`
 	Status     int    `json:"status"`
 	StatusText string `json:"status_text"`
+	EventType  int    `json:"event_type"`
 }
 
 func (rv *RedisValue) ConvertToTaskEvent() (*dto.TaskEvent, error) {
@@ -35,8 +36,9 @@ func (rv *RedisValue) ConvertToTaskEvent() (*dto.TaskEvent, error) {
 		FileSize:   rv.FileSize,
 		CreatedAt:  createDt,
 		ModifiedAt: modDt,
-		Status:     rv.Status,
+		Status:     dto.TaskStatus(rv.Status),
 		StatusText: rv.StatusText,
+		EventType:  dto.EventType(rv.Status),
 	}
 
 	return event, nil
@@ -50,6 +52,7 @@ func ConvertFromTaskEvent(taskEvent *dto.TaskEvent) *RedisValue {
 		FileSize:   taskEvent.FileSize,
 		CreatedAt:  taskEvent.CreatedAt.Unix(),
 		ModifiedAt: taskEvent.ModifiedAt.Unix(),
-		Status:     taskEvent.Status,
+		Status:     int(taskEvent.Status),
+		EventType:  int(taskEvent.EventType),
 	}
 }

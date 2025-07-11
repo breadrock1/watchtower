@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/glaslos/ssdeep"
+	"github.com/google/uuid"
 )
 
 func ComputeMd5(data []byte) string {
@@ -18,4 +19,8 @@ func ComputeSSDEEP(data []byte) (string, error) {
 	}
 
 	return hashData, nil
+}
+
+func GenerateUniqID() string {
+	return uuid.New().String()
 }
