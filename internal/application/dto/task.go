@@ -2,8 +2,6 @@ package dto
 
 import (
 	"time"
-
-	"github.com/google/uuid"
 )
 
 type TaskStatus int
@@ -27,7 +25,7 @@ const (
 )
 
 type TaskEvent struct {
-	Id         uuid.UUID  `json:"id"`
+	Id         string     `json:"id"`
 	Bucket     string     `json:"bucket"`
 	FilePath   string     `json:"file_path"`
 	FileSize   int64      `json:"file_size"`

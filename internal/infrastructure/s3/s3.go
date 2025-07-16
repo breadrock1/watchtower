@@ -7,8 +7,8 @@ import (
 	"log"
 	"sync"
 	"time"
+	"watchtower/internal/application/utils"
 
-	"github.com/google/uuid"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"watchtower/internal/application/dto"
@@ -154,8 +154,11 @@ func (s *S3Client) startBucketListener(ctx context.Context) {
 
 			log.Printf("[%s]: s3 event type: %s", bucketName, record.EventName)
 
+			id := utils.GenerateUniqID(bucketName, s3Object.Object.Key)
+			log.Printf("[%s]: publish task: %s", bucketName, id)
+
 			s.eventsCh <- dto.TaskEvent{
-				Id:         uuid.New(),
+				Id:         id,
 				Bucket:     bucketName,
 				FilePath:   s3Object.Object.Key,
 				FileSize:   s3Object.Object.Size,

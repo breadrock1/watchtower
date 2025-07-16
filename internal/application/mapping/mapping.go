@@ -1,6 +1,7 @@
 package mapping
 
 import (
+	"fmt"
 	"watchtower/internal/application/dto"
 	"watchtower/internal/domain/core/structures"
 )
@@ -16,20 +17,20 @@ func FromDocument(doc *domain.Document) dto.StorageDocument {
 	}
 }
 
-func TaskStatusFromString(enumVal string) dto.TaskStatus {
+func TaskStatusFromString(enumVal string) (dto.TaskStatus, error) {
 	switch enumVal {
 	case "received":
-		return dto.Received
+		return dto.Received, nil
 	case "pending":
-		return dto.Pending
+		return dto.Pending, nil
 	case "processing":
-		return dto.Processing
+		return dto.Processing, nil
 	case "successful":
-		return dto.Successful
+		return dto.Successful, nil
 	case "failed":
-		return dto.Failed
+		return dto.Failed, nil
 	default:
-		return dto.Pending
+		return dto.Pending, fmt.Errorf("unknown task status: %s", enumVal)
 	}
 }
 

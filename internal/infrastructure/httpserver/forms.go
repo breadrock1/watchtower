@@ -22,19 +22,8 @@ type ServerErrorForm struct {
 	Message string `json:"message" example:"Server Error message"`
 }
 
-// AttachDirectoryForm example
-type AttachDirectoryForm struct {
-	BucketName string `json:"bucket_name" example:"test-folder"`
-	Directory  string `json:"directory" example:"/directory"`
-}
-
-// FetchDocumentsList example
-type FetchDocumentsList struct {
-	BucketName string `json:"bucket_name" example:"test-folder"`
-	Status     string `json:"status" example:"Pending"`
-}
-
-// FetchAllDocuments example
-type FetchAllDocuments struct {
-	BucketName string `json:"bucket_name" example:"test-folder"`
+// AddDirectoryToWatcherForm example
+type AddDirectoryToWatcherForm struct {
+	BucketName string `json:"bucket" example:"test-folder"`
+	Suffix     string `json:"suffix" example:"./some-directory"`
 }
