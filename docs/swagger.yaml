@@ -1,10 +1,26 @@
 definitions:
+  dto.EventType:
+    enum:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    type: integer
+    x-enum-varnames:
+    - CreateFile
+    - DeleteFile
+    - CopyFile
+    - CreateBucket
+    - DeleteBucket
   dto.TaskEvent:
     properties:
       bucket:
         type: string
       created_at:
         type: string
+      event_type:
+        $ref: '#/definitions/dto.EventType'
       file_path:
         type: string
       file_size:
@@ -32,13 +48,13 @@ definitions:
     - Pending
     - Processing
     - Successful
-  httpserver.AttachDirectoryForm:
+  httpserver.AddDirectoryToWatcherForm:
     properties:
-      bucket_name:
+      bucket:
         example: test-folder
         type: string
-      directory:
-        example: /directory
+      suffix:
+        example: ./some-directory
         type: string
     type: object
   httpserver.BadRequestForm:
@@ -49,21 +65,6 @@ definitions:
       status:
         example: 400
         type: integer
-    type: object
-  httpserver.FetchAllDocuments:
-    properties:
-      bucket_name:
-        example: test-folder
-        type: string
-    type: object
-  httpserver.FetchDocumentsList:
-    properties:
-      bucket_name:
-        example: test-folder
-        type: string
-      status:
-        example: Pending
-        type: string
     type: object
   httpserver.ResponseForm:
     properties:
@@ -90,24 +91,30 @@ info:
   title: Watchtower service
   version: 0.0.1
 paths:
-  /tasks/all:
-    post:
+  /tasks/{bucket}:
+    get:
       consumes:
       - application/json
-      description: Get all processing documents
-      operationId: get-processing-documents
+      description: Get processing/unrecognized/done task document
+      operationId: get-task
       parameters:
-      - description: File names to fetch processing status
-        in: body
-        name: jsonQuery
+      - description: Bucket id
+        in: path
+        name: bucket
         required: true
-        schema:
-          $ref: '#/definitions/httpserver.FetchAllDocuments'
+        type: string
+      - description: File path into bucket
+        in: query
+        name: file
+        required: true
+        type: string
+      produces:
+      - application/json
       responses:
         "200":
           description: Ok
           schema:
-            $ref: '#/definitions/httpserver.ResponseForm'
+            $ref: '#/definitions/dto.TaskEvent'
         "400":
           description: Bad Request message
           schema:
@@ -116,22 +123,25 @@ paths:
           description: Server does not available
           schema:
             $ref: '#/definitions/httpserver.ServerErrorForm'
-      summary: Get all processing documents
+      summary: Get processing task
       tags:
       - tasks
-  /tasks/fetch:
-    post:
+  /tasks/{bucket}/all:
+    get:
       consumes:
       - application/json
-      description: Load processing/unrecognized/done documents by names list
-      operationId: fetch-documents
+      description: Load tasks of processing/unrecognized/done documents
+      operationId: load-tasks
       parameters:
-      - description: File names to fetch processing status
-        in: body
-        name: jsonQuery
+      - description: Bucket id
+        in: path
+        name: bucket
         required: true
-        schema:
-          $ref: '#/definitions/httpserver.FetchDocumentsList'
+        type: string
+      - description: Status
+        in: query
+        name: status
+        type: string
       produces:
       - application/json
       responses:
@@ -149,7 +159,7 @@ paths:
           description: Server does not available
           schema:
             $ref: '#/definitions/httpserver.ServerErrorForm'
-      summary: Fetch processing documents
+      summary: Load tasks of processing documents
       tags:
       - tasks
   /watcher/{bucket}:
@@ -159,7 +169,7 @@ paths:
       description: Attach new directory to watcher
       operationId: folders-detach
       parameters:
-      - description: Folder ids
+      - description: Bucket ids
         in: path
         name: bucket
         required: true
@@ -182,19 +192,18 @@ paths:
       summary: Attach new directory to watcher
       tags:
       - watcher
-  /watcher/attach:
     post:
       consumes:
       - application/json
       description: Attach new directory to watcher
       operationId: folders-attach
       parameters:
-      - description: File entity
+      - description: Bucket form
         in: body
         name: jsonQuery
         required: true
         schema:
-          $ref: '#/definitions/httpserver.AttachDirectoryForm'
+          $ref: '#/definitions/httpserver.AddDirectoryToWatcherForm'
       produces:
       - application/json
       responses:

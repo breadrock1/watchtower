@@ -27,7 +27,7 @@ func New(config *Config) *RedisClient {
 }
 
 func (rs *RedisClient) GetAll(ctx context.Context, bucket string) ([]*dto.TaskEvent, error) {
-	key := rs.buildKey(bucket, "*")
+	key := utils.GenerateUniqID(bucket, "*")
 	status := rs.rsConn.Scan(ctx, 0, key, -1)
 	if status.Err() != nil {
 		return nil, fmt.Errorf("failed to get tasks: %w", status.Err())
@@ -62,7 +62,7 @@ func (rs *RedisClient) GetAll(ctx context.Context, bucket string) ([]*dto.TaskEv
 }
 
 func (rs *RedisClient) Get(ctx context.Context, bucket, file string) (*dto.TaskEvent, error) {
-	key := rs.buildKey(bucket, file)
+	key := utils.GenerateUniqID(bucket, file)
 	cmd := rs.rsConn.Get(ctx, key)
 	if cmd.Err() != nil {
 		return nil, fmt.Errorf("failed to get tasks: %w", cmd.Err())
@@ -87,7 +87,7 @@ func (rs *RedisClient) Get(ctx context.Context, bucket, file string) (*dto.TaskE
 }
 
 func (rs *RedisClient) Push(ctx context.Context, task *dto.TaskEvent) error {
-	key := rs.buildKey(task.Bucket, task.FilePath)
+	key := utils.GenerateUniqID(task.Bucket, task.FilePath)
 
 	value := ConvertFromTaskEvent(task)
 	jsonData, err := json.Marshal(value)
@@ -101,12 +101,4 @@ func (rs *RedisClient) Push(ctx context.Context, task *dto.TaskEvent) error {
 	}
 
 	return nil
-}
-
-func (rs *RedisClient) buildKey(bucket, suffix string) string {
-	if suffix != "*" {
-		suffix = utils.ComputeMd5([]byte(suffix))
-	}
-
-	return fmt.Sprintf("%s:%s", bucket, suffix)
 }

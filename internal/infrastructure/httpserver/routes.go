@@ -2,17 +2,18 @@ package httpserver
 
 import (
 	"encoding/json"
-	"watchtower/internal/application/mapping"
+	"net/http"
 
 	"github.com/labstack/echo/v4"
 	"watchtower/internal/application/dto"
+	"watchtower/internal/application/mapping"
 )
 
 func (s *Server) CreateWatcherGroup() error {
 	group := s.server.Group("/watcher")
 
-	group.POST("/attach", s.AttachDirectory)
-	group.DELETE("/:bucket", s.DetachDirectory)
+	group.POST("/:bucket", s.AddDirectoryToWatcher)
+	group.DELETE("/:bucket", s.DeleteDirectoryFromWatcher)
 
 	return nil
 }
@@ -20,26 +21,26 @@ func (s *Server) CreateWatcherGroup() error {
 func (s *Server) CreateTasksGroup() error {
 	group := s.server.Group("/tasks")
 
-	group.POST("/fetch", s.FetchDocumentsByStatus)
-	group.POST("/all", s.GetAllProcessingDocuments)
+	group.GET("/:bucket/all", s.LoadTasks)
+	group.GET("/:bucket", s.GetTask)
 
 	return nil
 }
 
-// AttachDirectory
+// AddDirectoryToWatcher
 // @Summary Attach new directory to watcher
 // @Description Attach new directory to watcher
 // @ID folders-attach
 // @Tags watcher
 // @Accept  json
 // @Produce json
-// @Param jsonQuery body AttachDirectoryForm true "File entity"
+// @Param jsonQuery body AddDirectoryToWatcherForm true "Bucket form"
 // @Success 200 {object} ResponseForm "Ok"
 // @Failure	400 {object} BadRequestForm "Bad Request message"
 // @Failure	503 {object} ServerErrorForm "Server does not available"
-// @Router /watcher/attach [post]
-func (s *Server) AttachDirectory(eCtx echo.Context) error {
-	jsonForm := &AttachDirectoryForm{}
+// @Router /watcher/{bucket} [post]
+func (s *Server) AddDirectoryToWatcher(eCtx echo.Context) error {
+	jsonForm := &AddDirectoryToWatcherForm{}
 	decoder := json.NewDecoder(eCtx.Request().Body)
 	err := decoder.Decode(jsonForm)
 	if err != nil {
@@ -48,7 +49,7 @@ func (s *Server) AttachDirectory(eCtx echo.Context) error {
 
 	dir := dto.Directory{
 		Bucket: jsonForm.BucketName,
-		Path:   jsonForm.Directory,
+		Path:   jsonForm.Suffix,
 	}
 
 	ctx := eCtx.Request().Context()
@@ -57,23 +58,26 @@ func (s *Server) AttachDirectory(eCtx echo.Context) error {
 		return err
 	}
 
-	return eCtx.JSON(200, createStatusResponse(200, "Ok"))
+	return eCtx.JSON(201, createStatusResponse(200, "Ok"))
 }
 
-// DetachDirectory
+// DeleteDirectoryFromWatcher
 // @Summary Attach new directory to watcher
 // @Description Attach new directory to watcher
 // @ID folders-detach
 // @Tags watcher
 // @Accept  json
 // @Produce json
-// @Param bucket path string true "Folder ids"
+// @Param bucket path string true "Bucket ids"
 // @Success 200 {object} ResponseForm "Ok"
 // @Failure	400 {object} BadRequestForm "Bad Request message"
 // @Failure	503 {object} ServerErrorForm "Server does not available"
 // @Router /watcher/{bucket} [delete]
-func (s *Server) DetachDirectory(eCtx echo.Context) error {
+func (s *Server) DeleteDirectoryFromWatcher(eCtx echo.Context) error {
 	bucket := eCtx.Param("bucket")
+	if bucket == "" {
+		return echo.NewHTTPError(http.StatusNotFound, "unknown bucket")
+	}
 
 	ctx := eCtx.Request().Context()
 	if err := s.watcher.DetachWatchedDir(ctx, bucket); err != nil {
@@ -83,33 +87,42 @@ func (s *Server) DetachDirectory(eCtx echo.Context) error {
 	return eCtx.JSON(200, createStatusResponse(200, "Ok"))
 }
 
-// FetchDocumentsByStatus
-// @Summary Fetch processing documents
-// @Description Load processing/unrecognized/done documents by names list
-// @ID fetch-documents
+// LoadTasks
+// @Summary Load tasks of processing documents
+// @Description Load tasks of processing/unrecognized/done documents
+// @ID load-tasks
 // @Tags tasks
 // @Accept  json
 // @Produce json
-// @Param jsonQuery body FetchDocumentsList true "File names to fetch processing status"
+// @Param bucket path string true "Bucket id"
+// @Param status query string false "Status"
 // @Success 200 {object} []dto.TaskEvent "Ok"
 // @Failure	400 {object} BadRequestForm "Bad Request message"
 // @Failure	503 {object} ServerErrorForm "Server does not available"
-// @Router /tasks/fetch [post]
-func (s *Server) FetchDocumentsByStatus(eCtx echo.Context) error {
-	jsonForm := &FetchDocumentsList{}
-	decoder := json.NewDecoder(eCtx.Request().Body)
-	if err := decoder.Decode(jsonForm); err != nil {
-		return err
+// @Router /tasks/{bucket}/all [get]
+func (s *Server) LoadTasks(eCtx echo.Context) error {
+	bucket := eCtx.Param("bucket")
+	if bucket == "" {
+		return echo.NewHTTPError(http.StatusNotFound, "unknown bucket")
 	}
 
 	ctx := eCtx.Request().Context()
-	tasks, err := s.taskManager.GetAll(ctx, jsonForm.BucketName)
+	tasks, err := s.taskManager.GetAll(ctx, bucket)
 	if err != nil {
 		return err
 	}
 
+	status := eCtx.QueryParam("status")
+	if status == "" {
+		return eCtx.JSON(200, tasks)
+	}
+
+	inputTaskStatus, err := mapping.TaskStatusFromString(status)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, "unknown status")
+	}
+
 	foundedTasks := make([]*dto.TaskEvent, 0)
-	inputTaskStatus := mapping.TaskStatusFromString(jsonForm.Status)
 	for _, task := range tasks {
 		if task.Status == inputTaskStatus {
 			foundedTasks = append(foundedTasks, task)
@@ -119,29 +132,32 @@ func (s *Server) FetchDocumentsByStatus(eCtx echo.Context) error {
 	return eCtx.JSON(200, foundedTasks)
 }
 
-// GetAllProcessingDocuments
-// @Summary Get all processing documents
-// @Description Get all processing documents
-// @ID get-processing-documents
+// GetTask
+// @Summary Get processing task
+// @Description Get processing/unrecognized/done task document
+// @ID get-task
 // @Tags tasks
 // @Accept  json
-// @Param jsonQuery body FetchAllDocuments true "File names to fetch processing status"
-// @Success 200 {object} ResponseForm "Ok"
+// @Produce json
+// @Param bucket path string true "Bucket id"
+// @Param file query string true "File path into bucket"
+// @Success 200 {object} dto.TaskEvent "Ok"
 // @Failure	400 {object} BadRequestForm "Bad Request message"
 // @Failure	503 {object} ServerErrorForm "Server does not available"
-// @Router /tasks/all [post]
-func (s *Server) GetAllProcessingDocuments(eCtx echo.Context) error {
-	jsonForm := &FetchAllDocuments{}
-	decoder := json.NewDecoder(eCtx.Request().Body)
-	if err := decoder.Decode(jsonForm); err != nil {
-		return err
+// @Router /tasks/{bucket} [get]
+func (s *Server) GetTask(eCtx echo.Context) error {
+	bucket := eCtx.Param("bucket")
+	if bucket == "" {
+		return echo.NewHTTPError(http.StatusNotFound, "unknown bucket")
 	}
 
+	filePath := eCtx.Param("file")
+
 	ctx := eCtx.Request().Context()
-	documents, err := s.taskManager.GetAll(ctx, jsonForm.BucketName)
+	task, err := s.taskManager.Get(ctx, bucket, filePath)
 	if err != nil {
 		return err
 	}
 
-	return eCtx.JSON(200, documents)
+	return eCtx.JSON(200, task)
 }
