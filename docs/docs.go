@@ -15,33 +15,41 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/tasks/all": {
-            "post": {
-                "description": "Get all processing documents",
+        "/tasks/{bucket}": {
+            "get": {
+                "description": "Get processing/unrecognized/done task document",
                 "consumes": [
+                    "application/json"
+                ],
+                "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "tasks"
                 ],
-                "summary": "Get all processing documents",
-                "operationId": "get-processing-documents",
+                "summary": "Get processing task",
+                "operationId": "get-task",
                 "parameters": [
                     {
-                        "description": "File names to fetch processing status",
-                        "name": "jsonQuery",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/httpserver.FetchAllDocuments"
-                        }
+                        "type": "string",
+                        "description": "Bucket id",
+                        "name": "bucket",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "File path into bucket",
+                        "name": "file",
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "Ok",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ResponseForm"
+                            "$ref": "#/definitions/dto.TaskEvent"
                         }
                     },
                     "400": {
@@ -59,9 +67,9 @@ const docTemplate = `{
                 }
             }
         },
-        "/tasks/fetch": {
-            "post": {
-                "description": "Load processing/unrecognized/done documents by names list",
+        "/tasks/{bucket}/all": {
+            "get": {
+                "description": "Load tasks of processing/unrecognized/done documents",
                 "consumes": [
                     "application/json"
                 ],
@@ -71,17 +79,21 @@ const docTemplate = `{
                 "tags": [
                     "tasks"
                 ],
-                "summary": "Fetch processing documents",
-                "operationId": "fetch-documents",
+                "summary": "Load tasks of processing documents",
+                "operationId": "load-tasks",
                 "parameters": [
                     {
-                        "description": "File names to fetch processing status",
-                        "name": "jsonQuery",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/httpserver.FetchDocumentsList"
-                        }
+                        "type": "string",
+                        "description": "Bucket id",
+                        "name": "bucket",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Status",
+                        "name": "status",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -109,7 +121,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/watcher/attach": {
+        "/watcher/{bucket}": {
             "post": {
                 "description": "Attach new directory to watcher",
                 "consumes": [
@@ -125,12 +137,12 @@ const docTemplate = `{
                 "operationId": "folders-attach",
                 "parameters": [
                     {
-                        "description": "File entity",
+                        "description": "Bucket form",
                         "name": "jsonQuery",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/httpserver.AttachDirectoryForm"
+                            "$ref": "#/definitions/httpserver.AddDirectoryToWatcherForm"
                         }
                     }
                 ],
@@ -154,9 +166,7 @@ const docTemplate = `{
                         }
                     }
                 }
-            }
-        },
-        "/watcher/{bucket}": {
+            },
             "delete": {
                 "description": "Attach new directory to watcher",
                 "consumes": [
@@ -173,7 +183,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Folder ids",
+                        "description": "Bucket ids",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -203,6 +213,23 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "dto.EventType": {
+            "type": "integer",
+            "enum": [
+                0,
+                1,
+                2,
+                3,
+                4
+            ],
+            "x-enum-varnames": [
+                "CreateFile",
+                "DeleteFile",
+                "CopyFile",
+                "CreateBucket",
+                "DeleteBucket"
+            ]
+        },
         "dto.TaskEvent": {
             "type": "object",
             "properties": {
@@ -211,6 +238,9 @@ const docTemplate = `{
                 },
                 "created_at": {
                     "type": "string"
+                },
+                "event_type": {
+                    "$ref": "#/definitions/dto.EventType"
                 },
                 "file_path": {
                     "type": "string"
@@ -249,16 +279,16 @@ const docTemplate = `{
                 "Successful"
             ]
         },
-        "httpserver.AttachDirectoryForm": {
+        "httpserver.AddDirectoryToWatcherForm": {
             "type": "object",
             "properties": {
-                "bucket_name": {
+                "bucket": {
                     "type": "string",
                     "example": "test-folder"
                 },
-                "directory": {
+                "suffix": {
                     "type": "string",
-                    "example": "/directory"
+                    "example": "./some-directory"
                 }
             }
         },
@@ -272,28 +302,6 @@ const docTemplate = `{
                 "status": {
                     "type": "integer",
                     "example": 400
-                }
-            }
-        },
-        "httpserver.FetchAllDocuments": {
-            "type": "object",
-            "properties": {
-                "bucket_name": {
-                    "type": "string",
-                    "example": "test-folder"
-                }
-            }
-        },
-        "httpserver.FetchDocumentsList": {
-            "type": "object",
-            "properties": {
-                "bucket_name": {
-                    "type": "string",
-                    "example": "test-folder"
-                },
-                "status": {
-                    "type": "string",
-                    "example": "Pending"
                 }
             }
         },
