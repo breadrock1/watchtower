@@ -118,6 +118,10 @@ func (s *Server) LoadTasks(eCtx echo.Context) error {
 	}
 
 	inputTaskStatus, err := mapping.TaskStatusFromString(status)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, "unknown status")
+	}
+
 	foundedTasks := make([]*dto.TaskEvent, 0)
 	for _, task := range tasks {
 		if task.Status == inputTaskStatus {

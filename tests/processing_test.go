@@ -7,8 +7,8 @@ import (
 	"path"
 	"testing"
 	"time"
+	"watchtower/internal/application/utils"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"watchtower/internal/application/dto"
 	"watchtower/internal/application/usecase"
@@ -104,8 +104,9 @@ func TestProcessing(t *testing.T) {
 		)
 		useCase.LaunchProcessing(cCtx)
 
+		id := utils.GenerateUniqID(TestBucketName, TestInputFilePath)
 		taskEvent := dto.TaskEvent{
-			Id:         uuid.New(),
+			Id:         id,
 			Bucket:     TestBucketName,
 			FilePath:   TestInputFilePath,
 			FileSize:   0,
