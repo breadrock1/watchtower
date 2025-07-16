@@ -31,7 +31,16 @@ func (dsc *DocSearcherClient) StoreDocument(
 	folder string,
 	doc *dto.StorageDocument,
 ) (string, error) {
-	jsonData, err := json.Marshal(doc)
+	storeDoc := StoreDocumentForm{
+		FileName:   doc.FileName,
+		FilePath:   doc.FilePath,
+		FileSize:   doc.FileSize,
+		Content:    doc.Content,
+		CreatedAt:  doc.CreatedAt.UnixMilli(),
+		ModifiedAt: doc.ModifiedAt.UnixMilli(),
+	}
+
+	jsonData, err := json.Marshal(storeDoc)
 	if err != nil {
 		return "", fmt.Errorf("failed while marshaling doc: %w", err)
 	}
