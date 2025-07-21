@@ -7,54 +7,44 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 	"watchtower/internal/infrastructure/dedoc"
-	"watchtower/internal/infrastructure/doc-searcher"
+	"watchtower/internal/infrastructure/doc-storage"
 	"watchtower/internal/infrastructure/httpserver"
-	"watchtower/internal/infrastructure/pg"
 	"watchtower/internal/infrastructure/redis"
 	"watchtower/internal/infrastructure/rmq"
 	"watchtower/internal/infrastructure/s3"
 )
 
 type Config struct {
-	Ocr     OcrConfig     `mapstructure:"ocr"`
-	Cacher  CacherConfig  `mapstructure:"cacher"`
-	Storage StorageConfig `mapstructure:"storage"`
-	Server  ServerConfig  `mapstructure:"server"`
-	Cloud   CloudConfig   `mapstructure:"cloud"`
-	Queue   QueueConfig   `mapstructure:"queue"`
-	Watcher WatcherConfig `mapstructure:"watcher"`
-}
-
-type OcrConfig struct {
-	Dedoc dedoc.Config `mapstructure:"dedoc"`
-}
-
-type CacherConfig struct {
-	Redis redis.Config `mapstructure:"redis"`
-}
-
-type StorageConfig struct {
-	Docsearcher doc_searcher.Config `mapstructure:"docsearcher"`
+	Server     ServerConfig     `mapstructure:"server"`
+	Ocr        OcrConfig        `mapstructure:"ocr"`
+	DocStorage DocStorageConfig `mapstructure:"docstorage"`
+	Cacher     CacherConfig     `mapstructure:"cacher"`
+	Queue      QueueConfig      `mapstructure:"queue"`
+	Cloud      CloudConfig      `mapstructure:"cloud"`
 }
 
 type ServerConfig struct {
 	Http httpserver.Config `mapstructure:"http"`
 }
 
-type CloudConfig struct {
-	Minio s3.Config `mapstructure:"s3"`
+type OcrConfig struct {
+	Dedoc dedoc.Config `mapstructure:"dedoc"`
+}
+
+type DocStorageConfig struct {
+	DocSearcher doc_storage.Config `mapstructure:"docsearcher"`
+}
+
+type CacherConfig struct {
+	Redis redis.Config `mapstructure:"redis"`
 }
 
 type QueueConfig struct {
 	Rmq rmq.Config `mapstructure:"rmq"`
 }
 
-type WatcherConfig struct {
-	Storage WatcherStorageConfig `mapstructure:"storage"`
-}
-
-type WatcherStorageConfig struct {
-	Pg pg.Config `mapstructure:"pg"`
+type CloudConfig struct {
+	S3 s3.Config `mapstructure:"s3"`
 }
 
 func FromFile(filePath string) (*Config, error) {
@@ -99,33 +89,7 @@ func FromFile(filePath string) (*Config, error) {
 	}
 
 	// Storage doc-searcher config
-	bindErr = viperInstance.BindEnv("storage.docsearcher.address", "WATCHTOWER__STORAGE__DOC_SEARCHER__ADDRESS")
-	if bindErr != nil {
-		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
-	}
-
-	// Pg watched dirs config
-	bindErr = viperInstance.BindEnv("watcher.storage.pg.host", "WATCHTOWER__WATCHER__STORAGE__PG__HOST")
-	if bindErr != nil {
-		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
-	}
-	bindErr = viperInstance.BindEnv("watcher.storage.pg.port", "WATCHTOWER__WATCHER__STORAGE__PG__PORT")
-	if bindErr != nil {
-		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
-	}
-	bindErr = viperInstance.BindEnv("watcher.storage.pg.username", "WATCHTOWER__WATCHER__STORAGE__PG__USER")
-	if bindErr != nil {
-		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
-	}
-	bindErr = viperInstance.BindEnv("watcher.storage.pg.password", "WATCHTOWER__WATCHER__STORAGE__PG__PASSWORD")
-	if bindErr != nil {
-		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
-	}
-	bindErr = viperInstance.BindEnv("watcher.storage.pg.dbname", "WATCHTOWER__WATCHER__STORAGE__PG__DBNAME")
-	if bindErr != nil {
-		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
-	}
-	bindErr = viperInstance.BindEnv("watcher.storage.pg.ssl_mode", "WATCHTOWER__WATCHER__STORAGE__PG__SSL_MODE")
+	bindErr = viperInstance.BindEnv("storage.docsearcher.address", "WATCHTOWER__DOCSTORAGE__DOC_SEARCHER__ADDRESS")
 	if bindErr != nil {
 		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
 	}

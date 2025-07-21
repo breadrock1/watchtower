@@ -1,44 +1,33 @@
 [server.http]
-address="0.0.0.0:2893"
+address = "0.0.0.0:2893"
 
 [server.http.logger]
-level="info"
-enable_loki=false
-address="localhost:3100"
+level = "info"
+enable_loki = false
+address = "localhost:3100"
 
 [ocr.dedoc]
-address="http://localhost:8004"
-timeout=300
+address = "http://localhost:8004"
+timeout = 300
 
-[storage.docsearcher]
-address="http://localhost:2892"
-
-[watcher.storage.pg]
-host = "localhost"
-port = 5432
-username = "postgres"
-password = "postgres"
-dbname   = "watchtower"
-ssl_mode   = "disable"
+[docstorage.docsearcher]
+address = "http://localhost:2892"
 
 [cacher.redis]
-address="localhost:6379"
-username="redis"
-password="redis"
-expired=360
+address = "localhost:6379"
+username = "redis"
+password = "redis"
+expired = 360
 
 [queue.rmq]
-address="amqp://localhost:5672"
-exchange="test-watchtower"
-routing_key="test-task"
-queue="test-watchtower-tasks"
+address = "amqp://localhost:5672"
+exchange = "test-watchtower"
+routing_key = "test-task"
+queue = "test-watchtower-tasks"
 
 [cloud.s3]
-address="localhost:9000"
-access_id="minio-root"
-secret_key="minio-root"
-enable_ssl=false
-token=""
-watched_dirs=[
-    "test-bucket"
-]
+address = "localhost:9000"
+access_id = "minio-root"
+secret_key = "minio-root"
+enable_ssl = false
+token = ""

@@ -1,4 +1,4 @@
-package doc_searcher
+package doc_storage
 
 import (
 	"bytes"
@@ -29,7 +29,7 @@ func New(config *Config) *DocSearcherClient {
 func (dsc *DocSearcherClient) StoreDocument(
 	ctx context.Context,
 	folder string,
-	doc *dto.StorageDocument,
+	doc *dto.DocumentObject,
 ) (string, error) {
 	storeDoc := StoreDocumentForm{
 		FileName:   doc.FileName,
@@ -68,7 +68,7 @@ func (dsc *DocSearcherClient) StoreDocument(
 	return status.Message, nil
 }
 
-func (dsc *DocSearcherClient) UpdateDocument(ctx context.Context, folder string, document *dto.StorageDocument) error {
+func (dsc *DocSearcherClient) UpdateDocument(_ context.Context, _ string, _ *dto.DocumentObject) error {
 	return nil
 }
 

@@ -5,32 +5,15 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"sync"
 	"time"
-	"watchtower/internal/application/utils"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"watchtower/internal/application/dto"
 )
 
-var (
-	suffix       = ""
-	prefix       = ""
-	eventsFilter = []string{
-		"s3:ObjectCreated:Post",
-		"s3:ObjectCreated:Put",
-		"s3:ObjectCreated:Copy",
-		"s3:ObjectRemoved:Delete",
-		"s3:BucketCreated:*",
-		"s3:BucketRemoved:*",
-	}
-)
-
 type S3Client struct {
-	eventsCh    chan dto.TaskEvent
-	mc          *minio.Client
-	bindBuckets *sync.Map
+	mc *minio.Client
 }
 
 func New(config *Config) (*S3Client, error) {
@@ -46,139 +29,121 @@ func New(config *Config) (*S3Client, error) {
 	}
 
 	client := &S3Client{
-		mc:          s3Client,
-		bindBuckets: &sync.Map{},
-		eventsCh:    make(chan dto.TaskEvent),
+		mc: s3Client,
 	}
 
 	return client, nil
 }
 
-func (s *S3Client) GetEventsChannel() chan dto.TaskEvent {
-	return s.eventsCh
-}
-
-func (s *S3Client) GetWatchedDirs(_ context.Context) ([]dto.Directory, error) {
-	var watchedDirs []dto.Directory
-	s.bindBuckets.Range(func(k, v interface{}) bool {
-		dir := v.(dto.Directory)
-		watchedDirs = append(watchedDirs, dir)
-		return true
-	})
-
-	return watchedDirs, nil
-}
-
-func (s *S3Client) AttachWatchedDir(_ context.Context, dir dto.Directory) error {
-	s.bindBuckets.Store(dir.Bucket, dir)
-	return nil
-}
-
-func (s *S3Client) DetachWatchedDir(_ context.Context, path string) error {
-	s.bindBuckets.Delete(path)
-	return nil
-}
-
-func (s *S3Client) LaunchWatcher(ctx context.Context, dirs []dto.Directory) error {
-	for _, dir := range dirs {
-		err := s.AttachWatchedDir(ctx, dir)
-		if err != nil {
-			log.Printf("failed to launch watcher for directory %s: %v", dir.Bucket, err)
-		}
+func (s *S3Client) GetBuckets(ctx context.Context) ([]string, error) {
+	buckets, err := s.mc.ListBuckets(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get list of buckets: %w", err)
 	}
 
-	go func() {
-		s.startBucketListener(ctx)
-		<-ctx.Done()
-		if err := s.TerminateWatcher(ctx); err != nil {
-			log.Printf("failed to terminate s3 watchers: %v", err)
-		}
-	}()
+	bucketNames := make([]string, len(buckets))
+	for index, bucketInfo := range buckets {
+		bucketNames[index] = bucketInfo.Name
+	}
 
+	return bucketNames, nil
+}
+
+func (s *S3Client) CreateBucket(ctx context.Context, bucket string) error {
+	opts := minio.MakeBucketOptions{}
+	if err := s.mc.MakeBucket(ctx, bucket, opts); err != nil {
+		return fmt.Errorf("failed to create bucket %s: %w", bucket, err)
+	}
 	return nil
 }
 
-func (s *S3Client) TerminateWatcher(_ context.Context) error {
+func (s *S3Client) RemoveBucket(ctx context.Context, bucket string) error {
+	if err := s.mc.RemoveBucket(ctx, bucket); err != nil {
+		return fmt.Errorf("failed to remove bucket %s: %w", bucket, err)
+	}
 	return nil
 }
 
-func (s *S3Client) startBucketListener(ctx context.Context) {
-	for event := range s.mc.ListenNotification(ctx, prefix, suffix, eventsFilter) {
-		if event.Err != nil {
-			log.Printf("caughet error event: %v", event.Err)
+func (s *S3Client) IsBucketExist(ctx context.Context, bucket string) (bool, error) {
+	result, err := s.mc.BucketExists(ctx, bucket)
+	if err != nil {
+		return false, fmt.Errorf("failed to check if bucket %s exists: %w", bucket, err)
+	}
+	return result, nil
+}
+
+func (s *S3Client) GetFileMetadata(ctx context.Context, bucket, filePath string) (*dto.FileAttributes, error) {
+	opts := minio.StatObjectOptions{}
+	stats, err := s.mc.StatObject(ctx, bucket, filePath, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	itemAttributes := &dto.FileAttributes{
+		SHA256:       stats.ChecksumSHA256,
+		ContentType:  stats.ContentType,
+		LastModified: stats.LastModified,
+		Size:         stats.Size,
+		Expires:      stats.Expires,
+	}
+
+	return itemAttributes, nil
+}
+
+func (s *S3Client) GetBucketFiles(ctx context.Context, bucket, folder string) ([]*dto.FileObject, error) {
+	opts := minio.ListObjectsOptions{
+		UseV1:     true,
+		Prefix:    folder,
+		Recursive: false,
+	}
+
+	if s.mc.IsOffline() {
+		return nil, fmt.Errorf("cloud is offline")
+	}
+
+	dirObjects := make([]*dto.FileObject, 0)
+	for obj := range s.mc.ListObjects(ctx, bucket, opts) {
+		if obj.Err != nil {
+			log.Println("failed to get object: ", obj.Err)
 			continue
 		}
 
-		var eventType dto.EventType
-		for _, record := range event.Records {
-			s3Object := record.S3
-			bucketName := s3Object.Bucket.Name
-
-			_, exists := s.bindBuckets.Load(bucketName)
-
-			switch record.EventName {
-			case "s3:BucketCreated:*":
-				eventType = dto.CreateBucket
-
-			case "s3:BucketRemoved:*":
-				eventType = dto.DeleteBucket
-
-			case "s3:ObjectCreated:Put":
-				if !exists {
-					continue
-				}
-				eventType = dto.CreateFile
-
-			case "s3:ObjectCreated:Post":
-				if !exists {
-					continue
-				}
-				eventType = dto.CreateFile
-
-			case "s3:ObjectCreated:Copy":
-				if !exists {
-					continue
-				}
-				eventType = dto.CopyFile
-
-			case "s3:ObjectRemoved:Delete":
-				if !exists {
-					continue
-				}
-				eventType = dto.DeleteFile
-
-			default:
-				log.Printf("unknown event: %v", record.EventName)
-				continue
-			}
-
-			log.Printf("[%s]: s3 event type: %s", bucketName, record.EventName)
-
-			id := utils.GenerateUniqID(bucketName, s3Object.Object.Key)
-			log.Printf("[%s]: publish task: %s", bucketName, id)
-
-			s.eventsCh <- dto.TaskEvent{
-				Id:         id,
-				Bucket:     bucketName,
-				FilePath:   s3Object.Object.Key,
-				FileSize:   s3Object.Object.Size,
-				CreatedAt:  time.Now(),
-				ModifiedAt: time.Now(),
-				Status:     dto.Pending,
-				EventType:  eventType,
-			}
-		}
+		dirObjects = append(dirObjects, &dto.FileObject{
+			FileName:      obj.Key,
+			DirectoryName: folder,
+			IsDirectory:   len(obj.ETag) == 0,
+		})
 	}
+
+	return dirObjects, nil
 }
 
-func (s *S3Client) UploadFile(ctx context.Context, bucket, filePath string, data *bytes.Buffer) error {
-	opts := minio.PutObjectOptions{}
-	dataLen := int64(data.Len())
-	_, err := s.mc.PutObject(ctx, bucket, filePath, data, dataLen, opts)
-	if err != nil {
-		return fmt.Errorf("failed to upload file to s3: %w", err)
+func (s *S3Client) DeleteFile(ctx context.Context, bucket, filePath string) error {
+	opts := minio.RemoveObjectOptions{}
+	if err := s.mc.RemoveObject(ctx, bucket, filePath, opts); err != nil {
+		return fmt.Errorf("failed to remove object %s: %w", filePath, err)
 	}
 	return nil
+}
+
+func (s *S3Client) CopyFile(ctx context.Context, bucket, srcPath, dstPath string) error {
+	srcOpts := minio.CopySrcOptions{Bucket: bucket, Object: srcPath}
+	dstOpts := minio.CopyDestOptions{Bucket: bucket, Object: dstPath}
+	_, err := s.mc.CopyObject(ctx, dstOpts, srcOpts)
+	if err != nil {
+		return fmt.Errorf("failed to copy object %s to %s: %w", srcPath, dstPath, err)
+	}
+
+	return nil
+}
+
+func (s *S3Client) MoveFile(ctx context.Context, bucket, srcPath, dstPath string) error {
+	err := s.CopyFile(ctx, bucket, srcPath, dstPath)
+	if err != nil {
+		return fmt.Errorf("failed to move object %s to %s: %w", srcPath, dstPath, err)
+	}
+
+	return s.DeleteFile(ctx, bucket, srcPath)
 }
 
 func (s *S3Client) DownloadFile(ctx context.Context, bucket, filePath string) (bytes.Buffer, error) {
@@ -198,7 +163,39 @@ func (s *S3Client) DownloadFile(ctx context.Context, bucket, filePath string) (b
 	return objBody, nil
 }
 
-func (s *S3Client) CreateBucket(ctx context.Context, bucket string) error {
-	opts := minio.MakeBucketOptions{}
-	return s.mc.MakeBucket(ctx, bucket, opts)
+func (s *S3Client) UploadFile(
+	ctx context.Context,
+	bucket, filePath string,
+	data *bytes.Buffer,
+	expired *time.Time,
+) error {
+	opts := minio.PutObjectOptions{}
+	if expired != nil {
+		opts.Expires = *expired
+	}
+
+	dataLen := int64(data.Len())
+	_, err := s.mc.PutObject(ctx, bucket, filePath, data, dataLen, opts)
+	if err != nil {
+		return fmt.Errorf("failed to upload file to s3: %w", err)
+	}
+	return nil
+}
+
+func (s *S3Client) GenSharedURL(
+	ctx context.Context,
+	expired time.Duration,
+	bucket, filePath, redirectHost string,
+) (string, error) {
+	url, err := s.mc.PresignedGetObject(ctx, bucket, filePath, expired, map[string][]string{})
+	if err != nil {
+		return "", fmt.Errorf("failed to generate url: %w", err)
+	}
+
+	if redirectHost != "" {
+		url.Path = fmt.Sprintf("%s%s", url.Host, url.Path)
+		url.Host = redirectHost
+	}
+
+	return url.String(), nil
 }

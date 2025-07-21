@@ -8,12 +8,10 @@ import (
 	"syscall"
 
 	"watchtower/cmd"
-	"watchtower/internal/application/dto"
 	"watchtower/internal/application/usecase"
 	"watchtower/internal/infrastructure/dedoc"
-	"watchtower/internal/infrastructure/doc-searcher"
+	"watchtower/internal/infrastructure/doc-storage"
 	"watchtower/internal/infrastructure/httpserver"
-	"watchtower/internal/infrastructure/pg"
 	"watchtower/internal/infrastructure/redis"
 	"watchtower/internal/infrastructure/rmq"
 	"watchtower/internal/infrastructure/s3"
@@ -23,11 +21,17 @@ import (
 // @version        0.0.1
 // @description    Watchtower is a project designed to provide processing files created into cloud by events.
 //
-// @tag.name watcher
-// @tag.description APIs to manage cloud watchers
-//
 // @tag.name tasks
 // @tag.description APIs to get status tasks
+//
+// @tag.name buckets
+// @tag.description CRUD APIs to manage cloud buckets
+
+// @tag.name files
+// @tag.description CRUD APIs to manage files into bucket
+
+// @tag.name share
+// @tag.description Share files by URL API
 
 func main() {
 	ctx := context.Background()
@@ -35,7 +39,7 @@ func main() {
 
 	dedocServ := dedoc.New(&servConfig.Ocr.Dedoc)
 	redisServ := redis.New(&servConfig.Cacher.Redis)
-	searcherServ := doc_searcher.New(&servConfig.Storage.Docsearcher)
+	searcherServ := doc_storage.New(&servConfig.DocStorage.DocSearcher)
 
 	rmqServ, err := rmq.New(&servConfig.Queue.Rmq)
 	if err != nil {
@@ -43,37 +47,24 @@ func main() {
 	}
 	launchTasksConsumer(ctx, rmqServ)
 
-	s3Serv, err := s3.New(&servConfig.Cloud.Minio)
+	s3Serv, err := s3.New(&servConfig.Cloud.S3)
 	if err != nil {
 		log.Fatalf("s3 connection failed: %v", err)
 	}
-	launchBucketListeners(ctx, s3Serv, servConfig.Cloud.Minio.WatchedDirs)
-
-	pgStorage, err := pg.NewPgClient(&servConfig.Watcher.Storage.Pg)
-	if err != nil {
-		log.Printf("failed to connect to pg: %v", err)
-	}
 
 	cCtx, cancel := context.WithCancel(ctx)
-	useCase := usecase.New(
-		s3Serv.GetEventsChannel(),
-		rmqServ.GetConsumerChannel(),
+	useCase := usecase.NewUseCase(
 		rmqServ,
 		redisServ,
-		s3Serv,
 		dedocServ,
 		searcherServ,
-		pgStorage,
+		s3Serv,
 	)
-	useCase.LaunchProcessing(cCtx)
+	useCase.LaunchWatcherListener(cCtx)
 
-	if pgStorage != nil {
-		useCase.LoadAndLaunchWatchedDirs(cCtx)
-	}
-
-	httpServer := httpserver.New(&servConfig.Server.Http, redisServ, s3Serv)
+	httpServer := httpserver.New(&servConfig.Server.Http, useCase)
 	go func() {
-		if err := httpServer.Start(ctx); err != nil {
+		if err := httpServer.Start(cCtx); err != nil {
 			log.Fatalf("http server start failed: %v", err)
 		}
 	}()
@@ -82,21 +73,6 @@ func main() {
 	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
 	<-ch
 	cancel()
-
-	if pgStorage != nil {
-		useCase.StoreWatchedDirs(cCtx)
-	}
-}
-
-func launchBucketListeners(ctx context.Context, s3Serv *s3.S3Client, dirs []string) {
-	watchDirs := make([]dto.Directory, len(dirs))
-	for index, dirName := range dirs {
-		watchDirs[index] = dto.FromBucketName(dirName)
-	}
-
-	if err := s3Serv.LaunchWatcher(ctx, watchDirs); err != nil {
-		log.Printf("failed to start s3 bucket listers: %v", err)
-	}
 }
 
 func launchTasksConsumer(ctx context.Context, rmqServ *rmq.RmqClient) {

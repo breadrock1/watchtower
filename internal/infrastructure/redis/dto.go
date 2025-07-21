@@ -23,7 +23,7 @@ func (rv *RedisValue) ConvertToTaskEvent() (*dto.TaskEvent, error) {
 	createDt := time.Unix(rv.CreatedAt, 0)
 
 	event := &dto.TaskEvent{
-		Id:         rv.ID,
+		ID:         rv.ID,
 		Bucket:     rv.Bucket,
 		FilePath:   rv.FilePath,
 		FileSize:   rv.FileSize,
@@ -31,7 +31,6 @@ func (rv *RedisValue) ConvertToTaskEvent() (*dto.TaskEvent, error) {
 		ModifiedAt: modDt,
 		Status:     dto.TaskStatus(rv.Status),
 		StatusText: rv.StatusText,
-		EventType:  dto.EventType(rv.Status),
 	}
 
 	return event, nil
@@ -39,13 +38,12 @@ func (rv *RedisValue) ConvertToTaskEvent() (*dto.TaskEvent, error) {
 
 func ConvertFromTaskEvent(taskEvent *dto.TaskEvent) *RedisValue {
 	return &RedisValue{
-		ID:         taskEvent.Id,
+		ID:         taskEvent.ID,
 		Bucket:     taskEvent.Bucket,
 		FilePath:   taskEvent.FilePath,
 		FileSize:   taskEvent.FileSize,
 		CreatedAt:  taskEvent.CreatedAt.Unix(),
 		ModifiedAt: taskEvent.ModifiedAt.Unix(),
 		Status:     int(taskEvent.Status),
-		EventType:  int(taskEvent.EventType),
 	}
 }

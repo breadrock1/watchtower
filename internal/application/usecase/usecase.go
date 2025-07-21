@@ -5,56 +5,61 @@ import (
 	"fmt"
 	"log"
 	"path"
+	"time"
 
 	"watchtower/internal/application/dto"
+	"watchtower/internal/application/mapping"
 	"watchtower/internal/application/services/doc-storage"
+	"watchtower/internal/application/services/object-storage"
 	"watchtower/internal/application/services/recognizer"
 	"watchtower/internal/application/services/task-manager"
 	"watchtower/internal/application/services/task-queue"
-	"watchtower/internal/application/services/watcher"
+	"watchtower/internal/application/utils"
 )
 
 const EmptyMessage = ""
 
 type UseCase struct {
-	watcherCh  <-chan dto.TaskEvent
-	consumerCh <-chan dto.Message
+	processorCh chan dto.TaskEvent
+	consumerCh  <-chan dto.Message
 
-	queue        task_queue.ITaskQueue
-	cacher       task_manager.ITaskManager
-	watcher      watcher.IWatcher
-	recognizer   recognizer.IRecognizer
-	storage      doc_storage.IDocumentStorage
-	watchStorage watcher.IConfigStorage
+	taskQueue   task_queue.ITaskQueue
+	taskManager task_manager.ITaskManager
+	recognizer  recognizer.IRecognizer
+	docStorage  doc_storage.IDocumentStorage
+	objStorage  object_storage.IObjectStorage
 }
 
-func New(
-	watcherCh chan dto.TaskEvent,
-	consumerCh chan dto.Message,
-	queue task_queue.ITaskQueue,
-	cacher task_manager.ITaskManager,
-	watcher watcher.IWatcher,
+func NewUseCase(
+	taskQueue task_queue.ITaskQueue,
+	taskManager task_manager.ITaskManager,
 	recognizer recognizer.IRecognizer,
-	storage doc_storage.IDocumentStorage,
-	watchStorage watcher.IConfigStorage,
+	docStorage doc_storage.IDocumentStorage,
+	objStorage object_storage.IObjectStorage,
 ) *UseCase {
+	consumerCh := taskQueue.GetConsumerChannel()
+	processorCh := make(chan dto.TaskEvent)
 	return &UseCase{
-		watcherCh:    watcherCh,
-		consumerCh:   consumerCh,
-		queue:        queue,
-		cacher:       cacher,
-		watcher:      watcher,
-		recognizer:   recognizer,
-		storage:      storage,
-		watchStorage: watchStorage,
+		processorCh: processorCh,
+		consumerCh:  consumerCh,
+		taskQueue:   taskQueue,
+		taskManager: taskManager,
+		recognizer:  recognizer,
+		docStorage:  docStorage,
+		objStorage:  objStorage,
 	}
 }
 
-func (uc *UseCase) LaunchProcessing(ctx context.Context) {
+func (uc *UseCase) LaunchWatcherListener(ctx context.Context) {
 	go func() {
 		for {
 			select {
-			case taskEvent := <-uc.watcherCh:
+			case taskEvent := <-uc.processorCh:
+				if uc.isTaskAlreadyProcessed(ctx, &taskEvent) {
+					log.Printf("task has been already processed: %s", taskEvent.ID)
+					continue
+				}
+
 				status, msg := dto.Pending, EmptyMessage
 				if err := uc.publishToQueue(ctx, taskEvent); err != nil {
 					status, msg = dto.Failed, err.Error()
@@ -78,65 +83,58 @@ func (uc *UseCase) LaunchProcessing(ctx context.Context) {
 	}()
 }
 
+func (uc *UseCase) Processing(ctx context.Context, msg dto.Message) error {
+	taskEvent := msg.Body
+	uc.updateTaskStatus(ctx, &taskEvent, dto.Processing, EmptyMessage)
+	err := uc.processFile(ctx, taskEvent)
+	return err
+}
+
 func (uc *UseCase) publishToQueue(ctx context.Context, taskEvent dto.TaskEvent) error {
-	msg := dto.FromTaskEvent(taskEvent)
-	return uc.queue.Publish(ctx, msg)
+	msg := mapping.MessageFromTaskEvent(taskEvent)
+	err := uc.taskQueue.Publish(ctx, msg)
+	if err != nil {
+		return fmt.Errorf("failed to publish task event to queue: %w", err)
+	}
+	return nil
 }
 
 func (uc *UseCase) updateTaskStatus(ctx context.Context, task *dto.TaskEvent, status dto.TaskStatus, msg string) {
 	task.Status, task.StatusText = status, msg
-	if err := uc.cacher.Push(ctx, task); err != nil {
+	if err := uc.taskManager.Push(ctx, task); err != nil {
 		log.Printf("failed to store task to cache: %v", err)
 	}
 }
 
-func (uc *UseCase) Processing(ctx context.Context, msg dto.Message) error {
-	taskEvent := msg.Body
-	uc.updateTaskStatus(ctx, &taskEvent, dto.Processing, EmptyMessage)
+func (uc *UseCase) isTaskAlreadyProcessed(ctx context.Context, task *dto.TaskEvent) bool {
+	storageTask, err := uc.taskManager.Get(ctx, task.Bucket, task.ID)
+	if err != nil {
+		log.Printf("failed to get task from cache: %v", err)
+		return false
+	}
 
-	var callback func(ctx context.Context, task dto.TaskEvent) error
-	switch taskEvent.EventType {
-	case dto.CreateFile:
-		callback = uc.processFile
+	if storageTask == nil {
+		return false
+	}
 
-	case dto.CreateBucket:
-		callback = uc.createBucket
-
-	case dto.DeleteBucket:
-		callback = uc.deleteBucket
-
-	case dto.DeleteFile:
+	switch storageTask.Status {
+	case dto.Pending:
 		fallthrough
-
-	case dto.CopyFile:
+	case dto.Processing:
+		return true
+	case dto.Failed:
 		fallthrough
-
+	case dto.Received:
+		fallthrough
+	case dto.Successful:
+		return false
 	default:
-		return fmt.Errorf("unknown task event type: %v", taskEvent.EventType)
+		return false
 	}
-
-	err := callback(ctx, taskEvent)
-	return err
-}
-
-func (uc *UseCase) createBucket(ctx context.Context, taskEvent dto.TaskEvent) error {
-	err := uc.storage.CreateIndex(ctx, taskEvent.Bucket)
-	if err != nil {
-		return fmt.Errorf("failed to create index: %w", err)
-	}
-	return nil
-}
-
-func (uc *UseCase) deleteBucket(ctx context.Context, taskEvent dto.TaskEvent) error {
-	err := uc.storage.DeleteIndex(ctx, taskEvent.Bucket)
-	if err != nil {
-		return fmt.Errorf("failed to delete index: %w", err)
-	}
-	return nil
 }
 
 func (uc *UseCase) processFile(ctx context.Context, taskEvent dto.TaskEvent) error {
-	fileData, err := uc.watcher.DownloadFile(ctx, taskEvent.Bucket, taskEvent.FilePath)
+	fileData, err := uc.objStorage.DownloadFile(ctx, taskEvent.Bucket, taskEvent.FilePath)
 	if err != nil {
 		return fmt.Errorf("failed to download file: %w", err)
 	}
@@ -150,7 +148,7 @@ func (uc *UseCase) processFile(ctx context.Context, taskEvent dto.TaskEvent) err
 		return fmt.Errorf("failed to recognize: %w", err)
 	}
 
-	doc := &dto.StorageDocument{
+	doc := &dto.DocumentObject{
 		FileName:   path.Base(taskEvent.FilePath),
 		FilePath:   taskEvent.FilePath,
 		FileSize:   fileData.Len(),
@@ -159,7 +157,7 @@ func (uc *UseCase) processFile(ctx context.Context, taskEvent dto.TaskEvent) err
 		ModifiedAt: taskEvent.ModifiedAt,
 	}
 
-	id, err := uc.storage.StoreDocument(ctx, taskEvent.Bucket, doc)
+	id, err := uc.docStorage.StoreDocument(ctx, taskEvent.Bucket, doc)
 	if err != nil {
 		return fmt.Errorf("failed to store doc %s: %w", doc.FileName, err)
 	}
@@ -168,30 +166,42 @@ func (uc *UseCase) processFile(ctx context.Context, taskEvent dto.TaskEvent) err
 	return nil
 }
 
-func (uc *UseCase) LoadAndLaunchWatchedDirs(ctx context.Context) {
-	dirs, err := uc.watchStorage.LoadAllWatcherDirs(ctx)
-	if err != nil {
-		log.Printf("failed to load all watcher dirs: %v", err)
+func (uc *UseCase) StoreFileToStorage(ctx context.Context, fileForm dto.FileToUpload) (*dto.TaskEvent, error) {
+	id := utils.GenerateUniqID(fileForm.Bucket, fileForm.FilePath)
+	log.Printf("[%s]: publish task: %s", fileForm.Bucket, id)
+
+	task := dto.TaskEvent{
+		ID:         id,
+		Bucket:     fileForm.Bucket,
+		FilePath:   fileForm.FilePath,
+		FileSize:   int64(fileForm.FileData.Len()),
+		CreatedAt:  time.Now(),
+		ModifiedAt: time.Now(),
+		Status:     dto.Received,
 	}
 
-	for _, dir := range dirs {
-		err = uc.watcher.AttachWatchedDir(ctx, dir)
-		if err != nil {
-			log.Printf("failed to attach watcher dir %s: %v", dir, err)
-		}
+	if err := uc.taskManager.Push(ctx, &task); err != nil {
+		return nil, fmt.Errorf("failed to store task to cache: %w", err)
 	}
+
+	err := uc.objStorage.UploadFile(ctx, fileForm.Bucket, fileForm.FilePath, fileForm.FileData, fileForm.Expired)
+	if err != nil {
+		return nil, fmt.Errorf("failed to upload file: %w", err)
+	}
+
+	uc.processorCh <- task
+
+	return &task, nil
 }
 
-func (uc *UseCase) StoreWatchedDirs(ctx context.Context) {
-	dirs, err := uc.watcher.GetWatchedDirs(ctx)
-	if err != nil {
-		log.Printf("failed to get all watcher dirs: %v", err)
-	}
+func (uc *UseCase) GetObjectStorage() object_storage.IObjectStorage {
+	return uc.objStorage
+}
 
-	for _, dir := range dirs {
-		err = uc.watchStorage.StoreWatcherDir(ctx, dir)
-		if err != nil {
-			log.Printf("failed to store watcher dir %s: %v", dir, err)
-		}
-	}
+func (uc *UseCase) GetDocStorage() doc_storage.IDocumentStorage {
+	return uc.docStorage
+}
+
+func (uc *UseCase) GetTaskManager() task_manager.ITaskManager {
+	return uc.taskManager
 }

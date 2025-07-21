@@ -27,7 +27,6 @@ linters:
     - grouper
     - importas
     - interfacebloat
-    - ireturn
     - lll
     - loggercheck
     - maintidx
@@ -68,6 +67,7 @@ linters:
     - durationcheck
     - exhaustruct
     - ineffassign
+    - ireturn
     - forcetypeassert
     - funlen
     - gochecknoinits

@@ -12,4 +12,6 @@
 
 LICENSE
 
-indexer/
+minio-data/
+rabbitmq-data/
+redis-data/

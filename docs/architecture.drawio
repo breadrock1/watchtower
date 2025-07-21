@@ -4,74 +4,74 @@
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="buNy8_pUZ31k1adDsSU7-52" value="" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+        <mxCell id="buNy8_pUZ31k1adDsSU7-52" value="" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
           <mxGeometry x="-1070" y="-800" width="870" height="530" as="geometry" />
         </mxCell>
-        <mxCell id="buNy8_pUZ31k1adDsSU7-35" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" vertex="1" parent="1">
+        <mxCell id="buNy8_pUZ31k1adDsSU7-35" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" parent="1" vertex="1">
           <mxGeometry x="-450" y="-700" width="240" height="410" as="geometry" />
         </mxCell>
-        <mxCell id="buNy8_pUZ31k1adDsSU7-4" value="Queue Storage&lt;div&gt;(RabbitMQ)&lt;/div&gt;" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/general/Storage_Queue.svg;" vertex="1" parent="1">
+        <mxCell id="buNy8_pUZ31k1adDsSU7-4" value="Queue Storage&lt;div&gt;(RabbitMQ)&lt;/div&gt;" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/general/Storage_Queue.svg;" parent="1" vertex="1">
           <mxGeometry x="-640" y="-700" width="73.85" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="buNy8_pUZ31k1adDsSU7-5" value="Cache Storage&lt;div&gt;(Redis)&lt;/div&gt;" style="image;sketch=0;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/mscae/Cache_Redis_Product.svg;" vertex="1" parent="1">
+        <mxCell id="buNy8_pUZ31k1adDsSU7-5" value="Cache Storage&lt;div&gt;(Redis)&lt;/div&gt;" style="image;sketch=0;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/mscae/Cache_Redis_Product.svg;" parent="1" vertex="1">
           <mxGeometry x="-629.9999999999999" y="-540" width="71.43" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="buNy8_pUZ31k1adDsSU7-6" value="File Storage&lt;br&gt;(S3)" style="dashed=0;outlineConnect=0;html=1;align=center;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;shape=mxgraph.webicons.aws_s3;gradientColor=#DFDEDE" vertex="1" parent="1">
+        <mxCell id="buNy8_pUZ31k1adDsSU7-6" value="File Storage&lt;br&gt;(S3)" style="dashed=0;outlineConnect=0;html=1;align=center;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;shape=mxgraph.webicons.aws_s3;gradientColor=#DFDEDE" parent="1" vertex="1">
           <mxGeometry x="-849.5" y="-762" width="73" height="72" as="geometry" />
         </mxCell>
-        <mxCell id="buNy8_pUZ31k1adDsSU7-10" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;startArrow=classic;startFill=1;entryX=-0.043;entryY=0.565;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="buNy8_pUZ31k1adDsSU7-8" target="buNy8_pUZ31k1adDsSU7-4">
+        <mxCell id="buNy8_pUZ31k1adDsSU7-10" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;startArrow=classic;startFill=1;entryX=-0.043;entryY=0.565;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="buNy8_pUZ31k1adDsSU7-8" target="buNy8_pUZ31k1adDsSU7-4" edge="1">
           <mxGeometry relative="1" as="geometry">
             <mxPoint x="-770" y="-530" as="sourcePoint" />
             <mxPoint x="-710" y="-650" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="buNy8_pUZ31k1adDsSU7-18" value="put / load&amp;nbsp;&lt;div&gt;task&lt;/div&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="buNy8_pUZ31k1adDsSU7-10">
+        <mxCell id="buNy8_pUZ31k1adDsSU7-18" value="put / load&amp;nbsp;&lt;div&gt;task&lt;/div&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="buNy8_pUZ31k1adDsSU7-10" vertex="1" connectable="0">
           <mxGeometry x="-0.0754" relative="1" as="geometry">
             <mxPoint x="15" y="-12" as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="buNy8_pUZ31k1adDsSU7-12" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;startArrow=none;startFill=0;" edge="1" parent="1" target="buNy8_pUZ31k1adDsSU7-5">
+        <mxCell id="buNy8_pUZ31k1adDsSU7-12" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;startArrow=none;startFill=0;" parent="1" target="buNy8_pUZ31k1adDsSU7-5" edge="1">
           <mxGeometry relative="1" as="geometry">
             <mxPoint x="-770" y="-510" as="sourcePoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="buNy8_pUZ31k1adDsSU7-20" value="update&amp;nbsp;&lt;span style=&quot;background-color: light-dark(#ffffff, var(--ge-dark-color, #121212)); color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;task&amp;nbsp;&lt;/span&gt;&lt;div&gt;&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255)); background-color: light-dark(#ffffff, var(--ge-dark-color, #121212));&quot;&gt;processing&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255)); background-color: light-dark(#ffffff, var(--ge-dark-color, #121212));&quot;&gt;status&lt;/span&gt;&lt;/div&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="buNy8_pUZ31k1adDsSU7-12">
+        <mxCell id="buNy8_pUZ31k1adDsSU7-20" value="update&amp;nbsp;&lt;span style=&quot;background-color: light-dark(#ffffff, var(--ge-dark-color, #121212)); color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;task&amp;nbsp;&lt;/span&gt;&lt;div&gt;&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255)); background-color: light-dark(#ffffff, var(--ge-dark-color, #121212));&quot;&gt;processing&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255)); background-color: light-dark(#ffffff, var(--ge-dark-color, #121212));&quot;&gt;status&lt;/span&gt;&lt;/div&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="buNy8_pUZ31k1adDsSU7-12" vertex="1" connectable="0">
           <mxGeometry x="0.1488" y="1" relative="1" as="geometry">
             <mxPoint x="-14" y="5" as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="buNy8_pUZ31k1adDsSU7-15" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;startArrow=classic;startFill=1;endArrow=none;dashed=1;" edge="1" parent="1" source="buNy8_pUZ31k1adDsSU7-8">
+        <mxCell id="buNy8_pUZ31k1adDsSU7-15" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;startArrow=none;startFill=0;endArrow=classic;endFill=1;" parent="1" source="buNy8_pUZ31k1adDsSU7-8" edge="1">
           <mxGeometry relative="1" as="geometry">
             <mxPoint x="-830" y="-550" as="sourcePoint" />
             <mxPoint x="-810" y="-650" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="buNy8_pUZ31k1adDsSU7-21" value="&lt;div&gt;uploading&lt;span style=&quot;background-color: light-dark(#ffffff, var(--ge-dark-color, #121212)); color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&amp;nbsp;&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;background-color: light-dark(#ffffff, var(--ge-dark-color, #121212)); color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;file e&lt;/span&gt;&lt;span style=&quot;background-color: light-dark(#ffffff, var(--ge-dark-color, #121212)); color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;vent&lt;/span&gt;&lt;/div&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="buNy8_pUZ31k1adDsSU7-15">
+        <mxCell id="buNy8_pUZ31k1adDsSU7-21" value="&lt;div&gt;upload&lt;span style=&quot;background-color: light-dark(#ffffff, var(--ge-dark-color, #121212)); color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&amp;nbsp;&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;background-color: light-dark(#ffffff, var(--ge-dark-color, #121212)); color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;file&lt;/span&gt;&lt;/div&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="buNy8_pUZ31k1adDsSU7-15" vertex="1" connectable="0">
           <mxGeometry x="-0.399" y="1" relative="1" as="geometry">
             <mxPoint x="1" y="-27" as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="buNy8_pUZ31k1adDsSU7-8" value="Watchtower" style="sketch=0;pointerEvents=1;shadow=0;dashed=0;html=1;strokeColor=none;fillColor=#505050;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;outlineConnect=0;align=center;shape=mxgraph.office.communications.watcher_node;" vertex="1" parent="1">
+        <mxCell id="buNy8_pUZ31k1adDsSU7-8" value="Watchtower" style="sketch=0;pointerEvents=1;shadow=0;dashed=0;html=1;strokeColor=none;fillColor=#505050;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;outlineConnect=0;align=center;shape=mxgraph.office.communications.watcher_node;" parent="1" vertex="1">
           <mxGeometry x="-843.5" y="-540" width="67" height="66" as="geometry" />
         </mxCell>
-        <mxCell id="buNy8_pUZ31k1adDsSU7-14" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="buNy8_pUZ31k1adDsSU7-13" target="buNy8_pUZ31k1adDsSU7-8">
+        <mxCell id="buNy8_pUZ31k1adDsSU7-14" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="buNy8_pUZ31k1adDsSU7-13" target="buNy8_pUZ31k1adDsSU7-8" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="buNy8_pUZ31k1adDsSU7-41" value="REST&lt;div&gt;request&lt;/div&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="buNy8_pUZ31k1adDsSU7-14">
+        <mxCell id="buNy8_pUZ31k1adDsSU7-41" value="REST&lt;div&gt;request&lt;/div&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="buNy8_pUZ31k1adDsSU7-14" vertex="1" connectable="0">
           <mxGeometry x="-0.112" y="1" relative="1" as="geometry">
             <mxPoint as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="buNy8_pUZ31k1adDsSU7-13" value="User /&lt;div&gt;Ext. system&lt;/div&gt;" style="verticalLabelPosition=bottom;html=1;verticalAlign=top;align=center;strokeColor=none;fillColor=#00BEF2;shape=mxgraph.azure.user;" vertex="1" parent="1">
+        <mxCell id="buNy8_pUZ31k1adDsSU7-13" value="User /&lt;div&gt;Ext. system&lt;/div&gt;" style="verticalLabelPosition=bottom;html=1;verticalAlign=top;align=center;strokeColor=none;fillColor=#00BEF2;shape=mxgraph.azure.user;" parent="1" vertex="1">
           <mxGeometry x="-1050" y="-536" width="68" height="59" as="geometry" />
         </mxCell>
-        <mxCell id="buNy8_pUZ31k1adDsSU7-23" value="" style="points=[];aspect=fixed;html=1;align=center;shadow=0;dashed=0;fillColor=#FF6A00;strokeColor=none;shape=mxgraph.alibaba_cloud.elasticsearch;" vertex="1" parent="1">
+        <mxCell id="buNy8_pUZ31k1adDsSU7-23" value="" style="points=[];aspect=fixed;html=1;align=center;shadow=0;dashed=0;fillColor=#FF6A00;strokeColor=none;shape=mxgraph.alibaba_cloud.elasticsearch;" parent="1" vertex="1">
           <mxGeometry x="-402.48" y="-390" width="54.97" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="buNy8_pUZ31k1adDsSU7-25" value="Document Storage&lt;div&gt;(OpenSearch)&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+        <mxCell id="buNy8_pUZ31k1adDsSU7-25" value="Document Storage&lt;div&gt;(OpenSearch)&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
           <mxGeometry x="-430" y="-330" width="110" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="buNy8_pUZ31k1adDsSU7-44" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;compute&lt;/font&gt;&lt;div&gt;&lt;div&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;embeddings&lt;/font&gt;&lt;/div&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;of file content&lt;/font&gt;&lt;/div&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="buNy8_pUZ31k1adDsSU7-28" target="buNy8_pUZ31k1adDsSU7-31">
+        <mxCell id="buNy8_pUZ31k1adDsSU7-44" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;compute&lt;/font&gt;&lt;div&gt;&lt;div&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;embeddings&lt;/font&gt;&lt;/div&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;of file content&lt;/font&gt;&lt;/div&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="buNy8_pUZ31k1adDsSU7-28" target="buNy8_pUZ31k1adDsSU7-31" edge="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="-270" y="-660" />
@@ -79,13 +79,13 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="buNy8_pUZ31k1adDsSU7-28" value="" style="points=[];aspect=fixed;html=1;align=center;shadow=0;dashed=0;fillColor=#FF6A00;strokeColor=none;shape=mxgraph.alibaba_cloud.ocr_optical_character_recognition;" vertex="1" parent="1">
+        <mxCell id="buNy8_pUZ31k1adDsSU7-28" value="" style="points=[];aspect=fixed;html=1;align=center;shadow=0;dashed=0;fillColor=#FF6A00;strokeColor=none;shape=mxgraph.alibaba_cloud.ocr_optical_character_recognition;" parent="1" vertex="1">
           <mxGeometry x="-405" y="-690" width="60" height="60.6" as="geometry" />
         </mxCell>
-        <mxCell id="buNy8_pUZ31k1adDsSU7-29" value="OCR" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+        <mxCell id="buNy8_pUZ31k1adDsSU7-29" value="OCR" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
           <mxGeometry x="-405" y="-637" width="60" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="buNy8_pUZ31k1adDsSU7-45" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="buNy8_pUZ31k1adDsSU7-31" target="buNy8_pUZ31k1adDsSU7-37">
+        <mxCell id="buNy8_pUZ31k1adDsSU7-45" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="buNy8_pUZ31k1adDsSU7-31" target="buNy8_pUZ31k1adDsSU7-37" edge="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="-270" y="-570" />
@@ -93,21 +93,21 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="buNy8_pUZ31k1adDsSU7-48" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;extract&lt;/font&gt;&lt;div&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;knowledge&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;sub-graph&amp;nbsp;&lt;span style=&quot;background-color: light-dark(#ffffff, var(--ge-dark-color, #121212)); color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;of&amp;nbsp;&lt;br&gt;&lt;/span&gt;&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255)); background-color: light-dark(#ffffff, var(--ge-dark-color, #121212));&quot;&gt;file content&lt;/span&gt;&lt;/font&gt;&lt;/div&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="buNy8_pUZ31k1adDsSU7-45">
+        <mxCell id="buNy8_pUZ31k1adDsSU7-48" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;extract&lt;/font&gt;&lt;div&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;knowledge&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;sub-graph&amp;nbsp;&lt;span style=&quot;background-color: light-dark(#ffffff, var(--ge-dark-color, #121212)); color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;of&amp;nbsp;&lt;br&gt;&lt;/span&gt;&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255)); background-color: light-dark(#ffffff, var(--ge-dark-color, #121212));&quot;&gt;file content&lt;/span&gt;&lt;/font&gt;&lt;/div&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="buNy8_pUZ31k1adDsSU7-45" vertex="1" connectable="0">
           <mxGeometry x="-0.0161" relative="1" as="geometry">
             <mxPoint as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="buNy8_pUZ31k1adDsSU7-31" value="" style="points=[];aspect=fixed;html=1;align=center;shadow=0;dashed=0;fillColor=#FF6A00;strokeColor=none;shape=mxgraph.alibaba_cloud.nlp_natural_language_processing;" vertex="1" parent="1">
+        <mxCell id="buNy8_pUZ31k1adDsSU7-31" value="" style="points=[];aspect=fixed;html=1;align=center;shadow=0;dashed=0;fillColor=#FF6A00;strokeColor=none;shape=mxgraph.alibaba_cloud.nlp_natural_language_processing;" parent="1" vertex="1">
           <mxGeometry x="-405.81" y="-607" width="60.81" height="67" as="geometry" />
         </mxCell>
-        <mxCell id="buNy8_pUZ31k1adDsSU7-33" value="Vectorizer&lt;div&gt;(embeddings)&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+        <mxCell id="buNy8_pUZ31k1adDsSU7-33" value="Vectorizer&lt;div&gt;(embeddings)&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
           <mxGeometry x="-405.81" y="-540" width="60" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="buNy8_pUZ31k1adDsSU7-36" value="&lt;font style=&quot;font-size: 12px;&quot;&gt;Document&lt;/font&gt;&lt;div&gt;&lt;font style=&quot;font-size: 12px;&quot;&gt;processing&lt;/font&gt;&lt;/div&gt;" style="html=1;strokeWidth=1;shadow=0;dashed=0;shape=mxgraph.ios7.misc.settings;fillColor=#8F8E94;strokeColor=none;buttonText=;strokeColor2=#222222;fontColor=#222222;fontSize=8;verticalLabelPosition=bottom;verticalAlign=top;align=center;sketch=0;" vertex="1" parent="1">
+        <mxCell id="buNy8_pUZ31k1adDsSU7-36" value="&lt;font style=&quot;font-size: 12px;&quot;&gt;Document&lt;/font&gt;&lt;div&gt;&lt;font style=&quot;font-size: 12px;&quot;&gt;processing&lt;/font&gt;&lt;/div&gt;" style="html=1;strokeWidth=1;shadow=0;dashed=0;shape=mxgraph.ios7.misc.settings;fillColor=#8F8E94;strokeColor=none;buttonText=;strokeColor2=#222222;fontColor=#222222;fontSize=8;verticalLabelPosition=bottom;verticalAlign=top;align=center;sketch=0;" parent="1" vertex="1">
           <mxGeometry x="-640" y="-390" width="70" height="70" as="geometry" />
         </mxCell>
-        <mxCell id="buNy8_pUZ31k1adDsSU7-46" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="buNy8_pUZ31k1adDsSU7-37" target="buNy8_pUZ31k1adDsSU7-23">
+        <mxCell id="buNy8_pUZ31k1adDsSU7-46" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="buNy8_pUZ31k1adDsSU7-37" target="buNy8_pUZ31k1adDsSU7-23" edge="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="-270" y="-460" />
@@ -115,34 +115,34 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="buNy8_pUZ31k1adDsSU7-49" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;store&amp;nbsp;&lt;span style=&quot;background-color: light-dark(#ffffff, var(--ge-dark-color, #121212)); color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;all&amp;nbsp;&lt;/span&gt;&lt;/font&gt;&lt;div&gt;&lt;span style=&quot;background-color: light-dark(#ffffff, var(--ge-dark-color, #121212)); color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;processed&lt;/font&gt;&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;document data&lt;/font&gt;&lt;/div&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="buNy8_pUZ31k1adDsSU7-46">
+        <mxCell id="buNy8_pUZ31k1adDsSU7-49" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;store&amp;nbsp;&lt;span style=&quot;background-color: light-dark(#ffffff, var(--ge-dark-color, #121212)); color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;all&amp;nbsp;&lt;/span&gt;&lt;/font&gt;&lt;div&gt;&lt;span style=&quot;background-color: light-dark(#ffffff, var(--ge-dark-color, #121212)); color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;processed&lt;/font&gt;&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;document data&lt;/font&gt;&lt;/div&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="buNy8_pUZ31k1adDsSU7-46" vertex="1" connectable="0">
           <mxGeometry x="-0.012" relative="1" as="geometry">
             <mxPoint as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="buNy8_pUZ31k1adDsSU7-37" value="" style="points=[];aspect=fixed;html=1;align=center;shadow=0;dashed=0;fillColor=#FF6A00;strokeColor=none;shape=mxgraph.alibaba_cloud.gdb_graph_database;" vertex="1" parent="1">
+        <mxCell id="buNy8_pUZ31k1adDsSU7-37" value="" style="points=[];aspect=fixed;html=1;align=center;shadow=0;dashed=0;fillColor=#FF6A00;strokeColor=none;shape=mxgraph.alibaba_cloud.gdb_graph_database;" parent="1" vertex="1">
           <mxGeometry x="-408.01" y="-500" width="66.02" height="57" as="geometry" />
         </mxCell>
-        <mxCell id="buNy8_pUZ31k1adDsSU7-38" value="Graph Knowledge&lt;div&gt;(neo4j)&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+        <mxCell id="buNy8_pUZ31k1adDsSU7-38" value="Graph Knowledge&lt;div&gt;(neo4j)&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
           <mxGeometry x="-408.01" y="-433" width="68.01" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="buNy8_pUZ31k1adDsSU7-42" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="buNy8_pUZ31k1adDsSU7-8" target="buNy8_pUZ31k1adDsSU7-36">
+        <mxCell id="buNy8_pUZ31k1adDsSU7-42" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="buNy8_pUZ31k1adDsSU7-8" target="buNy8_pUZ31k1adDsSU7-36" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="buNy8_pUZ31k1adDsSU7-43" value="&lt;div&gt;processing&lt;/div&gt;&lt;div&gt;task&lt;/div&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="buNy8_pUZ31k1adDsSU7-42">
+        <mxCell id="buNy8_pUZ31k1adDsSU7-43" value="&lt;div&gt;processing&lt;/div&gt;&lt;div&gt;task&lt;/div&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="buNy8_pUZ31k1adDsSU7-42" vertex="1" connectable="0">
           <mxGeometry x="-0.1132" y="1" relative="1" as="geometry">
             <mxPoint as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="buNy8_pUZ31k1adDsSU7-50" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.013;entryY=0.537;entryDx=0;entryDy=0;entryPerimeter=0;dashed=1;" edge="1" parent="1" source="buNy8_pUZ31k1adDsSU7-36" target="buNy8_pUZ31k1adDsSU7-28">
+        <mxCell id="buNy8_pUZ31k1adDsSU7-50" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.013;entryY=0.537;entryDx=0;entryDy=0;entryPerimeter=0;dashed=1;" parent="1" source="buNy8_pUZ31k1adDsSU7-36" target="buNy8_pUZ31k1adDsSU7-28" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="buNy8_pUZ31k1adDsSU7-51" value="file&lt;div&gt;content&lt;/div&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="buNy8_pUZ31k1adDsSU7-50">
+        <mxCell id="buNy8_pUZ31k1adDsSU7-51" value="file&lt;div&gt;content&lt;/div&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="buNy8_pUZ31k1adDsSU7-50" vertex="1" connectable="0">
           <mxGeometry x="0.0492" y="1" relative="1" as="geometry">
             <mxPoint as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="buNy8_pUZ31k1adDsSU7-53" value="Watchtower&lt;div&gt;arch schema&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+        <mxCell id="buNy8_pUZ31k1adDsSU7-53" value="Watchtower&lt;div&gt;arch schema&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
           <mxGeometry x="-1062" y="-790" width="80" height="30" as="geometry" />
         </mxCell>
       </root>

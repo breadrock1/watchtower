@@ -1,4 +1,4 @@
-package doc_searcher
+package doc_storage
 
 type CreateIndexForm struct {
 	ID   string `json:"id"`

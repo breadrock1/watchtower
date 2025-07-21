@@ -52,16 +52,7 @@ func SendRequest(client *http.Client, req *http.Request) ([]byte, error) {
 	return respData, nil
 }
 
-func BuildTargetURL(enableSSL bool, host, path string) string {
-	httpSchema := GetHttpSchema(enableSSL)
-	targetURL := fmt.Sprintf("%s://%s%s", httpSchema, host, path)
+func BuildTargetURL(host, path string) string {
+	targetURL := fmt.Sprintf("%s%s", host, path)
 	return targetURL
-}
-
-func GetHttpSchema(enableSSL bool) string {
-	if enableSSL {
-		return "https"
-	} else {
-		return "http"
-	}
 }

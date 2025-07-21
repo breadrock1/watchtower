@@ -43,7 +43,7 @@ func (dc *DedocClient) Recognize(ctx context.Context, inputFile dto.InputFile) (
 
 	mimeType := mpw.FormDataContentType()
 	timeoutReq := dc.config.Timeout * time.Second
-	targetURL := utils.BuildTargetURL(dc.config.EnableSSL, dc.config.Address, RecognitionURL)
+	targetURL := utils.BuildTargetURL(dc.config.Address, RecognitionURL)
 
 	respData, err := utils.POST(ctx, &buf, targetURL, mimeType, timeoutReq)
 	if err != nil {
