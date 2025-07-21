@@ -1,44 +1,36 @@
 [server.http]
-address="0.0.0.0:2893"
+address = "0.0.0.0:2893"
 
 [server.http.logger]
-level="info"
-enable_loki=true
-address="loki:3100"
+level = "info"
+enable_loki = true
+address = "loki:3100"
 
 [ocr.dedoc]
-address="http://dedoc:8004"
-timeout=300
+address = "http://dedoc:8004"
+timeout = 300
 
-[storage.docsearcher]
-address="http://doc-searcher:2892"
-
-[watcher.storage.pg]
-host = "localhost"
-port = 5432
-user = "postgres"
-password = "postgres"
-dbname   = "watchtower"
-ssl_mode   = "disable"
+[docstorage.docsearcher]
+address = "http://doc-searcher:2892"
 
 [cacher.redis]
-address="redis:6379"
-username="redis"
-password="redis"
-expired=3600
+address = "redis:6379"
+username = "redis"
+password = "redis"
+expired = 3600
 
 [queue.rmq]
-address="amqp://localhost:5672"
-exchange="watchtower"
-routing_key="task"
-queue="watchtower-tasks"
+address = "amqp://localhost:5672"
+exchange = "watchtower"
+routing_key = "task"
+queue = "watchtower-tasks"
 
 [cloud.s3]
-address="cloud-storage:9000"
-access_id="minio-root"
-secret_key="minio-root"
-enable_ssl=false
-token=""
-watched_dirs=[
+address = "cloud-storage:9000"
+access_id = "minio-root"
+secret_key = "minio-root"
+enable_ssl = false
+token = ""
+watched_dirs = [
     "common-folder"
 ]

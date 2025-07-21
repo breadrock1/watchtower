@@ -1,26 +1,10 @@
 definitions:
-  dto.EventType:
-    enum:
-    - 0
-    - 1
-    - 2
-    - 3
-    - 4
-    type: integer
-    x-enum-varnames:
-    - CreateFile
-    - DeleteFile
-    - CopyFile
-    - CreateBucket
-    - DeleteBucket
   dto.TaskEvent:
     properties:
       bucket:
         type: string
       created_at:
         type: string
-      event_type:
-        $ref: '#/definitions/dto.EventType'
       file_path:
         type: string
       file_size:
@@ -48,15 +32,6 @@ definitions:
     - Pending
     - Processing
     - Successful
-  httpserver.AddDirectoryToWatcherForm:
-    properties:
-      bucket:
-        example: test-folder
-        type: string
-      suffix:
-        example: ./some-directory
-        type: string
-    type: object
   httpserver.BadRequestForm:
     properties:
       message:
@@ -65,6 +40,45 @@ definitions:
       status:
         example: 400
         type: integer
+    type: object
+  httpserver.CopyFileForm:
+    properties:
+      dst_path:
+        example: test-document.docx
+        type: string
+      src_path:
+        example: old-test-document.docx
+        type: string
+    type: object
+  httpserver.CreateBucketForm:
+    properties:
+      bucket_name:
+        example: test-bucket
+        type: string
+    type: object
+  httpserver.DownloadFileForm:
+    properties:
+      file_name:
+        example: test-file.docx
+        type: string
+    type: object
+  httpserver.GetFileAttributesForm:
+    properties:
+      file_path:
+        example: test-file.docx
+        type: string
+    type: object
+  httpserver.GetFilesForm:
+    properties:
+      directory:
+        example: test-folder/
+        type: string
+    type: object
+  httpserver.RemoveFileForm:
+    properties:
+      file_name:
+        example: test-file.docx
+        type: string
     type: object
   httpserver.ResponseForm:
     properties:
@@ -84,6 +98,21 @@ definitions:
         example: 503
         type: integer
     type: object
+  httpserver.ShareFileForm:
+    properties:
+      dir_path:
+        example: test-folder/
+        type: string
+      expired_secs:
+        example: 3600
+        type: integer
+      file_name:
+        example: test-file.docx
+        type: string
+      redirect_host:
+        example: service-domain-name:4444
+        type: string
+    type: object
 info:
   contact: {}
   description: Watchtower is a project designed to provide processing files created
@@ -91,21 +120,14 @@ info:
   title: Watchtower service
   version: 0.0.1
 paths:
-  /tasks/{bucket}:
-    get:
-      consumes:
-      - application/json
-      description: Get processing/unrecognized/done task document
-      operationId: get-task
+  /cloud/{bucket}:
+    delete:
+      description: Remove bucket from cloud
+      operationId: remove-bucket
       parameters:
-      - description: Bucket id
+      - description: Bucket name to remove
         in: path
         name: bucket
-        required: true
-        type: string
-      - description: File path into bucket
-        in: query
-        name: file
         required: true
         type: string
       produces:
@@ -114,7 +136,7 @@ paths:
         "200":
           description: Ok
           schema:
-            $ref: '#/definitions/dto.TaskEvent'
+            $ref: '#/definitions/httpserver.ResponseForm'
         "400":
           description: Bad Request message
           schema:
@@ -123,22 +145,395 @@ paths:
           description: Server does not available
           schema:
             $ref: '#/definitions/httpserver.ServerErrorForm'
-      summary: Get processing task
+      summary: Remove bucket from cloud
       tags:
-      - tasks
-  /tasks/{bucket}/all:
-    get:
-      consumes:
-      - application/json
-      description: Load tasks of processing/unrecognized/done documents
-      operationId: load-tasks
+      - buckets
+  /cloud/{bucket}/file:
+    delete:
+      description: Remove file from cloud
+      operationId: remove-file-2
       parameters:
-      - description: Bucket id
+      - description: Bucket name to remove file
         in: path
         name: bucket
         required: true
         type: string
-      - description: Status
+      - description: Parameters to remove file
+        in: query
+        name: file_name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ok
+          schema:
+            $ref: '#/definitions/httpserver.ResponseForm'
+        "400":
+          description: Bad Request message
+          schema:
+            $ref: '#/definitions/httpserver.BadRequestForm'
+        "503":
+          description: Server does not available
+          schema:
+            $ref: '#/definitions/httpserver.ServerErrorForm'
+      summary: Remove file from cloud
+      tags:
+      - files
+  /cloud/{bucket}/file/attributes:
+    post:
+      consumes:
+      - application/json
+      description: Get file attributes
+      operationId: get-file-attrs
+      parameters:
+      - description: Bucket name to get list files
+        in: path
+        name: bucket
+        required: true
+        type: string
+      - description: Parameters to get list files
+        in: body
+        name: jsonQuery
+        required: true
+        schema:
+          $ref: '#/definitions/httpserver.GetFileAttributesForm'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ok
+          schema:
+            $ref: '#/definitions/httpserver.ResponseForm'
+        "400":
+          description: Bad Request message
+          schema:
+            $ref: '#/definitions/httpserver.BadRequestForm'
+        "503":
+          description: Server does not available
+          schema:
+            $ref: '#/definitions/httpserver.ServerErrorForm'
+      summary: Get file attributes
+      tags:
+      - files
+  /cloud/{bucket}/file/copy:
+    post:
+      consumes:
+      - application/json
+      description: Copy file to another location into bucket
+      operationId: copy-file
+      parameters:
+      - description: Bucket name of src file
+        in: path
+        name: bucket
+        required: true
+        type: string
+      - description: Params to copy file
+        in: body
+        name: jsonQuery
+        required: true
+        schema:
+          $ref: '#/definitions/httpserver.CopyFileForm'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ok
+          schema:
+            $ref: '#/definitions/httpserver.ResponseForm'
+        "400":
+          description: Bad Request message
+          schema:
+            $ref: '#/definitions/httpserver.BadRequestForm'
+        "503":
+          description: Server does not available
+          schema:
+            $ref: '#/definitions/httpserver.ServerErrorForm'
+      summary: Copy file to another location into bucket
+      tags:
+      - files
+  /cloud/{bucket}/file/download:
+    post:
+      consumes:
+      - application/json
+      description: Download file from cloud
+      operationId: download-file
+      parameters:
+      - description: Bucket name to download file
+        in: path
+        name: bucket
+        required: true
+        type: string
+      - description: Parameters to download file
+        in: body
+        name: jsonQuery
+        required: true
+        schema:
+          $ref: '#/definitions/httpserver.DownloadFileForm'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ok
+          schema:
+            type: file
+        "400":
+          description: Bad Request message
+          schema:
+            $ref: '#/definitions/httpserver.BadRequestForm'
+        "503":
+          description: Server does not available
+          schema:
+            $ref: '#/definitions/httpserver.ServerErrorForm'
+      summary: Download file from cloud
+      tags:
+      - files
+  /cloud/{bucket}/file/move:
+    post:
+      consumes:
+      - application/json
+      description: Move file to another location into bucket
+      operationId: move-file
+      parameters:
+      - description: Bucket name of src file
+        in: path
+        name: bucket
+        required: true
+        type: string
+      - description: Params to move file
+        in: body
+        name: jsonQuery
+        required: true
+        schema:
+          $ref: '#/definitions/httpserver.CopyFileForm'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ok
+          schema:
+            $ref: '#/definitions/httpserver.ResponseForm'
+        "400":
+          description: Bad Request message
+          schema:
+            $ref: '#/definitions/httpserver.BadRequestForm'
+        "503":
+          description: Server does not available
+          schema:
+            $ref: '#/definitions/httpserver.ServerErrorForm'
+      summary: Move file to another location into bucket
+      tags:
+      - files
+  /cloud/{bucket}/file/remove:
+    delete:
+      description: Remove file from cloud
+      operationId: remove-file
+      parameters:
+      - description: Bucket name to remove file
+        in: path
+        name: bucket
+        required: true
+        type: string
+      - description: Parameters to remove file
+        in: body
+        name: jsonQuery
+        required: true
+        schema:
+          $ref: '#/definitions/httpserver.RemoveFileForm'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ok
+          schema:
+            $ref: '#/definitions/httpserver.ResponseForm'
+        "400":
+          description: Bad Request message
+          schema:
+            $ref: '#/definitions/httpserver.BadRequestForm'
+        "503":
+          description: Server does not available
+          schema:
+            $ref: '#/definitions/httpserver.ServerErrorForm'
+      summary: Remove file from cloud
+      tags:
+      - files
+  /cloud/{bucket}/file/share:
+    post:
+      consumes:
+      - application/json
+      description: Get share URL for file
+      operationId: share-file
+      parameters:
+      - description: Bucket name to share file
+        in: path
+        name: bucket
+        required: true
+        type: string
+      - description: Parameters to share file
+        in: body
+        name: jsonQuery
+        required: true
+        schema:
+          $ref: '#/definitions/httpserver.ShareFileForm'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ok
+          schema:
+            $ref: '#/definitions/httpserver.ResponseForm'
+        "400":
+          description: Bad Request message
+          schema:
+            $ref: '#/definitions/httpserver.BadRequestForm'
+        "503":
+          description: Server does not available
+          schema:
+            $ref: '#/definitions/httpserver.ServerErrorForm'
+      summary: Get share URL for file
+      tags:
+      - share
+  /cloud/{bucket}/file/upload:
+    post:
+      consumes:
+      - multipart/form
+      description: Upload files to cloud
+      operationId: upload-files
+      parameters:
+      - description: Bucket name to upload files
+        in: path
+        name: bucket
+        required: true
+        type: string
+      - description: Files multipart form
+        in: formData
+        name: files
+        required: true
+        type: file
+      - description: File datetime expired like 2025-01-01T12:01:01Z
+        in: query
+        name: expired
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ok
+          schema:
+            $ref: '#/definitions/httpserver.ResponseForm'
+        "400":
+          description: Bad Request message
+          schema:
+            $ref: '#/definitions/httpserver.BadRequestForm'
+        "503":
+          description: Server does not available
+          schema:
+            $ref: '#/definitions/httpserver.ServerErrorForm'
+      summary: Upload files to cloud
+      tags:
+      - files
+  /cloud/{bucket}/files:
+    post:
+      consumes:
+      - application/json
+      description: Get files list into bucket
+      operationId: get-list-files
+      parameters:
+      - description: Bucket name to get list files
+        in: path
+        name: bucket
+        required: true
+        type: string
+      - description: Parameters to get list files
+        in: body
+        name: jsonQuery
+        required: true
+        schema:
+          $ref: '#/definitions/httpserver.GetFilesForm'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ok
+          schema:
+            $ref: '#/definitions/httpserver.ResponseForm'
+        "400":
+          description: Bad Request message
+          schema:
+            $ref: '#/definitions/httpserver.BadRequestForm'
+        "503":
+          description: Server does not available
+          schema:
+            $ref: '#/definitions/httpserver.ServerErrorForm'
+      summary: Get files list into bucket
+      tags:
+      - files
+  /cloud/bucket:
+    put:
+      consumes:
+      - application/json
+      description: Create new bucket into cloud
+      operationId: create-bucket
+      parameters:
+      - description: Bucket name to create
+        in: body
+        name: jsonQuery
+        required: true
+        schema:
+          $ref: '#/definitions/httpserver.CreateBucketForm'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ok
+          schema:
+            $ref: '#/definitions/httpserver.ResponseForm'
+        "400":
+          description: Bad Request message
+          schema:
+            $ref: '#/definitions/httpserver.BadRequestForm'
+        "503":
+          description: Server does not available
+          schema:
+            $ref: '#/definitions/httpserver.ServerErrorForm'
+      summary: Create new bucket into cloud
+      tags:
+      - buckets
+  /cloud/buckets:
+    get:
+      description: Get watched bucket list
+      operationId: get-buckets
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ok
+          schema:
+            items:
+              type: string
+            type: array
+        "503":
+          description: Server does not available
+          schema:
+            $ref: '#/definitions/httpserver.ServerErrorForm'
+      summary: Get watched bucket list
+      tags:
+      - buckets
+  /tasks/{bucket}:
+    get:
+      consumes:
+      - application/json
+      description: Load tasks (processing/unrecognized/done) of uploaded files
+      operationId: load-tasks
+      parameters:
+      - description: Bucket id of uploaded files
+        in: path
+        name: bucket
+        required: true
+        type: string
+      - description: Status tasks to filter target result
         in: query
         name: status
         type: string
@@ -159,19 +554,24 @@ paths:
           description: Server does not available
           schema:
             $ref: '#/definitions/httpserver.ServerErrorForm'
-      summary: Load tasks of processing documents
+      summary: Load processing tasks of uploaded files into bucket
       tags:
       - tasks
-  /watcher/{bucket}:
-    delete:
+  /tasks/{bucket}/{task_id}:
+    get:
       consumes:
       - application/json
-      description: Attach new directory to watcher
-      operationId: folders-detach
+      description: Load processing/unrecognized/done task by id of uploaded file
+      operationId: load-task-by-id
       parameters:
-      - description: Bucket ids
+      - description: Bucket id of processing task
         in: path
         name: bucket
+        required: true
+        type: string
+      - description: Task ID
+        in: path
+        name: task_id
         required: true
         type: string
       produces:
@@ -180,7 +580,7 @@ paths:
         "200":
           description: Ok
           schema:
-            $ref: '#/definitions/httpserver.ResponseForm'
+            $ref: '#/definitions/dto.TaskEvent'
         "400":
           description: Bad Request message
           schema:
@@ -189,42 +589,16 @@ paths:
           description: Server does not available
           schema:
             $ref: '#/definitions/httpserver.ServerErrorForm'
-      summary: Attach new directory to watcher
+      summary: Load processing task by id
       tags:
-      - watcher
-    post:
-      consumes:
-      - application/json
-      description: Attach new directory to watcher
-      operationId: folders-attach
-      parameters:
-      - description: Bucket form
-        in: body
-        name: jsonQuery
-        required: true
-        schema:
-          $ref: '#/definitions/httpserver.AddDirectoryToWatcherForm'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Ok
-          schema:
-            $ref: '#/definitions/httpserver.ResponseForm'
-        "400":
-          description: Bad Request message
-          schema:
-            $ref: '#/definitions/httpserver.BadRequestForm'
-        "503":
-          description: Server does not available
-          schema:
-            $ref: '#/definitions/httpserver.ServerErrorForm'
-      summary: Attach new directory to watcher
-      tags:
-      - watcher
+      - tasks
 swagger: "2.0"
 tags:
-- description: APIs to manage cloud watchers
-  name: watcher
 - description: APIs to get status tasks
   name: tasks
+- description: CRUD APIs to manage cloud buckets
+  name: buckets
+- description: CRUD APIs to manage files into bucket
+  name: files
+- description: Share files by URL API
+  name: share

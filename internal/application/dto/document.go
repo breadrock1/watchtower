@@ -2,7 +2,7 @@ package dto
 
 import "time"
 
-type StorageDocument struct {
+type DocumentObject struct {
 	FileName   string    `json:"file_name"`
 	FilePath   string    `json:"file_path"`
 	FileSize   int       `json:"file_size"`

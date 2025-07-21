@@ -7,11 +7,12 @@ import (
 	"path"
 	"testing"
 	"time"
-	"watchtower/internal/application/utils"
 
 	"github.com/stretchr/testify/assert"
 	"watchtower/internal/application/dto"
+	"watchtower/internal/application/mapping"
 	"watchtower/internal/application/usecase"
+	"watchtower/internal/application/utils"
 	"watchtower/internal/infrastructure/config"
 	"watchtower/internal/infrastructure/redis"
 	"watchtower/internal/infrastructure/rmq"
@@ -32,7 +33,6 @@ func TestProcessing(t *testing.T) {
 	servConfig, initErr := config.FromFile(TestConfigFilePath)
 	assert.NoError(t, initErr, "failed to load testing config")
 
-	pgServ := &mocks.MockPgClient{}
 	dedocServ := &mocks.MockDedocClient{}
 
 	redisServ := redis.New(&servConfig.Cacher.Redis)
@@ -41,40 +41,43 @@ func TestProcessing(t *testing.T) {
 	initErr = rmqServ.Consume(ctx)
 	assert.NoError(t, initErr, "failed to start consuming rmq client")
 
-	s3Serv, initErr := s3.New(&servConfig.Cloud.Minio)
+	s3Serv, initErr := s3.New(&servConfig.Cloud.S3)
 	assert.NoError(t, initErr, "failed to init s3 client")
-	_ = s3Serv.CreateBucket(ctx, TestBucketName)
-	watchDir := dto.FromBucketName(TestBucketName)
-	initErr = s3Serv.LaunchWatcher(ctx, []dto.Directory{watchDir})
-	assert.NoError(t, initErr, "failed to launch s3 bucket watcher")
 
 	t.Run("Positive pipeline", func(t *testing.T) {
 		searcherServ := mocks.NewMockDocSearcherClient()
 
 		cCtx, cancel := context.WithCancel(ctx)
-		useCase := usecase.New(
-			s3Serv.GetEventsChannel(),
-			rmqServ.GetConsumerChannel(),
+		useCase := usecase.NewUseCase(
 			rmqServ,
 			redisServ,
-			s3Serv,
 			dedocServ,
 			searcherServ,
-			pgServ,
+			s3Serv,
 		)
-		useCase.LaunchProcessing(cCtx)
+		useCase.LaunchWatcherListener(cCtx)
 
 		fileData, err := os.ReadFile(TestInputFilePath)
 		data := bytes.NewBuffer(fileData)
 		dataStr := data.String()
 		assert.NoError(t, err, "failed to read test input file")
-		err = s3Serv.UploadFile(ctx, TestBucketName, path.Base(TestInputFilePath), data)
+		expired := time.Now()
+		expired.Add(10 * time.Second)
+
+		fileForm := dto.FileToUpload{
+			Bucket:   TestBucketName,
+			FilePath: path.Base(TestInputFilePath),
+			FileData: data,
+			Expired:  &expired,
+		}
+
+		task, err := useCase.StoreFileToStorage(ctx, fileForm)
 		assert.NoError(t, err, "failed to upload test input file to s3")
 
 		timeoutCh := time.After(7 * time.Second)
 		<-timeoutCh
 
-		task, err := redisServ.Get(ctx, TestBucketName, path.Base(TestInputFilePath))
+		task, err = redisServ.Get(ctx, TestBucketName, task.ID)
 		assert.NoError(t, err, "failed to get task from redis")
 		assert.Equal(t, dto.TaskStatus(3), task.Status)
 		assert.Equal(t, TestBucketName, task.Bucket)
@@ -92,21 +95,18 @@ func TestProcessing(t *testing.T) {
 		searcherServ := mocks.NewMockDocSearcherClient()
 
 		cCtx, cancel := context.WithCancel(ctx)
-		useCase := usecase.New(
-			s3Serv.GetEventsChannel(),
-			rmqServ.GetConsumerChannel(),
+		useCase := usecase.NewUseCase(
 			rmqServ,
 			redisServ,
-			s3Serv,
 			dedocServ,
 			searcherServ,
-			pgServ,
+			s3Serv,
 		)
-		useCase.LaunchProcessing(cCtx)
+		useCase.LaunchWatcherListener(cCtx)
 
 		id := utils.GenerateUniqID(TestBucketName, TestInputFilePath)
 		taskEvent := dto.TaskEvent{
-			Id:         id,
+			ID:         id,
 			Bucket:     TestBucketName,
 			FilePath:   TestInputFilePath,
 			FileSize:   0,
@@ -116,14 +116,14 @@ func TestProcessing(t *testing.T) {
 			StatusText: "",
 		}
 
-		rmqMsg := dto.FromTaskEvent(taskEvent)
+		rmqMsg := mapping.MessageFromTaskEvent(taskEvent)
 		err := rmqServ.Publish(ctx, rmqMsg)
 		assert.NoError(t, err, "failed to publish task event")
 
 		timeoutCh := time.After(7 * time.Second)
 		<-timeoutCh
 
-		task, err := redisServ.Get(ctx, TestBucketName, TestInputFilePath)
+		task, err := redisServ.Get(ctx, TestBucketName, id)
 		assert.NoError(t, err, "failed to get task from redis")
 		assert.Equal(t, dto.TaskStatus(-1), task.Status)
 		assert.Equal(t, TestBucketName, task.Bucket)

@@ -7,8 +7,7 @@ import (
 	"github.com/labstack/echo-contrib/echoprometheus"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"watchtower/internal/application/services/task-manager"
-	"watchtower/internal/application/services/watcher"
+	"watchtower/internal/application/usecase"
 
 	echoSwagger "github.com/swaggo/echo-swagger"
 	_ "watchtower/docs"
@@ -18,15 +17,13 @@ type Server struct {
 	server *echo.Echo
 	config *Config
 
-	taskManager task_manager.ITaskManager
-	watcher     watcher.IWatcher
+	uc *usecase.UseCase
 }
 
-func New(config *Config, tm task_manager.ITaskManager, watch watcher.IWatcher) *Server {
+func New(config *Config, watcherUC *usecase.UseCase) *Server {
 	return &Server{
-		config:      config,
-		taskManager: tm,
-		watcher:     watch,
+		config: config,
+		uc:     watcherUC,
 	}
 }
 
@@ -45,8 +42,9 @@ func (s *Server) setupServer() {
 	s.server.Use(middleware.CORS())
 	s.server.Use(middleware.Recover())
 
-	_ = s.CreateWatcherGroup()
 	_ = s.CreateTasksGroup()
+	_ = s.CreateStorageBucketsGroup()
+	_ = s.CreateStorageObjectsGroup()
 
 	s.server.GET("/swagger/*", echoSwagger.WrapHandler)
 }

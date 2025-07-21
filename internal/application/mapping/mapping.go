@@ -2,18 +2,15 @@ package mapping
 
 import (
 	"fmt"
+
+	"github.com/google/uuid"
 	"watchtower/internal/application/dto"
-	"watchtower/internal/domain/core/structures"
 )
 
-func FromDocument(doc *domain.Document) dto.StorageDocument {
-	return dto.StorageDocument{
-		FileName:   doc.FileName,
-		FilePath:   doc.FilePath,
-		FileSize:   doc.FileSize,
-		Content:    doc.Content,
-		CreatedAt:  doc.CreatedAt,
-		ModifiedAt: doc.ModifiedAt,
+func MessageFromTaskEvent(event dto.TaskEvent) dto.Message {
+	return dto.Message{
+		EventId: uuid.New(),
+		Body:    event,
 	}
 }
 

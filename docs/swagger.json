@@ -7,9 +7,9 @@
         "version": "0.0.1"
     },
     "paths": {
-        "/tasks/{bucket}": {
-            "get": {
-                "description": "Get processing/unrecognized/done task document",
+        "/cloud/bucket": {
+            "put": {
+                "description": "Create new bucket into cloud",
                 "consumes": [
                     "application/json"
                 ],
@@ -17,31 +17,26 @@
                     "application/json"
                 ],
                 "tags": [
-                    "tasks"
+                    "buckets"
                 ],
-                "summary": "Get processing task",
-                "operationId": "get-task",
+                "summary": "Create new bucket into cloud",
+                "operationId": "create-bucket",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "Bucket id",
-                        "name": "bucket",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "File path into bucket",
-                        "name": "file",
-                        "in": "query",
-                        "required": true
+                        "description": "Bucket name to create",
+                        "name": "jsonQuery",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.CreateBucketForm"
+                        }
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "Ok",
                         "schema": {
-                            "$ref": "#/definitions/dto.TaskEvent"
+                            "$ref": "#/definitions/httpserver.ResponseForm"
                         }
                     },
                     "400": {
@@ -59,9 +54,563 @@
                 }
             }
         },
-        "/tasks/{bucket}/all": {
+        "/cloud/buckets": {
             "get": {
-                "description": "Load tasks of processing/unrecognized/done documents",
+                "description": "Get watched bucket list",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "buckets"
+                ],
+                "summary": "Get watched bucket list",
+                "operationId": "get-buckets",
+                "responses": {
+                    "200": {
+                        "description": "Ok",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "Server does not available",
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.ServerErrorForm"
+                        }
+                    }
+                }
+            }
+        },
+        "/cloud/{bucket}": {
+            "delete": {
+                "description": "Remove bucket from cloud",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "buckets"
+                ],
+                "summary": "Remove bucket from cloud",
+                "operationId": "remove-bucket",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bucket name to remove",
+                        "name": "bucket",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Ok",
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.ResponseForm"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request message",
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.BadRequestForm"
+                        }
+                    },
+                    "503": {
+                        "description": "Server does not available",
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.ServerErrorForm"
+                        }
+                    }
+                }
+            }
+        },
+        "/cloud/{bucket}/file": {
+            "delete": {
+                "description": "Remove file from cloud",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Remove file from cloud",
+                "operationId": "remove-file-2",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bucket name to remove file",
+                        "name": "bucket",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Parameters to remove file",
+                        "name": "file_name",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Ok",
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.ResponseForm"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request message",
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.BadRequestForm"
+                        }
+                    },
+                    "503": {
+                        "description": "Server does not available",
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.ServerErrorForm"
+                        }
+                    }
+                }
+            }
+        },
+        "/cloud/{bucket}/file/attributes": {
+            "post": {
+                "description": "Get file attributes",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Get file attributes",
+                "operationId": "get-file-attrs",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bucket name to get list files",
+                        "name": "bucket",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Parameters to get list files",
+                        "name": "jsonQuery",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.GetFileAttributesForm"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Ok",
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.ResponseForm"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request message",
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.BadRequestForm"
+                        }
+                    },
+                    "503": {
+                        "description": "Server does not available",
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.ServerErrorForm"
+                        }
+                    }
+                }
+            }
+        },
+        "/cloud/{bucket}/file/copy": {
+            "post": {
+                "description": "Copy file to another location into bucket",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Copy file to another location into bucket",
+                "operationId": "copy-file",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bucket name of src file",
+                        "name": "bucket",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Params to copy file",
+                        "name": "jsonQuery",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.CopyFileForm"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Ok",
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.ResponseForm"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request message",
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.BadRequestForm"
+                        }
+                    },
+                    "503": {
+                        "description": "Server does not available",
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.ServerErrorForm"
+                        }
+                    }
+                }
+            }
+        },
+        "/cloud/{bucket}/file/download": {
+            "post": {
+                "description": "Download file from cloud",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Download file from cloud",
+                "operationId": "download-file",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bucket name to download file",
+                        "name": "bucket",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Parameters to download file",
+                        "name": "jsonQuery",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.DownloadFileForm"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Ok",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request message",
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.BadRequestForm"
+                        }
+                    },
+                    "503": {
+                        "description": "Server does not available",
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.ServerErrorForm"
+                        }
+                    }
+                }
+            }
+        },
+        "/cloud/{bucket}/file/move": {
+            "post": {
+                "description": "Move file to another location into bucket",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Move file to another location into bucket",
+                "operationId": "move-file",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bucket name of src file",
+                        "name": "bucket",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Params to move file",
+                        "name": "jsonQuery",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.CopyFileForm"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Ok",
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.ResponseForm"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request message",
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.BadRequestForm"
+                        }
+                    },
+                    "503": {
+                        "description": "Server does not available",
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.ServerErrorForm"
+                        }
+                    }
+                }
+            }
+        },
+        "/cloud/{bucket}/file/remove": {
+            "delete": {
+                "description": "Remove file from cloud",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Remove file from cloud",
+                "operationId": "remove-file",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bucket name to remove file",
+                        "name": "bucket",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Parameters to remove file",
+                        "name": "jsonQuery",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.RemoveFileForm"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Ok",
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.ResponseForm"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request message",
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.BadRequestForm"
+                        }
+                    },
+                    "503": {
+                        "description": "Server does not available",
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.ServerErrorForm"
+                        }
+                    }
+                }
+            }
+        },
+        "/cloud/{bucket}/file/share": {
+            "post": {
+                "description": "Get share URL for file",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "share"
+                ],
+                "summary": "Get share URL for file",
+                "operationId": "share-file",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bucket name to share file",
+                        "name": "bucket",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Parameters to share file",
+                        "name": "jsonQuery",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.ShareFileForm"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Ok",
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.ResponseForm"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request message",
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.BadRequestForm"
+                        }
+                    },
+                    "503": {
+                        "description": "Server does not available",
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.ServerErrorForm"
+                        }
+                    }
+                }
+            }
+        },
+        "/cloud/{bucket}/file/upload": {
+            "post": {
+                "description": "Upload files to cloud",
+                "consumes": [
+                    "multipart/form"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Upload files to cloud",
+                "operationId": "upload-files",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bucket name to upload files",
+                        "name": "bucket",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Files multipart form",
+                        "name": "files",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "File datetime expired like 2025-01-01T12:01:01Z",
+                        "name": "expired",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Ok",
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.ResponseForm"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request message",
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.BadRequestForm"
+                        }
+                    },
+                    "503": {
+                        "description": "Server does not available",
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.ServerErrorForm"
+                        }
+                    }
+                }
+            }
+        },
+        "/cloud/{bucket}/files": {
+            "post": {
+                "description": "Get files list into bucket",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Get files list into bucket",
+                "operationId": "get-list-files",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bucket name to get list files",
+                        "name": "bucket",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Parameters to get list files",
+                        "name": "jsonQuery",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.GetFilesForm"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Ok",
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.ResponseForm"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request message",
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.BadRequestForm"
+                        }
+                    },
+                    "503": {
+                        "description": "Server does not available",
+                        "schema": {
+                            "$ref": "#/definitions/httpserver.ServerErrorForm"
+                        }
+                    }
+                }
+            }
+        },
+        "/tasks/{bucket}": {
+            "get": {
+                "description": "Load tasks (processing/unrecognized/done) of uploaded files",
                 "consumes": [
                     "application/json"
                 ],
@@ -71,19 +620,19 @@
                 "tags": [
                     "tasks"
                 ],
-                "summary": "Load tasks of processing documents",
+                "summary": "Load processing tasks of uploaded files into bucket",
                 "operationId": "load-tasks",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Bucket id",
+                        "description": "Bucket id of uploaded files",
                         "name": "bucket",
                         "in": "path",
                         "required": true
                     },
                     {
                         "type": "string",
-                        "description": "Status",
+                        "description": "Status tasks to filter target result",
                         "name": "status",
                         "in": "query"
                     }
@@ -113,9 +662,9 @@
                 }
             }
         },
-        "/watcher/{bucket}": {
-            "post": {
-                "description": "Attach new directory to watcher",
+        "/tasks/{bucket}/{task_id}": {
+            "get": {
+                "description": "Load processing/unrecognized/done task by id of uploaded file",
                 "consumes": [
                     "application/json"
                 ],
@@ -123,60 +672,22 @@
                     "application/json"
                 ],
                 "tags": [
-                    "watcher"
+                    "tasks"
                 ],
-                "summary": "Attach new directory to watcher",
-                "operationId": "folders-attach",
-                "parameters": [
-                    {
-                        "description": "Bucket form",
-                        "name": "jsonQuery",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/httpserver.AddDirectoryToWatcherForm"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Ok",
-                        "schema": {
-                            "$ref": "#/definitions/httpserver.ResponseForm"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request message",
-                        "schema": {
-                            "$ref": "#/definitions/httpserver.BadRequestForm"
-                        }
-                    },
-                    "503": {
-                        "description": "Server does not available",
-                        "schema": {
-                            "$ref": "#/definitions/httpserver.ServerErrorForm"
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "description": "Attach new directory to watcher",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "watcher"
-                ],
-                "summary": "Attach new directory to watcher",
-                "operationId": "folders-detach",
+                "summary": "Load processing task by id",
+                "operationId": "load-task-by-id",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Bucket ids",
+                        "description": "Bucket id of processing task",
                         "name": "bucket",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Task ID",
+                        "name": "task_id",
                         "in": "path",
                         "required": true
                     }
@@ -185,7 +696,7 @@
                     "200": {
                         "description": "Ok",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ResponseForm"
+                            "$ref": "#/definitions/dto.TaskEvent"
                         }
                     },
                     "400": {
@@ -205,23 +716,6 @@
         }
     },
     "definitions": {
-        "dto.EventType": {
-            "type": "integer",
-            "enum": [
-                0,
-                1,
-                2,
-                3,
-                4
-            ],
-            "x-enum-varnames": [
-                "CreateFile",
-                "DeleteFile",
-                "CopyFile",
-                "CreateBucket",
-                "DeleteBucket"
-            ]
-        },
         "dto.TaskEvent": {
             "type": "object",
             "properties": {
@@ -230,9 +724,6 @@
                 },
                 "created_at": {
                     "type": "string"
-                },
-                "event_type": {
-                    "$ref": "#/definitions/dto.EventType"
                 },
                 "file_path": {
                     "type": "string"
@@ -271,19 +762,6 @@
                 "Successful"
             ]
         },
-        "httpserver.AddDirectoryToWatcherForm": {
-            "type": "object",
-            "properties": {
-                "bucket": {
-                    "type": "string",
-                    "example": "test-folder"
-                },
-                "suffix": {
-                    "type": "string",
-                    "example": "./some-directory"
-                }
-            }
-        },
         "httpserver.BadRequestForm": {
             "type": "object",
             "properties": {
@@ -294,6 +772,64 @@
                 "status": {
                     "type": "integer",
                     "example": 400
+                }
+            }
+        },
+        "httpserver.CopyFileForm": {
+            "type": "object",
+            "properties": {
+                "dst_path": {
+                    "type": "string",
+                    "example": "test-document.docx"
+                },
+                "src_path": {
+                    "type": "string",
+                    "example": "old-test-document.docx"
+                }
+            }
+        },
+        "httpserver.CreateBucketForm": {
+            "type": "object",
+            "properties": {
+                "bucket_name": {
+                    "type": "string",
+                    "example": "test-bucket"
+                }
+            }
+        },
+        "httpserver.DownloadFileForm": {
+            "type": "object",
+            "properties": {
+                "file_name": {
+                    "type": "string",
+                    "example": "test-file.docx"
+                }
+            }
+        },
+        "httpserver.GetFileAttributesForm": {
+            "type": "object",
+            "properties": {
+                "file_path": {
+                    "type": "string",
+                    "example": "test-file.docx"
+                }
+            }
+        },
+        "httpserver.GetFilesForm": {
+            "type": "object",
+            "properties": {
+                "directory": {
+                    "type": "string",
+                    "example": "test-folder/"
+                }
+            }
+        },
+        "httpserver.RemoveFileForm": {
+            "type": "object",
+            "properties": {
+                "file_name": {
+                    "type": "string",
+                    "example": "test-file.docx"
                 }
             }
         },
@@ -322,16 +858,45 @@
                     "example": 503
                 }
             }
+        },
+        "httpserver.ShareFileForm": {
+            "type": "object",
+            "properties": {
+                "dir_path": {
+                    "type": "string",
+                    "example": "test-folder/"
+                },
+                "expired_secs": {
+                    "type": "integer",
+                    "example": 3600
+                },
+                "file_name": {
+                    "type": "string",
+                    "example": "test-file.docx"
+                },
+                "redirect_host": {
+                    "type": "string",
+                    "example": "service-domain-name:4444"
+                }
+            }
         }
     },
     "tags": [
         {
-            "description": "APIs to manage cloud watchers",
-            "name": "watcher"
-        },
-        {
             "description": "APIs to get status tasks",
             "name": "tasks"
+        },
+        {
+            "description": "CRUD APIs to manage cloud buckets",
+            "name": "buckets"
+        },
+        {
+            "description": "CRUD APIs to manage files into bucket",
+            "name": "files"
+        },
+        {
+            "description": "Share files by URL API",
+            "name": "share"
         }
     ]
 }

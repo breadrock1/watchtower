@@ -17,5 +17,6 @@ type IPublisher interface {
 
 type IConsumer interface {
 	Consume(ctx context.Context) error
+	GetConsumerChannel() chan dto.Message
 	StopConsuming(ctx context.Context) error
 }

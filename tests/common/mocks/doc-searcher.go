@@ -10,17 +10,17 @@ import (
 
 type MockDocSearcherClient struct {
 	mu      *sync.Mutex
-	storage map[string]*dto.StorageDocument
+	storage map[string]*dto.DocumentObject
 }
 
 func NewMockDocSearcherClient() *MockDocSearcherClient {
 	return &MockDocSearcherClient{
 		mu:      &sync.Mutex{},
-		storage: make(map[string]*dto.StorageDocument),
+		storage: make(map[string]*dto.DocumentObject),
 	}
 }
 
-func (dsc *MockDocSearcherClient) StoreDocument(_ context.Context, _ string, doc *dto.StorageDocument) (string, error) {
+func (dsc *MockDocSearcherClient) StoreDocument(_ context.Context, _ string, doc *dto.DocumentObject) (string, error) {
 	id := uuid.New().String()
 	dsc.mu.Lock()
 	defer dsc.mu.Unlock()
@@ -28,12 +28,12 @@ func (dsc *MockDocSearcherClient) StoreDocument(_ context.Context, _ string, doc
 	return id, nil
 }
 
-func (dsc *MockDocSearcherClient) Get(id string) (*dto.StorageDocument, error) {
+func (dsc *MockDocSearcherClient) Get(id string) (*dto.DocumentObject, error) {
 	return dsc.storage[id], nil
 }
 
-func (dsc *MockDocSearcherClient) GetDocuments() []*dto.StorageDocument {
-	docs := make([]*dto.StorageDocument, len(dsc.storage))
+func (dsc *MockDocSearcherClient) GetDocuments() []*dto.DocumentObject {
+	docs := make([]*dto.DocumentObject, len(dsc.storage))
 
 	index := 0
 	for _, val := range dsc.storage {
@@ -43,7 +43,7 @@ func (dsc *MockDocSearcherClient) GetDocuments() []*dto.StorageDocument {
 	return docs
 }
 
-func (dsc *MockDocSearcherClient) UpdateDocument(_ context.Context, _ string, _ *dto.StorageDocument) error {
+func (dsc *MockDocSearcherClient) UpdateDocument(_ context.Context, _ string, _ *dto.DocumentObject) error {
 	return nil
 }
 

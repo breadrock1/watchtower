@@ -6,10 +6,11 @@ import (
 )
 
 func GenerateUniqID(bucket, suffix string) string {
-	if suffix == "*" {
-		return fmt.Sprintf("watchtower:%s:%s", bucket, suffix)
-	}
+	mask := fmt.Sprintf("%s:%s", bucket, suffix)
+	suffix = fmt.Sprintf("%x", md5.Sum([]byte(mask)))
+	return suffix
+}
 
-	suffix = fmt.Sprintf("%x", md5.Sum([]byte(suffix)))
-	return fmt.Sprintf("watchtower:%s:%s", bucket, suffix)
+func ConstructUniqID(bucket, taskID string) string {
+	return fmt.Sprintf("watchtower:%s:%s", bucket, taskID)
 }

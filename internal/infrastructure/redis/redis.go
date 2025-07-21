@@ -27,7 +27,7 @@ func New(config *Config) *RedisClient {
 }
 
 func (rs *RedisClient) GetAll(ctx context.Context, bucket string) ([]*dto.TaskEvent, error) {
-	key := utils.GenerateUniqID(bucket, "*")
+	key := utils.ConstructUniqID(bucket, "*")
 	status := rs.rsConn.Scan(ctx, 0, key, -1)
 	if status.Err() != nil {
 		return nil, fmt.Errorf("failed to get tasks: %w", status.Err())
@@ -61,8 +61,8 @@ func (rs *RedisClient) GetAll(ctx context.Context, bucket string) ([]*dto.TaskEv
 	return tasks, nil
 }
 
-func (rs *RedisClient) Get(ctx context.Context, bucket, file string) (*dto.TaskEvent, error) {
-	key := utils.GenerateUniqID(bucket, file)
+func (rs *RedisClient) Get(ctx context.Context, bucket, taskID string) (*dto.TaskEvent, error) {
+	key := utils.ConstructUniqID(bucket, taskID)
 	cmd := rs.rsConn.Get(ctx, key)
 	if cmd.Err() != nil {
 		return nil, fmt.Errorf("failed to get tasks: %w", cmd.Err())
@@ -87,7 +87,7 @@ func (rs *RedisClient) Get(ctx context.Context, bucket, file string) (*dto.TaskE
 }
 
 func (rs *RedisClient) Push(ctx context.Context, task *dto.TaskEvent) error {
-	key := utils.GenerateUniqID(task.Bucket, task.FilePath)
+	key := utils.ConstructUniqID(task.Bucket, task.ID)
 
 	value := ConvertFromTaskEvent(task)
 	jsonData, err := json.Marshal(value)
