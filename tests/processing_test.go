@@ -43,6 +43,8 @@ func TestProcessing(t *testing.T) {
 
 	s3Serv, initErr := s3.New(&servConfig.Cloud.S3)
 	assert.NoError(t, initErr, "failed to init s3 client")
+	initErr = s3Serv.CreateBucket(ctx, TestBucketName)
+	assert.NoError(t, initErr, "failed to create s3 bucket")
 
 	t.Run("Positive pipeline", func(t *testing.T) {
 		searcherServ := mocks.NewMockDocSearcherClient()
@@ -119,6 +121,9 @@ func TestProcessing(t *testing.T) {
 		rmqMsg := mapping.MessageFromTaskEvent(taskEvent)
 		err := rmqServ.Publish(ctx, rmqMsg)
 		assert.NoError(t, err, "failed to publish task event")
+
+		initErr = s3Serv.CreateBucket(ctx, TestBucketName)
+		assert.NoError(t, initErr, "failed to create s3 bucket")
 
 		timeoutCh := time.After(7 * time.Second)
 		<-timeoutCh
