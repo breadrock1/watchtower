@@ -3,8 +3,8 @@ address = "0.0.0.0:2893"
 
 [server.http.logger]
 level = "info"
-enable_loki = true
 address = "loki:3100"
+enable_loki = true
 
 [ocr.dedoc]
 address = "http://dedoc:8004"
@@ -31,6 +31,3 @@ access_id = "minio-root"
 secret_key = "minio-root"
 enable_ssl = false
 token = ""
-watched_dirs = [
-    "common-folder"
-]

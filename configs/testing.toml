@@ -31,6 +31,3 @@ access_id = "minio-root"
 secret_key = "minio-root"
 enable_ssl = false
 token = ""
-watched_dirs = [
-    "test-bucket"
-]

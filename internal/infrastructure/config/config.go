@@ -15,36 +15,36 @@ import (
 )
 
 type Config struct {
-	Ocr        OcrConfig        `mapstructure:"ocr"`
-	Cacher     CacherConfig     `mapstructure:"cacher"`
-	DocStorage DocStorageConfig `mapstructure:"docstorage"`
 	Server     ServerConfig     `mapstructure:"server"`
-	Cloud      CloudConfig      `mapstructure:"cloud"`
+	Ocr        OcrConfig        `mapstructure:"ocr"`
+	DocStorage DocStorageConfig `mapstructure:"docstorage"`
+	Cacher     CacherConfig     `mapstructure:"cacher"`
 	Queue      QueueConfig      `mapstructure:"queue"`
-}
-
-type OcrConfig struct {
-	Dedoc dedoc.Config `mapstructure:"dedoc"`
-}
-
-type CacherConfig struct {
-	Redis redis.Config `mapstructure:"redis"`
-}
-
-type DocStorageConfig struct {
-	DocSearcher doc_storage.Config `mapstructure:"docsearcher"`
+	Cloud      CloudConfig      `mapstructure:"cloud"`
 }
 
 type ServerConfig struct {
 	Http httpserver.Config `mapstructure:"http"`
 }
 
-type CloudConfig struct {
-	S3 s3.Config `mapstructure:"s3"`
+type OcrConfig struct {
+	Dedoc dedoc.Config `mapstructure:"dedoc"`
+}
+
+type DocStorageConfig struct {
+	DocSearcher doc_storage.Config `mapstructure:"docsearcher"`
+}
+
+type CacherConfig struct {
+	Redis redis.Config `mapstructure:"redis"`
 }
 
 type QueueConfig struct {
 	Rmq rmq.Config `mapstructure:"rmq"`
+}
+
+type CloudConfig struct {
+	S3 s3.Config `mapstructure:"s3"`
 }
 
 func FromFile(filePath string) (*Config, error) {
