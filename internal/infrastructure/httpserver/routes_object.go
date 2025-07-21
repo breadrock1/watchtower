@@ -42,23 +42,23 @@ func (s *Server) CreateStorageObjectsGroup() error {
 // @Failure	400 {object} BadRequestForm "Bad Request message"
 // @Failure	503 {object} ServerErrorForm "Server does not available"
 // @Router /cloud/{bucket}/file/copy [post]
-func (s *Server) CopyFile(c echo.Context) error {
-	bucket := c.Param("bucket")
+func (s *Server) CopyFile(eCtx echo.Context) error {
+	bucket := eCtx.Param("bucket")
 
 	jsonForm := &CopyFileForm{}
-	decoder := json.NewDecoder(c.Request().Body)
+	decoder := json.NewDecoder(eCtx.Request().Body)
 	err := decoder.Decode(jsonForm)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	ctx := c.Request().Context()
+	ctx := eCtx.Request().Context()
 	err = s.uc.GetObjectStorage().CopyFile(ctx, bucket, jsonForm.SrcPath, jsonForm.DstPath)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	return c.JSON(200, createStatusResponse(200, "Ok"))
+	return eCtx.JSON(200, createStatusResponse("Ok"))
 }
 
 // MoveFile
@@ -74,23 +74,23 @@ func (s *Server) CopyFile(c echo.Context) error {
 // @Failure	400 {object} BadRequestForm "Bad Request message"
 // @Failure	503 {object} ServerErrorForm "Server does not available"
 // @Router /cloud/{bucket}/file/move [post]
-func (s *Server) MoveFile(c echo.Context) error {
-	bucket := c.Param("bucket")
+func (s *Server) MoveFile(eCtx echo.Context) error {
+	bucket := eCtx.Param("bucket")
 
 	jsonForm := &CopyFileForm{}
-	decoder := json.NewDecoder(c.Request().Body)
+	decoder := json.NewDecoder(eCtx.Request().Body)
 	err := decoder.Decode(jsonForm)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	ctx := c.Request().Context()
+	ctx := eCtx.Request().Context()
 	err = s.uc.GetObjectStorage().CopyFile(ctx, bucket, jsonForm.SrcPath, jsonForm.DstPath)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	return c.JSON(200, createStatusResponse(200, "Ok"))
+	return eCtx.JSON(200, createStatusResponse("Ok"))
 }
 
 // UploadFile
@@ -107,16 +107,16 @@ func (s *Server) MoveFile(c echo.Context) error {
 // @Failure	400 {object} BadRequestForm "Bad Request message"
 // @Failure	503 {object} ServerErrorForm "Server does not available"
 // @Router /cloud/{bucket}/file/upload [post]
-func (s *Server) UploadFile(c echo.Context) error {
+func (s *Server) UploadFile(eCtx echo.Context) error {
 	var fileData bytes.Buffer
 
-	multipartForm, err := c.MultipartForm()
+	multipartForm, err := eCtx.MultipartForm()
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	bucket := c.Param("bucket")
-	if exist, err := s.uc.GetObjectStorage().IsBucketExist(c.Request().Context(), bucket); err != nil || !exist {
+	bucket := eCtx.Param("bucket")
+	if exist, err := s.uc.GetObjectStorage().IsBucketExist(eCtx.Request().Context(), bucket); err != nil || !exist {
 		retErr := fmt.Errorf("specified bucket %s does not exist", bucket)
 		return echo.NewHTTPError(http.StatusBadRequest, retErr.Error())
 	}
@@ -126,14 +126,14 @@ func (s *Server) UploadFile(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	expired := c.QueryParam("expired")
+	expired := eCtx.QueryParam("expired")
 	timeVal, timeParseErr := time.Parse(time.RFC3339, expired)
 	if timeParseErr != nil {
 		log.Println("failed to parse expired time param: ", expired, timeParseErr)
 	}
 
 	uploadedFiles := make([]*dto.TaskEvent, len(multipartForm.File["files"]))
-	ctx := c.Request().Context()
+	ctx := eCtx.Request().Context()
 	for index, fileForm := range multipartForm.File["files"] {
 		fileName := fileForm.Filename
 		fileHandler, err := fileForm.Open()
@@ -171,7 +171,7 @@ func (s *Server) UploadFile(c echo.Context) error {
 		uploadedFiles[index] = task
 	}
 
-	return c.JSON(200, uploadedFiles)
+	return eCtx.JSON(200, uploadedFiles)
 }
 
 // DownloadFile
@@ -187,23 +187,23 @@ func (s *Server) UploadFile(c echo.Context) error {
 // @Failure	400 {object} BadRequestForm "Bad Request message"
 // @Failure	503 {object} ServerErrorForm "Server does not available"
 // @Router /cloud/{bucket}/file/download [post]
-func (s *Server) DownloadFile(c echo.Context) error {
-	bucket := c.Param("bucket")
+func (s *Server) DownloadFile(eCtx echo.Context) error {
+	bucket := eCtx.Param("bucket")
 
 	jsonForm := &DownloadFileForm{}
-	decoder := json.NewDecoder(c.Request().Body)
+	decoder := json.NewDecoder(eCtx.Request().Body)
 	if err := decoder.Decode(jsonForm); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	ctx := c.Request().Context()
+	ctx := eCtx.Request().Context()
 	fileData, err := s.uc.GetObjectStorage().DownloadFile(ctx, bucket, jsonForm.FileName)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 	defer fileData.Reset()
 
-	return c.Blob(200, echo.MIMEMultipartForm, fileData.Bytes())
+	return eCtx.Blob(200, echo.MIMEMultipartForm, fileData.Bytes())
 }
 
 // RemoveFile
@@ -218,21 +218,21 @@ func (s *Server) DownloadFile(c echo.Context) error {
 // @Failure	400 {object} BadRequestForm "Bad Request message"
 // @Failure	503 {object} ServerErrorForm "Server does not available"
 // @Router /cloud/{bucket}/file/remove [delete]
-func (s *Server) RemoveFile(c echo.Context) error {
-	bucket := c.Param("bucket")
+func (s *Server) RemoveFile(eCtx echo.Context) error {
+	bucket := eCtx.Param("bucket")
 
 	jsonForm := &RemoveFileForm{}
-	decoder := json.NewDecoder(c.Request().Body)
+	decoder := json.NewDecoder(eCtx.Request().Body)
 	if err := decoder.Decode(jsonForm); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	ctx := c.Request().Context()
+	ctx := eCtx.Request().Context()
 	if err := s.uc.GetObjectStorage().DeleteFile(ctx, bucket, jsonForm.FileName); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	return c.JSON(200, createStatusResponse(200, "Ok"))
+	return eCtx.JSON(200, createStatusResponse("Ok"))
 }
 
 // RemoveFile2
@@ -247,15 +247,15 @@ func (s *Server) RemoveFile(c echo.Context) error {
 // @Failure	400 {object} BadRequestForm "Bad Request message"
 // @Failure	503 {object} ServerErrorForm "Server does not available"
 // @Router /cloud/{bucket}/file [delete]
-func (s *Server) RemoveFile2(c echo.Context) error {
-	bucket := c.Param("bucket")
-	fileName := c.QueryParam("file_name")
-	ctx := c.Request().Context()
+func (s *Server) RemoveFile2(eCtx echo.Context) error {
+	bucket := eCtx.Param("bucket")
+	fileName := eCtx.QueryParam("file_name")
+	ctx := eCtx.Request().Context()
 	if err := s.uc.GetObjectStorage().DeleteFile(ctx, bucket, fileName); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	return c.JSON(200, createStatusResponse(200, "Ok"))
+	return eCtx.JSON(200, createStatusResponse("Ok"))
 }
 
 // GetFiles
@@ -271,23 +271,23 @@ func (s *Server) RemoveFile2(c echo.Context) error {
 // @Failure	400 {object} BadRequestForm "Bad Request message"
 // @Failure	503 {object} ServerErrorForm "Server does not available"
 // @Router /cloud/{bucket}/files [post]
-func (s *Server) GetFiles(c echo.Context) error {
-	bucket := c.Param("bucket")
+func (s *Server) GetFiles(eCtx echo.Context) error {
+	bucket := eCtx.Param("bucket")
 
 	jsonForm := &GetFilesForm{}
-	decoder := json.NewDecoder(c.Request().Body)
+	decoder := json.NewDecoder(eCtx.Request().Body)
 	err := decoder.Decode(jsonForm)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	ctx := c.Request().Context()
+	ctx := eCtx.Request().Context()
 	listObjects, err := s.uc.GetObjectStorage().GetBucketFiles(ctx, bucket, jsonForm.DirectoryName)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	return c.JSON(200, listObjects)
+	return eCtx.JSON(200, listObjects)
 }
 
 // GetFileAttributes
@@ -303,23 +303,23 @@ func (s *Server) GetFiles(c echo.Context) error {
 // @Failure	400 {object} BadRequestForm "Bad Request message"
 // @Failure	503 {object} ServerErrorForm "Server does not available"
 // @Router /cloud/{bucket}/file/attributes [post]
-func (s *Server) GetFileAttributes(c echo.Context) error {
-	bucket := c.Param("bucket")
+func (s *Server) GetFileAttributes(eCtx echo.Context) error {
+	bucket := eCtx.Param("bucket")
 
 	jsonForm := &GetFileAttributesForm{}
-	decoder := json.NewDecoder(c.Request().Body)
+	decoder := json.NewDecoder(eCtx.Request().Body)
 	err := decoder.Decode(jsonForm)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	ctx := c.Request().Context()
+	ctx := eCtx.Request().Context()
 	listObjects, err := s.uc.GetObjectStorage().GetFileMetadata(ctx, bucket, jsonForm.FilePath)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	return c.JSON(200, listObjects)
+	return eCtx.JSON(200, listObjects)
 }
 
 // ShareFile
@@ -335,11 +335,11 @@ func (s *Server) GetFileAttributes(c echo.Context) error {
 // @Failure	400 {object} BadRequestForm "Bad Request message"
 // @Failure	503 {object} ServerErrorForm "Server does not available"
 // @Router /cloud/{bucket}/file/share [post]
-func (s *Server) ShareFile(c echo.Context) error {
-	bucket := c.Param("bucket")
+func (s *Server) ShareFile(eCtx echo.Context) error {
+	bucket := eCtx.Param("bucket")
 
 	jsonForm := &ShareFileForm{}
-	decoder := json.NewDecoder(c.Request().Body)
+	decoder := json.NewDecoder(eCtx.Request().Body)
 	err := decoder.Decode(jsonForm)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
@@ -347,11 +347,11 @@ func (s *Server) ShareFile(c echo.Context) error {
 
 	expired := time.Second * time.Duration(jsonForm.ExpiredSecs)
 
-	ctx := c.Request().Context()
+	ctx := eCtx.Request().Context()
 	url, err := s.uc.GetObjectStorage().GenSharedURL(ctx, expired, bucket, jsonForm.FileName, jsonForm.RedirectHost)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	return c.JSON(200, createStatusResponse(200, url))
+	return eCtx.JSON(200, createStatusResponse(url))
 }

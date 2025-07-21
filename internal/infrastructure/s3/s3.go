@@ -163,7 +163,12 @@ func (s *S3Client) DownloadFile(ctx context.Context, bucket, filePath string) (b
 	return objBody, nil
 }
 
-func (s *S3Client) UploadFile(ctx context.Context, bucket, filePath string, data *bytes.Buffer, expired *time.Time) error {
+func (s *S3Client) UploadFile(
+	ctx context.Context,
+	bucket, filePath string,
+	data *bytes.Buffer,
+	expired *time.Time,
+) error {
 	opts := minio.PutObjectOptions{}
 	if expired != nil {
 		opts.Expires = *expired
@@ -177,7 +182,11 @@ func (s *S3Client) UploadFile(ctx context.Context, bucket, filePath string, data
 	return nil
 }
 
-func (s *S3Client) GenSharedURL(ctx context.Context, expired time.Duration, bucket, filePath, redirectHost string) (string, error) {
+func (s *S3Client) GenSharedURL(
+	ctx context.Context,
+	expired time.Duration,
+	bucket, filePath, redirectHost string,
+) (string, error) {
 	url, err := s.mc.PresignedGetObject(ctx, bucket, filePath, expired, map[string][]string{})
 	if err != nil {
 		return "", fmt.Errorf("failed to generate url: %w", err)

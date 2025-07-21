@@ -94,7 +94,7 @@ func (uc *UseCase) publishToQueue(ctx context.Context, taskEvent dto.TaskEvent) 
 	msg := mapping.MessageFromTaskEvent(taskEvent)
 	err := uc.taskQueue.Publish(ctx, msg)
 	if err != nil {
-		return fmt.Errorf("failed to publish task event to queue: %v", err)
+		return fmt.Errorf("failed to publish task event to queue: %w", err)
 	}
 	return nil
 }
@@ -122,6 +122,12 @@ func (uc *UseCase) isTaskAlreadyProcessed(ctx context.Context, task *dto.TaskEve
 		fallthrough
 	case dto.Processing:
 		return true
+	case dto.Failed:
+		fallthrough
+	case dto.Received:
+		fallthrough
+	case dto.Successful:
+		return false
 	default:
 		return false
 	}
@@ -175,7 +181,7 @@ func (uc *UseCase) StoreFileToStorage(ctx context.Context, fileForm dto.FileToUp
 	}
 
 	if err := uc.taskManager.Push(ctx, &task); err != nil {
-		return nil, fmt.Errorf("failed to store task to cache: %v", err)
+		return nil, fmt.Errorf("failed to store task to cache: %w", err)
 	}
 
 	err := uc.objStorage.UploadFile(ctx, fileForm.Bucket, fileForm.FilePath, fileForm.FileData, fileForm.Expired)

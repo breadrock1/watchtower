@@ -1,7 +1,7 @@
 package httpserver
 
-func createStatusResponse(status int, msg string) *ResponseForm {
-	return &ResponseForm{Status: status, Message: msg}
+func createStatusResponse(msg string) *ResponseForm {
+	return &ResponseForm{Status: 200, Message: msg}
 }
 
 // ResponseForm example

@@ -62,7 +62,7 @@ func TestProcessing(t *testing.T) {
 		dataStr := data.String()
 		assert.NoError(t, err, "failed to read test input file")
 		expired := time.Now()
-		expired.Add(10 * time.Second)
+		_ = expired.Add(10 * time.Second)
 
 		fileForm := dto.FileToUpload{
 			Bucket:   TestBucketName,
@@ -104,9 +104,9 @@ func TestProcessing(t *testing.T) {
 		)
 		useCase.LaunchWatcherListener(cCtx)
 
-		id := utils.GenerateUniqID(TestBucketName, TestInputFilePath)
+		taskID := utils.GenerateUniqID(TestBucketName, TestInputFilePath)
 		taskEvent := dto.TaskEvent{
-			ID:         id,
+			ID:         taskID,
 			Bucket:     TestBucketName,
 			FilePath:   TestInputFilePath,
 			FileSize:   0,
@@ -123,7 +123,7 @@ func TestProcessing(t *testing.T) {
 		timeoutCh := time.After(7 * time.Second)
 		<-timeoutCh
 
-		task, err := redisServ.Get(ctx, TestBucketName, id)
+		task, err := redisServ.Get(ctx, TestBucketName, taskID)
 		assert.NoError(t, err, "failed to get task from redis")
 		assert.Equal(t, dto.TaskStatus(-1), task.Status)
 		assert.Equal(t, TestBucketName, task.Bucket)

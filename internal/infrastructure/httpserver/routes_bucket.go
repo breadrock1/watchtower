@@ -26,14 +26,14 @@ func (s *Server) CreateStorageBucketsGroup() error {
 // @Success 200 {array} string "Ok"
 // @Failure	503 {object} ServerErrorForm "Server does not available"
 // @Router /cloud/buckets [get]
-func (s *Server) GetBuckets(c echo.Context) error {
-	ctx := c.Request().Context()
+func (s *Server) GetBuckets(eCtx echo.Context) error {
+	ctx := eCtx.Request().Context()
 	watcherDirs, err := s.uc.GetObjectStorage().GetBuckets(ctx)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	return c.JSON(200, watcherDirs)
+	return eCtx.JSON(200, watcherDirs)
 }
 
 // CreateBucket
@@ -48,21 +48,21 @@ func (s *Server) GetBuckets(c echo.Context) error {
 // @Failure	400 {object} BadRequestForm "Bad Request message"
 // @Failure	503 {object} ServerErrorForm "Server does not available"
 // @Router /cloud/bucket [put]
-func (s *Server) CreateBucket(c echo.Context) error {
+func (s *Server) CreateBucket(eCtx echo.Context) error {
 	jsonForm := &CreateBucketForm{}
-	decoder := json.NewDecoder(c.Request().Body)
+	decoder := json.NewDecoder(eCtx.Request().Body)
 	err := decoder.Decode(jsonForm)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	ctx := c.Request().Context()
+	ctx := eCtx.Request().Context()
 	err = s.uc.GetObjectStorage().CreateBucket(ctx, jsonForm.BucketName)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	return c.JSON(201, createStatusResponse(200, "Ok"))
+	return eCtx.JSON(201, createStatusResponse("Ok"))
 }
 
 // RemoveBucket
@@ -76,13 +76,13 @@ func (s *Server) CreateBucket(c echo.Context) error {
 // @Failure	400 {object} BadRequestForm "Bad Request message"
 // @Failure	503 {object} ServerErrorForm "Server does not available"
 // @Router /cloud/{bucket} [delete]
-func (s *Server) RemoveBucket(c echo.Context) error {
-	bucket := c.Param("bucket")
-	ctx := c.Request().Context()
+func (s *Server) RemoveBucket(eCtx echo.Context) error {
+	bucket := eCtx.Param("bucket")
+	ctx := eCtx.Request().Context()
 	err := s.uc.GetObjectStorage().RemoveBucket(ctx, bucket)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	return c.JSON(200, createStatusResponse(200, "Ok"))
+	return eCtx.JSON(200, createStatusResponse("Ok"))
 }
