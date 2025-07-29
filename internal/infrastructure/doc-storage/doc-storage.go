@@ -54,13 +54,13 @@ func (dsc *DocSearcherClient) StoreDocument(
 
 	reqBody := bytes.NewBuffer(jsonData)
 	timeoutReq := time.Duration(300) * time.Second
-	_, err = utils.PUT(ctx, reqBody, targetURL, DocumentJsonMime, timeoutReq)
+	respData, err := utils.PUT(ctx, reqBody, targetURL, DocumentJsonMime, timeoutReq)
 	if err != nil {
 		return "", fmt.Errorf("failed to store document to storage: %w", err)
 	}
 
 	status := &StoreDocumentResult{}
-	err = json.Unmarshal(reqBody.Bytes(), status)
+	err = json.Unmarshal(respData, status)
 	if err != nil {
 		return "", fmt.Errorf("failed to unmarshal response body: %w", err)
 	}
