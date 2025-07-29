@@ -45,7 +45,7 @@ func SendRequest(client *http.Client, req *http.Request) ([]byte, error) {
 		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 
-	if response.StatusCode > 200 {
+	if response.StatusCode/100 > 2 {
 		return nil, fmt.Errorf("non success response %s: %s", response.Status, string(respData))
 	}
 
