@@ -55,10 +55,11 @@ func (uc *UseCase) LaunchWatcherListener(ctx context.Context) {
 		for {
 			select {
 			case taskEvent := <-uc.processorCh:
-				if uc.isTaskAlreadyProcessed(ctx, &taskEvent) {
-					log.Printf("task has been already processed: %s", taskEvent.ID)
-					continue
-				}
+				// TODO: Disabled for TechDebt
+				//if uc.isTaskAlreadyProcessed(ctx, &taskEvent) {
+				//	log.Printf("task has been already processed: %s", taskEvent.ID)
+				//	continue
+				//}
 
 				status, msg := dto.Pending, EmptyMessage
 				if err := uc.publishToQueue(ctx, taskEvent); err != nil {
@@ -68,13 +69,7 @@ func (uc *UseCase) LaunchWatcherListener(ctx context.Context) {
 
 				uc.updateTaskStatus(ctx, &taskEvent, status, msg)
 			case cMsg := <-uc.consumerCh:
-				status, msg := dto.Successful, EmptyMessage
-				if err := uc.Processing(ctx, cMsg); err != nil {
-					status, msg = dto.Failed, err.Error()
-					log.Printf("failed while processing file: %v", err)
-				}
-
-				uc.updateTaskStatus(ctx, &cMsg.Body, status, msg)
+				uc.Processing(ctx, cMsg)
 			case <-ctx.Done():
 				log.Println("terminated processing")
 				return
@@ -83,11 +78,19 @@ func (uc *UseCase) LaunchWatcherListener(ctx context.Context) {
 	}()
 }
 
-func (uc *UseCase) Processing(ctx context.Context, msg dto.Message) error {
-	taskEvent := msg.Body
+func (uc *UseCase) Processing(ctx context.Context, recvMsg dto.Message) {
+	taskEvent := recvMsg.Body
 	uc.updateTaskStatus(ctx, &taskEvent, dto.Processing, EmptyMessage)
-	err := uc.processFile(ctx, taskEvent)
-	return err
+
+	status := dto.Successful
+	msg, err := uc.processFile(ctx, recvMsg.Body)
+	if err != nil {
+		status, msg = dto.Failed, err.Error()
+		log.Printf("failed while processing file: %v", err)
+	}
+
+	taskEvent.StatusText = msg
+	uc.updateTaskStatus(ctx, &taskEvent, status, msg)
 }
 
 func (uc *UseCase) publishToQueue(ctx context.Context, taskEvent dto.TaskEvent) error {
@@ -133,10 +136,10 @@ func (uc *UseCase) isTaskAlreadyProcessed(ctx context.Context, task *dto.TaskEve
 	}
 }
 
-func (uc *UseCase) processFile(ctx context.Context, taskEvent dto.TaskEvent) error {
+func (uc *UseCase) processFile(ctx context.Context, taskEvent dto.TaskEvent) (string, error) {
 	fileData, err := uc.objStorage.DownloadFile(ctx, taskEvent.Bucket, taskEvent.FilePath)
 	if err != nil {
-		return fmt.Errorf("failed to download file: %w", err)
+		return "", fmt.Errorf("failed to download file: %w", err)
 	}
 
 	inputFile := dto.InputFile{
@@ -145,7 +148,7 @@ func (uc *UseCase) processFile(ctx context.Context, taskEvent dto.TaskEvent) err
 	}
 	recData, err := uc.recognizer.Recognize(ctx, inputFile)
 	if err != nil {
-		return fmt.Errorf("failed to recognize: %w", err)
+		return "", fmt.Errorf("failed to recognize: %w", err)
 	}
 
 	doc := &dto.DocumentObject{
@@ -159,11 +162,11 @@ func (uc *UseCase) processFile(ctx context.Context, taskEvent dto.TaskEvent) err
 
 	id, err := uc.docStorage.StoreDocument(ctx, taskEvent.Bucket, doc)
 	if err != nil {
-		return fmt.Errorf("failed to store doc %s: %w", doc.FileName, err)
+		return "", fmt.Errorf("failed to store doc %s: %w", doc.FileName, err)
 	}
 
 	log.Printf("successfully stored document: %s", id)
-	return nil
+	return id, nil
 }
 
 func (uc *UseCase) StoreFileToStorage(ctx context.Context, fileForm dto.FileToUpload) (*dto.TaskEvent, error) {
