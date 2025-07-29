@@ -106,7 +106,7 @@ func (s *Server) MoveFile(eCtx echo.Context) error {
 // @Success 200 {object} ResponseForm "Ok"
 // @Failure	400 {object} BadRequestForm "Bad Request message"
 // @Failure	503 {object} ServerErrorForm "Server does not available"
-// @Router /cloud/{bucket}/file/upload [post]
+// @Router /cloud/{bucket}/file/upload [put]
 func (s *Server) UploadFile(eCtx echo.Context) error {
 	var fileData bytes.Buffer
 
