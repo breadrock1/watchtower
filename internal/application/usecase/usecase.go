@@ -118,13 +118,13 @@ func (uc *UseCase) isTaskAlreadyProcessed(ctx context.Context, task *dto.TaskEve
 	}
 
 	switch storageTask.Status {
+	case dto.Received:
+		fallthrough
 	case dto.Pending:
 		fallthrough
 	case dto.Processing:
 		return true
 	case dto.Failed:
-		fallthrough
-	case dto.Received:
 		fallthrough
 	case dto.Successful:
 		return false
