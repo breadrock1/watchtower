@@ -396,7 +396,7 @@ paths:
       tags:
       - share
   /cloud/{bucket}/file/upload:
-    post:
+    put:
       consumes:
       - multipart/form
       description: Upload files to cloud

@@ -505,7 +505,7 @@ const docTemplate = `{
             }
         },
         "/cloud/{bucket}/file/upload": {
-            "post": {
+            "put": {
                 "description": "Upload files to cloud",
                 "consumes": [
                     "multipart/form"
