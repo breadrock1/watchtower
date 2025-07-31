@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 	"watchtower/internal/application/dto"
@@ -21,7 +22,10 @@ type RmqClient struct {
 }
 
 func New(config *Config) (*RmqClient, error) {
-	rmqConfig := amqp.Config{Properties: amqp.NewConnectionProperties()}
+	rmqConfig := amqp.Config{
+		Properties: amqp.NewConnectionProperties(),
+		Heartbeat:  10 * time.Second,
+	}
 	rmqConfig.Properties.SetClientConnectionName(ConsumerName)
 
 	conn, err := amqp.DialConfig(config.Address, rmqConfig)
@@ -74,6 +78,8 @@ func (r *RmqClient) Publish(_ context.Context, msg dto.Message) error {
 }
 
 func (r *RmqClient) Consume(_ context.Context) error {
+	go r.handleReconnect()
+
 	deliveries, err := r.channel.Consume(
 		r.config.QueueName, // name
 		ConsumerName,       // consumerTag,
@@ -118,6 +124,48 @@ func (r *RmqClient) handle(deliveries <-chan amqp.Delivery, done chan error) {
 		msg := &dto.Message{}
 		_ = json.Unmarshal(delMsg.Body, msg)
 		r.redirect <- *msg
+	}
+}
+
+func (r *RmqClient) handleReconnect() {
+	for {
+		select {
+		case <-r.done:
+			return
+
+		case <-r.conn.NotifyClose(make(chan *amqp.Error)):
+			log.Println("Attempting to reconnect...")
+
+			rmqConfig := amqp.Config{
+				Properties: amqp.NewConnectionProperties(),
+				Heartbeat:  10 * time.Second,
+			}
+
+			rmqConfig.Properties.SetClientConnectionName(ConsumerName)
+
+			var err error
+			for i := 0; i < 5; i++ {
+				r.conn, err = amqp.DialConfig(r.config.Address, rmqConfig)
+				if err != nil {
+					log.Printf("failed while re-connecting to rmq: %v", err)
+					return
+				}
+
+				r.channel, err = r.conn.Channel()
+				if err == nil {
+					log.Printf("connection to rmq has been returned!")
+					break
+				}
+
+				log.Printf("failed to create rmq channel: %v", err)
+				time.Sleep(time.Duration(i*i) * time.Second)
+			}
+
+			if err != nil {
+				log.Println("Failed to reconnect to RabbitMQ")
+				return
+			}
+		}
 	}
 }
 
