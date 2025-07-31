@@ -56,10 +56,11 @@ func (uc *UseCase) LaunchWatcherListener(ctx context.Context) {
 			select {
 			case taskEvent := <-uc.processorCh:
 				// TODO: Disabled for TechDebt
-				//if uc.isTaskAlreadyProcessed(ctx, &taskEvent) {
-				//	log.Printf("task has been already processed: %s", taskEvent.ID)
-				//	continue
-				//}
+				_ = uc.isTaskAlreadyProcessed(ctx, &taskEvent)
+				// if uc.isTaskAlreadyProcessed(ctx, &taskEvent) {
+				//	 log.Printf("task has been already processed: %s", taskEvent.ID)
+				//	 continue
+				// }
 
 				status, msg := dto.Pending, EmptyMessage
 				if err := uc.publishToQueue(ctx, taskEvent); err != nil {
@@ -160,13 +161,13 @@ func (uc *UseCase) processFile(ctx context.Context, taskEvent dto.TaskEvent) (st
 		ModifiedAt: taskEvent.ModifiedAt,
 	}
 
-	id, err := uc.docStorage.StoreDocument(ctx, taskEvent.Bucket, doc)
+	docID, err := uc.docStorage.StoreDocument(ctx, taskEvent.Bucket, doc)
 	if err != nil {
 		return "", fmt.Errorf("failed to store doc %s: %w", doc.FileName, err)
 	}
 
-	log.Printf("successfully stored document: %s", id)
-	return id, nil
+	log.Printf("successfully stored document: %s", docID)
+	return docID, nil
 }
 
 func (uc *UseCase) StoreFileToStorage(ctx context.Context, fileForm dto.FileToUpload) (*dto.TaskEvent, error) {

@@ -22,7 +22,12 @@ import (
 // @description    Watchtower is a project designed to provide processing files created into cloud by events.
 //
 // @tag.name tasks
-// @tag.description APIs to get status tasks. When TaskStatus may be: Failed -> -1; Received -> 0; Pending -> 1; Processing -> 2; Successful -> 3.
+// @tag.description APIs to get status tasks. When TaskStatus may be:
+// 	Failed -> -1;
+//	Received -> 0;
+//	Pending -> 1;
+//	Processing -> 2;
+//	Successful -> 3.
 //
 // @tag.name buckets
 // @tag.description CRUD APIs to manage cloud buckets
