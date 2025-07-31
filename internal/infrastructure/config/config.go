@@ -89,7 +89,7 @@ func FromFile(filePath string) (*Config, error) {
 	}
 
 	// Storage doc-searcher config
-	bindErr = viperInstance.BindEnv("storage.docsearcher.address", "WATCHTOWER__DOCSTORAGE__DOC_SEARCHER__ADDRESS")
+	bindErr = viperInstance.BindEnv("docstorage.docsearcher.address", "WATCHTOWER__DOCSTORAGE__DOC_SEARCHER__ADDRESS")
 	if bindErr != nil {
 		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
 	}

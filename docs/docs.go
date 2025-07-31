@@ -505,7 +505,7 @@ const docTemplate = `{
             }
         },
         "/cloud/{bucket}/file/upload": {
-            "post": {
+            "put": {
                 "description": "Upload files to cloud",
                 "consumes": [
                     "multipart/form"
@@ -891,7 +891,7 @@ const docTemplate = `{
     },
     "tags": [
         {
-            "description": "APIs to get status tasks",
+            "description": "APIs to get status tasks. When TaskStatus may be: Failed -\u003e -1; Received -\u003e 0; Pending -\u003e 1; Processing -\u003e 2; Successful -\u003e 3.",
             "name": "tasks"
         },
         {

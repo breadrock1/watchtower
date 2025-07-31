@@ -396,7 +396,7 @@ paths:
       tags:
       - share
   /cloud/{bucket}/file/upload:
-    post:
+    put:
       consumes:
       - multipart/form
       description: Upload files to cloud
@@ -594,7 +594,8 @@ paths:
       - tasks
 swagger: "2.0"
 tags:
-- description: APIs to get status tasks
+- description: 'APIs to get status tasks. When TaskStatus may be: Failed -> -1; Received
+    -> 0; Pending -> 1; Processing -> 2; Successful -> 3.'
   name: tasks
 - description: CRUD APIs to manage cloud buckets
   name: buckets
