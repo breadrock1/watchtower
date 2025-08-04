@@ -81,6 +81,8 @@ func (uc *UseCase) LaunchWatcherListener(ctx context.Context) {
 
 func (uc *UseCase) Processing(ctx context.Context, recvMsg dto.Message) {
 	taskEvent := recvMsg.Body
+	log.Printf("processing task event: %v", taskEvent)
+
 	uc.updateTaskStatus(ctx, &taskEvent, dto.Processing, EmptyMessage)
 
 	status := dto.Successful
@@ -171,7 +173,9 @@ func (uc *UseCase) processFile(ctx context.Context, taskEvent dto.TaskEvent) (st
 }
 
 func (uc *UseCase) StoreFileToStorage(ctx context.Context, fileForm dto.FileToUpload) (*dto.TaskEvent, error) {
-	id := utils.GenerateUniqID(fileForm.Bucket, fileForm.FilePath)
+	// TODO: Disabled for TechDebt
+	// id := utils.GenerateUniqID(fileForm.Bucket, fileForm.FilePath)
+	id := utils.GenerateTaskID()
 	log.Printf("[%s]: publish task: %s", fileForm.Bucket, id)
 
 	task := dto.TaskEvent{
