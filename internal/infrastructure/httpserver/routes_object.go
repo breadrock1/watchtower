@@ -338,17 +338,18 @@ func (s *Server) GetFileAttributes(eCtx echo.Context) error {
 func (s *Server) ShareFile(eCtx echo.Context) error {
 	bucket := eCtx.Param("bucket")
 
-	jsonForm := &ShareFileForm{}
+	form := &ShareFileForm{}
 	decoder := json.NewDecoder(eCtx.Request().Body)
-	err := decoder.Decode(jsonForm)
+	err := decoder.Decode(form)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	expired := time.Second * time.Duration(jsonForm.ExpiredSecs)
+	expired := time.Second * time.Duration(form.ExpiredSecs)
 
 	ctx := eCtx.Request().Context()
-	url, err := s.uc.GetObjectStorage().GenSharedURL(ctx, expired, bucket, jsonForm.FileName, jsonForm.RedirectHost)
+	storage := s.uc.GetObjectStorage()
+	url, err := storage.GenSharedURL(ctx, expired, bucket, form.FilePath)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}

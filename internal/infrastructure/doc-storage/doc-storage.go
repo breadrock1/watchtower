@@ -47,7 +47,7 @@ func (dsc *DocSearcherClient) StoreDocument(
 
 	buildURL := strings.Builder{}
 	buildURL.WriteString(dsc.config.Address)
-	buildURL.WriteString(fmt.Sprintf("/storage/%s/create", folder))
+	buildURL.WriteString(fmt.Sprintf("/storage/%s/create?force=true", folder))
 	targetURL := buildURL.String()
 
 	log.Printf("storing document to index %s", folder)

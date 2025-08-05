@@ -182,20 +182,11 @@ func (s *S3Client) UploadFile(
 	return nil
 }
 
-func (s *S3Client) GenSharedURL(
-	ctx context.Context,
-	expired time.Duration,
-	bucket, filePath, redirectHost string,
-) (string, error) {
+func (s *S3Client) GenSharedURL(ctx context.Context, expired time.Duration, bucket, filePath string) (string, error) {
 	url, err := s.mc.PresignedGetObject(ctx, bucket, filePath, expired, map[string][]string{})
 	if err != nil {
 		return "", fmt.Errorf("failed to generate url: %w", err)
 	}
 
-	if redirectHost != "" {
-		url.Path = fmt.Sprintf("%s%s", url.Host, url.Path)
-		url.Host = redirectHost
-	}
-
-	return url.String(), nil
+	return url.RequestURI(), nil
 }

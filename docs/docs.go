@@ -870,28 +870,20 @@ const docTemplate = `{
         "httpserver.ShareFileForm": {
             "type": "object",
             "properties": {
-                "dir_path": {
-                    "type": "string",
-                    "example": "test-folder/"
-                },
                 "expired_secs": {
                     "type": "integer",
                     "example": 3600
                 },
-                "file_name": {
+                "file_path": {
                     "type": "string",
                     "example": "test-file.docx"
-                },
-                "redirect_host": {
-                    "type": "string",
-                    "example": "service-domain-name:4444"
                 }
             }
         }
     },
     "tags": [
         {
-            "description": "APIs to get status tasks. When TaskStatus may be: Failed -\u003e -1; Received -\u003e 0; Pending -\u003e 1; Processing -\u003e 2; Successful -\u003e 3.",
+            "description": "APIs to get status tasks. When TaskStatus may be:",
             "name": "tasks"
         },
         {
