@@ -31,7 +31,7 @@ type IFileManager interface {
 }
 
 type IShareManager interface {
-	GenSharedURL(ctx context.Context, expired time.Duration, bucket, filePath, redirect string) (string, error)
+	GenSharedURL(ctx context.Context, expired time.Duration, bucket, filePath string) (string, error)
 }
 
 type IFileLoader interface {

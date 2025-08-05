@@ -52,10 +52,8 @@ type DownloadFileForm struct {
 
 // ShareFileForm example
 type ShareFileForm struct {
-	FileName     string `json:"file_name" example:"test-file.docx"`
-	FileDirPath  string `json:"dir_path" example:"test-folder/"`
-	ExpiredSecs  int32  `json:"expired_secs" example:"3600"`
-	RedirectHost string `json:"redirect_host" example:"service-domain-name:4444"`
+	FilePath    string `json:"file_path" example:"test-file.docx"`
+	ExpiredSecs int32  `json:"expired_secs" example:"3600"`
 }
 
 // GetFilesForm example
