@@ -100,17 +100,11 @@ definitions:
     type: object
   httpserver.ShareFileForm:
     properties:
-      dir_path:
-        example: test-folder/
-        type: string
       expired_secs:
         example: 3600
         type: integer
-      file_name:
+      file_path:
         example: test-file.docx
-        type: string
-      redirect_host:
-        example: service-domain-name:4444
         type: string
     type: object
 info:
@@ -594,8 +588,7 @@ paths:
       - tasks
 swagger: "2.0"
 tags:
-- description: 'APIs to get status tasks. When TaskStatus may be: Failed -> -1; Received
-    -> 0; Pending -> 1; Processing -> 2; Successful -> 3.'
+- description: 'APIs to get status tasks. When TaskStatus may be:'
   name: tasks
 - description: CRUD APIs to manage cloud buckets
   name: buckets
