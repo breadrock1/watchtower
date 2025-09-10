@@ -15,6 +15,7 @@ import (
 )
 
 const DocumentJsonMime = "application/json"
+const ApiVersionPrefix = "/api/v1"
 
 type DocSearcherClient struct {
 	config *Config
@@ -47,7 +48,7 @@ func (dsc *DocSearcherClient) StoreDocument(
 
 	buildURL := strings.Builder{}
 	buildURL.WriteString(dsc.config.Address)
-	buildURL.WriteString(fmt.Sprintf("/storage/%s/create?force=true", folder))
+	buildURL.WriteString(fmt.Sprintf("%s/storage/%s/create?force=true", ApiVersionPrefix, folder))
 	targetURL := buildURL.String()
 
 	log.Printf("storing document to index %s", folder)
@@ -75,7 +76,7 @@ func (dsc *DocSearcherClient) UpdateDocument(_ context.Context, _ string, _ *dto
 func (dsc *DocSearcherClient) DeleteDocument(ctx context.Context, folder, id string) error {
 	buildURL := strings.Builder{}
 	buildURL.WriteString(dsc.config.Address)
-	buildURL.WriteString(fmt.Sprintf("/storage/%s/%s", folder, id))
+	buildURL.WriteString(fmt.Sprintf("%s/storage/%s/%s", ApiVersionPrefix, folder, id))
 	targetURL := buildURL.String()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, targetURL, bytes.NewReader([]byte{}))
@@ -110,7 +111,7 @@ func (dsc *DocSearcherClient) CreateIndex(ctx context.Context, folder string) er
 
 	buildURL := strings.Builder{}
 	buildURL.WriteString(dsc.config.Address)
-	buildURL.WriteString(fmt.Sprintf("/storage/%s", folder))
+	buildURL.WriteString(fmt.Sprintf("%s/storage/%s", ApiVersionPrefix, folder))
 	targetURL := buildURL.String()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, targetURL, bytes.NewReader(data))
@@ -135,7 +136,7 @@ func (dsc *DocSearcherClient) CreateIndex(ctx context.Context, folder string) er
 func (dsc *DocSearcherClient) DeleteIndex(ctx context.Context, folder string) error {
 	buildURL := strings.Builder{}
 	buildURL.WriteString(dsc.config.Address)
-	buildURL.WriteString(fmt.Sprintf("/storage/%s", folder))
+	buildURL.WriteString(fmt.Sprintf("%s/storage/%s", ApiVersionPrefix, folder))
 	targetURL := buildURL.String()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, targetURL, bytes.NewReader([]byte{}))
