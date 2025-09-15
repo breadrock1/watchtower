@@ -5,6 +5,7 @@ import (
 	"context"
 	"os"
 	"path"
+	"strings"
 	"testing"
 	"time"
 
@@ -71,7 +72,7 @@ func TestProcessing(t *testing.T) {
 
 		fileData, err := os.ReadFile(TestInputFilePath)
 		data := bytes.NewBuffer(fileData)
-		dataStr := data.String()
+		dataStr := strings.Trim(data.String(), "\n")
 		assert.NoError(t, err, "failed to read test input file")
 		expired := time.Now()
 		_ = expired.Add(10 * time.Second)
