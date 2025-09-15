@@ -59,7 +59,13 @@ func main() {
 	}
 
 	settings := servConfig.Settings
-	textChunker := chunker.NewChunker(settings.ChunkSize, settings.ChunkOverlap, chunker.DefaultSeparators, false, false)
+	textChunker := chunker.NewChunker(
+		settings.ChunkSize,
+		settings.ChunkOverlap,
+		chunker.DefaultSeparators,
+		false,
+		false,
+	)
 
 	cCtx, cancel := context.WithCancel(ctx)
 	useCase := usecase.NewUseCase(

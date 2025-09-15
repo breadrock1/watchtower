@@ -37,7 +37,13 @@ func TestProcessing(t *testing.T) {
 	dedocServ := &mocks.MockDedocClient{}
 
 	settings := servConfig.Settings
-	textChunker := chunker.NewChunker(settings.ChunkSize, settings.ChunkOverlap, chunker.DefaultSeparators, false, false)
+	textChunker := chunker.NewChunker(
+		settings.ChunkSize,
+		settings.ChunkOverlap,
+		chunker.DefaultSeparators,
+		false,
+		false,
+	)
 
 	redisServ := redis.New(&servConfig.Cacher.Redis)
 	rmqServ, initErr := rmq.New(&servConfig.Queue.Rmq)

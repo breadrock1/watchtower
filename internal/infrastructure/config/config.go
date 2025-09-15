@@ -72,6 +72,9 @@ func FromFile(filePath string) (*Config, error) {
 		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
 	}
 	bindErr = viperInstance.BindEnv("settings", "WATCHTOWER__SETTINGS__CHUNK_OVERLAP")
+	if bindErr != nil {
+		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
+	}
 
 	// Http server config
 	bindErr = viperInstance.BindEnv("server.http.address", "WATCHTOWER__SERVER__HTTP__ADDRESS")
