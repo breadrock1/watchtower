@@ -7,6 +7,7 @@ import (
 	"path"
 	"time"
 
+	"github.com/jonathanhecl/chunker"
 	"watchtower/internal/application/dto"
 	"watchtower/internal/application/mapping"
 	"watchtower/internal/application/services/doc-storage"
@@ -22,6 +23,7 @@ const EmptyMessage = ""
 type UseCase struct {
 	processorCh chan dto.TaskEvent
 	consumerCh  <-chan dto.Message
+	textChunker chunker.Chunker
 
 	taskQueue   task_queue.ITaskQueue
 	taskManager task_manager.ITaskManager
@@ -31,6 +33,7 @@ type UseCase struct {
 }
 
 func NewUseCase(
+	textChunker chunker.Chunker,
 	taskQueue task_queue.ITaskQueue,
 	taskManager task_manager.ITaskManager,
 	recognizer recognizer.IRecognizer,
@@ -40,6 +43,7 @@ func NewUseCase(
 	consumerCh := taskQueue.GetConsumerChannel()
 	processorCh := make(chan dto.TaskEvent)
 	return &UseCase{
+		textChunker: textChunker,
 		processorCh: processorCh,
 		consumerCh:  consumerCh,
 		taskQueue:   taskQueue,
@@ -154,18 +158,21 @@ func (uc *UseCase) processFile(ctx context.Context, taskEvent dto.TaskEvent) (st
 		return "", fmt.Errorf("failed to recognize: %w", err)
 	}
 
-	doc := &dto.DocumentObject{
-		FileName:   path.Base(taskEvent.FilePath),
-		FilePath:   taskEvent.FilePath,
-		FileSize:   fileData.Len(),
-		Content:    recData.Text,
-		CreatedAt:  taskEvent.CreatedAt,
-		ModifiedAt: taskEvent.ModifiedAt,
-	}
+	var docID string
+	for _, chunk := range uc.textChunker.Chunk(recData.Text) {
+		doc := &dto.DocumentObject{
+			FileName:   path.Base(taskEvent.FilePath),
+			FilePath:   taskEvent.FilePath,
+			FileSize:   fileData.Len(),
+			Content:    chunk,
+			CreatedAt:  taskEvent.CreatedAt,
+			ModifiedAt: taskEvent.ModifiedAt,
+		}
 
-	docID, err := uc.docStorage.StoreDocument(ctx, taskEvent.Bucket, doc)
-	if err != nil {
-		return "", fmt.Errorf("failed to store doc %s: %w", doc.FileName, err)
+		docID, err = uc.docStorage.StoreDocument(ctx, taskEvent.Bucket, doc)
+		if err != nil {
+			return "", fmt.Errorf("failed to store doc %s: %w", doc.FileName, err)
+		}
 	}
 
 	log.Printf("successfully stored document: %s", docID)

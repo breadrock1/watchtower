@@ -21,6 +21,12 @@ type Config struct {
 	Cacher     CacherConfig     `mapstructure:"cacher"`
 	Queue      QueueConfig      `mapstructure:"queue"`
 	Cloud      CloudConfig      `mapstructure:"cloud"`
+	Settings   SettingsConfig   `mapstructure:"settings"`
+}
+
+type SettingsConfig struct {
+	ChunkSize    int `mapstructure:"chunk_size"`
+	ChunkOverlap int `mapstructure:"chunk_overlap"`
 }
 
 type ServerConfig struct {
@@ -60,8 +66,15 @@ func FromFile(filePath string) (*Config, error) {
 	viperInstance.SetEnvPrefix("watchtower")
 	viperInstance.SetEnvKeyReplacer(strings.NewReplacer(".", "__"))
 
+	// Settings server config
+	bindErr := viperInstance.BindEnv("settings", "WATCHTOWER__SETTINGS__CHUNK_SIZE")
+	if bindErr != nil {
+		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
+	}
+	bindErr = viperInstance.BindEnv("settings", "WATCHTOWER__SETTINGS__CHUNK_OVERLAP")
+
 	// Http server config
-	bindErr := viperInstance.BindEnv("server.http.address", "WATCHTOWER__SERVER__HTTP__ADDRESS")
+	bindErr = viperInstance.BindEnv("server.http.address", "WATCHTOWER__SERVER__HTTP__ADDRESS")
 	if bindErr != nil {
 		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
 	}

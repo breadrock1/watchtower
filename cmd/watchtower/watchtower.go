@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/jonathanhecl/chunker"
 	"watchtower/cmd"
 	"watchtower/internal/application/usecase"
 	"watchtower/internal/infrastructure/dedoc"
@@ -57,8 +58,12 @@ func main() {
 		log.Fatalf("s3 connection failed: %v", err)
 	}
 
+	settings := servConfig.Settings
+	textChunker := chunker.NewChunker(settings.ChunkSize, settings.ChunkOverlap, chunker.DefaultSeparators, false, false)
+
 	cCtx, cancel := context.WithCancel(ctx)
 	useCase := usecase.NewUseCase(
+		*textChunker,
 		rmqServ,
 		redisServ,
 		dedocServ,

@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jonathanhecl/chunker"
 	"github.com/stretchr/testify/assert"
 	"watchtower/internal/application/dto"
 	"watchtower/internal/application/mapping"
@@ -35,6 +36,9 @@ func TestProcessing(t *testing.T) {
 
 	dedocServ := &mocks.MockDedocClient{}
 
+	settings := servConfig.Settings
+	textChunker := chunker.NewChunker(settings.ChunkSize, settings.ChunkOverlap, chunker.DefaultSeparators, false, false)
+
 	redisServ := redis.New(&servConfig.Cacher.Redis)
 	rmqServ, initErr := rmq.New(&servConfig.Queue.Rmq)
 	assert.NoError(t, initErr, "failed to init rmq client")
@@ -50,6 +54,7 @@ func TestProcessing(t *testing.T) {
 
 		cCtx, cancel := context.WithCancel(ctx)
 		useCase := usecase.NewUseCase(
+			*textChunker,
 			rmqServ,
 			redisServ,
 			dedocServ,
@@ -97,6 +102,7 @@ func TestProcessing(t *testing.T) {
 
 		cCtx, cancel := context.WithCancel(ctx)
 		useCase := usecase.NewUseCase(
+			*textChunker,
 			rmqServ,
 			redisServ,
 			dedocServ,

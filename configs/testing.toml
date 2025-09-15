@@ -1,3 +1,7 @@
+[settings]
+chunk_size = 50000
+chunk_overlap = 1000
+
 [server.http]
 address = "0.0.0.0:2893"
 
