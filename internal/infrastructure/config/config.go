@@ -67,11 +67,11 @@ func FromFile(filePath string) (*Config, error) {
 	viperInstance.SetEnvKeyReplacer(strings.NewReplacer(".", "__"))
 
 	// Settings server config
-	bindErr := viperInstance.BindEnv("settings", "WATCHTOWER__SETTINGS__CHUNK_SIZE")
+	bindErr := viperInstance.BindEnv("settings.chunk_size", "WATCHTOWER__SETTINGS__CHUNK_SIZE")
 	if bindErr != nil {
 		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
 	}
-	bindErr = viperInstance.BindEnv("settings", "WATCHTOWER__SETTINGS__CHUNK_OVERLAP")
+	bindErr = viperInstance.BindEnv("settings.chunk_overlap", "WATCHTOWER__SETTINGS__CHUNK_OVERLAP")
 	if bindErr != nil {
 		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
 	}
