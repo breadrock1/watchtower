@@ -34,8 +34,9 @@ func (s *Server) setupServer() {
 	if s.config.Logger.EnableLoki {
 		lokiLog := InitLokiLogger(s.config.Logger)
 		s.e.Use(lokiLog.LokiLoggerMW())
+	} else {
+		s.e.Use(InitLocalLogger(s.config.Logger))
 	}
-	s.e.Use(InitLocalLogger(s.config.Logger))
 
 	s.e.Use(middleware.CORS())
 	s.e.Use(middleware.Recover())

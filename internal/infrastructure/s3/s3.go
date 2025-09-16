@@ -104,7 +104,7 @@ func (s *S3Client) GetBucketFiles(ctx context.Context, bucket, folder string) ([
 	dirObjects := make([]*dto.FileObject, 0)
 	for obj := range s.mc.ListObjects(ctx, bucket, opts) {
 		if obj.Err != nil {
-			slog.Warn("failed to get object from s3: ", obj.Err.Error())
+			slog.Warn("failed to get object from s3: ", slog.String("err", obj.Err.Error()))
 			continue
 		}
 

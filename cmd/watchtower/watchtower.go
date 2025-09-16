@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -42,6 +43,9 @@ import (
 // @tag.description Share files by URL API
 
 func main() {
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
+
 	ctx := context.Background()
 	servConfig := cmd.Execute()
 
@@ -51,12 +55,13 @@ func main() {
 
 	rmqServ, err := rmq.New(&servConfig.Queue.Rmq)
 	if err != nil {
-		log.Fatalf("rmq connection failed: %v", err)
+		slog.Error("rmq connection failed", slog.String("err", err.Error()))
 	}
 	launchTasksConsumer(ctx, rmqServ)
 
 	s3Serv, err := s3.New(&servConfig.Cloud.S3)
 	if err != nil {
+		slog.Error("s3 connection failed", slog.String("err", err.Error()))
 		log.Fatalf("s3 connection failed: %v", err)
 	}
 
@@ -83,6 +88,7 @@ func main() {
 	httpServer := httpserver.New(&servConfig.Server.Http, useCase)
 	go func() {
 		if err := httpServer.Start(cCtx); err != nil {
+			slog.Error("http server start failed", slog.String("err", err.Error()))
 			log.Fatalf("http server start failed: %v", err)
 		}
 	}()
@@ -95,6 +101,7 @@ func main() {
 
 func launchTasksConsumer(ctx context.Context, rmqServ *rmq.RmqClient) {
 	if err := rmqServ.Consume(ctx); err != nil {
+		slog.Error("rmq consumer launching failed", slog.String("err", err.Error()))
 		log.Fatalf("rmq consumer launching failed: %v", err)
 	}
 }

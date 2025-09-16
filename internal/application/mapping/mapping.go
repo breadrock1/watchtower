@@ -30,11 +30,3 @@ func TaskStatusFromString(enumVal string) (dto.TaskStatus, error) {
 		return dto.Pending, fmt.Errorf("unknown task status: %s", enumVal)
 	}
 }
-
-func TaskStatusToInt(ts dto.TaskStatus) int {
-	return int(ts)
-}
-
-func TaskStatusFromInt(enum int) dto.TaskStatus {
-	return dto.TaskStatus(enum)
-}

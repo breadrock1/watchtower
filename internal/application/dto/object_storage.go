@@ -11,13 +11,6 @@ type Bucket struct {
 	CreatedAt time.Time
 }
 
-func NewBucketFromName(dirName string) Bucket {
-	return Bucket{
-		Bucket: dirName,
-		Path:   "",
-	}
-}
-
 type FileObject struct {
 	FileName      string `json:"file_name"`
 	DirectoryName string `json:"directory_name"`

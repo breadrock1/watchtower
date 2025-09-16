@@ -147,7 +147,7 @@ func (r *RmqClient) handleReconnect() {
 			for reconnCounter := 0; reconnCounter < 5; reconnCounter++ {
 				r.conn, err = amqp.DialConfig(r.config.Address, rmqConfig)
 				if err != nil {
-					slog.Error("failed while re-connecting to rmq: ", err.Error())
+					slog.Error("failed while re-connecting to rmq: ", slog.String("err", err.Error()))
 					return
 				}
 
@@ -157,7 +157,7 @@ func (r *RmqClient) handleReconnect() {
 					break
 				}
 
-				slog.Error("failed to create rmq channel: ", err.Error())
+				slog.Error("failed to create rmq channel: ", slog.String("err", err.Error()))
 				time.Sleep(time.Duration(reconnCounter*reconnCounter) * time.Second)
 			}
 

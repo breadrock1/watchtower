@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -129,7 +130,9 @@ func (s *V1Server) UploadFile(eCtx echo.Context) error {
 	expired := eCtx.QueryParam("expired")
 	timeVal, timeParseErr := time.Parse(time.RFC3339, expired)
 	if timeParseErr != nil {
-		log.Println("failed to parse expired time param: ", expired, timeParseErr)
+		slog.Warn("failed to parse expired time param: ",
+			slog.String("expired", expired),
+			slog.String("err", timeParseErr.Error()))
 	}
 
 	uploadedFiles := make([]*dto.TaskEvent, len(multipartForm.File["files"]))
@@ -143,7 +146,9 @@ func (s *V1Server) UploadFile(eCtx echo.Context) error {
 		}
 		defer func() {
 			if err := fileHandler.Close(); err != nil {
-				log.Println("failed to close file handler: ", fileName, err)
+				slog.Error("failed to close file handler: ",
+					slog.String("file", fileName),
+					slog.String("err", err.Error()))
 				return
 			}
 		}()
@@ -151,7 +156,9 @@ func (s *V1Server) UploadFile(eCtx echo.Context) error {
 		fileData.Reset()
 		_, err = fileData.ReadFrom(fileHandler)
 		if err != nil {
-			log.Println("failed to read file form", fileName, err)
+			slog.Error("failed to read file form",
+				slog.String("file", fileName),
+				slog.String("err", err.Error()))
 			continue
 		}
 
@@ -164,7 +171,9 @@ func (s *V1Server) UploadFile(eCtx echo.Context) error {
 
 		task, err := s.uc.StoreFileToStorage(ctx, uploadItem)
 		if err != nil {
-			log.Println("failed to upload file to cloud: ", fileName, err)
+			slog.Error("failed to upload file to cloud",
+				slog.String("file", fileName),
+				slog.String("err", err.Error()))
 			continue
 		}
 

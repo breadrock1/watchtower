@@ -39,19 +39,19 @@ func (rs *RedisClient) GetAll(ctx context.Context, bucket string) ([]*dto.TaskEv
 		cmd := rs.rsConn.Get(ctx, rKey)
 		data, err := cmd.Bytes()
 		if err != nil {
-			slog.Warn("failed to get task: ", err.Error())
+			slog.Warn("failed to get task: ", slog.String("err", err.Error()))
 			continue
 		}
 
 		value := &RedisValue{}
 		if err = json.Unmarshal(data, &value); err != nil {
-			slog.Warn("failed to unmarshal task: ", err.Error())
+			slog.Warn("failed to unmarshal task: ", slog.String("err", err.Error()))
 			continue
 		}
 
 		taskEvent, err := value.ConvertToTaskEvent()
 		if err != nil {
-			slog.Warn("failed to unmarshal task: ", err.Error())
+			slog.Warn("failed to unmarshal task: ", slog.String("err", err.Error()))
 			continue
 		}
 
