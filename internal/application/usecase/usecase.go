@@ -6,9 +6,11 @@ import (
 	"log"
 	"log/slog"
 	"path"
+	"sync"
 	"time"
 
 	"github.com/jonathanhecl/chunker"
+	"golang.org/x/sync/semaphore"
 	"watchtower/internal/application/dto"
 	"watchtower/internal/application/mapping"
 	"watchtower/internal/application/services/doc-storage"
@@ -20,6 +22,7 @@ import (
 )
 
 const EmptyMessage = ""
+const SEMAPHORE_WORKERS_COUNT = 10
 
 type UseCase struct {
 	processorCh chan dto.TaskEvent
@@ -159,24 +162,78 @@ func (uc *UseCase) processFile(ctx context.Context, taskEvent dto.TaskEvent) (st
 		return "", fmt.Errorf("failed to recognize: %w", err)
 	}
 
-	var docID string
-	for _, chunk := range uc.textChunker.Chunk(recData.Text) {
-		doc := &dto.DocumentObject{
-			FileName:   path.Base(taskEvent.FilePath),
-			FilePath:   taskEvent.FilePath,
-			FileSize:   fileData.Len(),
-			Content:    chunk,
-			CreatedAt:  taskEvent.CreatedAt,
-			ModifiedAt: taskEvent.ModifiedAt,
-		}
+	doc := &dto.DocumentObject{
+		FileName:   path.Base(taskEvent.FilePath),
+		FilePath:   taskEvent.FilePath,
+		FileSize:   fileData.Len(),
+		Content:    recData.Text,
+		CreatedAt:  taskEvent.CreatedAt,
+		ModifiedAt: taskEvent.ModifiedAt,
+	}
 
-		docID, err = uc.docStorage.StoreDocument(ctx, taskEvent.Bucket, doc)
-		if err != nil {
-			return "", fmt.Errorf("failed to store doc %s: %w", doc.FileName, err)
-		}
+	docID, err := uc.storeToDocSearch(ctx, taskEvent.Bucket, doc)
+	if err != nil {
+		return "", fmt.Errorf("failed to store doc to doc-searcher %s: %w", doc.FileName, err)
 	}
 
 	slog.Info("successfully stored document: ", docID)
+	return docID, nil
+}
+
+func (uc *UseCase) storeToDocSearch(ctx context.Context, index string, doc *dto.DocumentObject) (string, error) {
+	allChunks := uc.textChunker.Chunk(doc.Content)
+
+	rootChunk := allChunks[0]
+	splitDoc := &dto.DocumentObject{
+		FileName:   doc.FileName,
+		FilePath:   doc.FilePath,
+		FileSize:   doc.FileSize,
+		Content:    rootChunk,
+		CreatedAt:  doc.CreatedAt,
+		ModifiedAt: doc.ModifiedAt,
+	}
+	docID, err := uc.docStorage.StoreDocument(ctx, index, splitDoc)
+	if err != nil {
+		return "", fmt.Errorf("failed to store: %w", err)
+	}
+
+	if len(allChunks) < 2 {
+		return docID, nil
+	}
+
+	sem := semaphore.NewWeighted(SEMAPHORE_WORKERS_COUNT)
+	waitGroup := sync.WaitGroup{}
+	waitGroup.Add(len(allChunks) - 1)
+	for _, chunk := range allChunks[1:] {
+		chunk := chunk
+		go func() {
+			defer waitGroup.Done()
+
+			if err := sem.Acquire(ctx, 1); err != nil {
+				log.Printf("internal semaphore error: %v", err)
+				return
+			}
+			defer sem.Release(1)
+
+			splitDoc := &dto.DocumentObject{
+				FileName:   doc.FileName,
+				FilePath:   doc.FilePath,
+				FileSize:   doc.FileSize,
+				Content:    chunk,
+				CreatedAt:  doc.CreatedAt,
+				ModifiedAt: doc.ModifiedAt,
+			}
+
+			docID, err := uc.docStorage.StoreDocument(ctx, index, splitDoc)
+			if err != nil {
+				log.Printf("failed to store doc %s: %v", doc.FileName, err)
+			} else {
+				log.Printf("stored doc chunk %s of file %s: %v", docID, doc.FileName, err)
+			}
+		}()
+	}
+
+	waitGroup.Wait()
 	return docID, nil
 }
 
