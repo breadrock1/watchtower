@@ -30,6 +30,8 @@ import (
 //	Processing -> 2;
 //	Successful -> 3.
 //
+// @BasePath /api/v1
+//
 // @tag.name buckets
 // @tag.description CRUD APIs to manage cloud buckets
 

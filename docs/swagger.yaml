@@ -1,3 +1,4 @@
+basePath: /api/v1
 definitions:
   dto.TaskEvent:
     properties:
@@ -32,7 +33,7 @@ definitions:
     - Pending
     - Processing
     - Successful
-  httpserver.BadRequestForm:
+  v1.BadRequestForm:
     properties:
       message:
         example: Bad Request message
@@ -41,7 +42,7 @@ definitions:
         example: 400
         type: integer
     type: object
-  httpserver.CopyFileForm:
+  v1.CopyFileForm:
     properties:
       dst_path:
         example: test-document.docx
@@ -50,37 +51,37 @@ definitions:
         example: old-test-document.docx
         type: string
     type: object
-  httpserver.CreateBucketForm:
+  v1.CreateBucketForm:
     properties:
       bucket_name:
         example: test-bucket
         type: string
     type: object
-  httpserver.DownloadFileForm:
+  v1.DownloadFileForm:
     properties:
       file_name:
         example: test-file.docx
         type: string
     type: object
-  httpserver.GetFileAttributesForm:
+  v1.GetFileAttributesForm:
     properties:
       file_path:
         example: test-file.docx
         type: string
     type: object
-  httpserver.GetFilesForm:
+  v1.GetFilesForm:
     properties:
       directory:
         example: test-folder/
         type: string
     type: object
-  httpserver.RemoveFileForm:
+  v1.RemoveFileForm:
     properties:
       file_name:
         example: test-file.docx
         type: string
     type: object
-  httpserver.ResponseForm:
+  v1.ResponseForm:
     properties:
       message:
         example: Done
@@ -89,7 +90,7 @@ definitions:
         example: 200
         type: integer
     type: object
-  httpserver.ServerErrorForm:
+  v1.ServerErrorForm:
     properties:
       message:
         example: Server Error message
@@ -98,7 +99,7 @@ definitions:
         example: 503
         type: integer
     type: object
-  httpserver.ShareFileForm:
+  v1.ShareFileForm:
     properties:
       expired_secs:
         example: 3600
@@ -114,6 +115,42 @@ info:
   title: Watchtower service
   version: 0.0.1
 paths:
+  /api/v1/cloud/{bucket}/file/copy:
+    post:
+      consumes:
+      - application/json
+      description: Copy file to another location into bucket
+      operationId: copy-file
+      parameters:
+      - description: Bucket name of src file
+        in: path
+        name: bucket
+        required: true
+        type: string
+      - description: Params to copy file
+        in: body
+        name: jsonQuery
+        required: true
+        schema:
+          $ref: '#/definitions/v1.CopyFileForm'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ok
+          schema:
+            $ref: '#/definitions/v1.ResponseForm'
+        "400":
+          description: Bad Request message
+          schema:
+            $ref: '#/definitions/v1.BadRequestForm'
+        "503":
+          description: Server does not available
+          schema:
+            $ref: '#/definitions/v1.ServerErrorForm'
+      summary: Copy file to another location into bucket
+      tags:
+      - files
   /cloud/{bucket}:
     delete:
       description: Remove bucket from cloud
@@ -130,15 +167,15 @@ paths:
         "200":
           description: Ok
           schema:
-            $ref: '#/definitions/httpserver.ResponseForm'
+            $ref: '#/definitions/v1.ResponseForm'
         "400":
           description: Bad Request message
           schema:
-            $ref: '#/definitions/httpserver.BadRequestForm'
+            $ref: '#/definitions/v1.BadRequestForm'
         "503":
           description: Server does not available
           schema:
-            $ref: '#/definitions/httpserver.ServerErrorForm'
+            $ref: '#/definitions/v1.ServerErrorForm'
       summary: Remove bucket from cloud
       tags:
       - buckets
@@ -163,15 +200,15 @@ paths:
         "200":
           description: Ok
           schema:
-            $ref: '#/definitions/httpserver.ResponseForm'
+            $ref: '#/definitions/v1.ResponseForm'
         "400":
           description: Bad Request message
           schema:
-            $ref: '#/definitions/httpserver.BadRequestForm'
+            $ref: '#/definitions/v1.BadRequestForm'
         "503":
           description: Server does not available
           schema:
-            $ref: '#/definitions/httpserver.ServerErrorForm'
+            $ref: '#/definitions/v1.ServerErrorForm'
       summary: Remove file from cloud
       tags:
       - files
@@ -192,59 +229,23 @@ paths:
         name: jsonQuery
         required: true
         schema:
-          $ref: '#/definitions/httpserver.GetFileAttributesForm'
+          $ref: '#/definitions/v1.GetFileAttributesForm'
       produces:
       - application/json
       responses:
         "200":
           description: Ok
           schema:
-            $ref: '#/definitions/httpserver.ResponseForm'
+            $ref: '#/definitions/v1.ResponseForm'
         "400":
           description: Bad Request message
           schema:
-            $ref: '#/definitions/httpserver.BadRequestForm'
+            $ref: '#/definitions/v1.BadRequestForm'
         "503":
           description: Server does not available
           schema:
-            $ref: '#/definitions/httpserver.ServerErrorForm'
+            $ref: '#/definitions/v1.ServerErrorForm'
       summary: Get file attributes
-      tags:
-      - files
-  /cloud/{bucket}/file/copy:
-    post:
-      consumes:
-      - application/json
-      description: Copy file to another location into bucket
-      operationId: copy-file
-      parameters:
-      - description: Bucket name of src file
-        in: path
-        name: bucket
-        required: true
-        type: string
-      - description: Params to copy file
-        in: body
-        name: jsonQuery
-        required: true
-        schema:
-          $ref: '#/definitions/httpserver.CopyFileForm'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Ok
-          schema:
-            $ref: '#/definitions/httpserver.ResponseForm'
-        "400":
-          description: Bad Request message
-          schema:
-            $ref: '#/definitions/httpserver.BadRequestForm'
-        "503":
-          description: Server does not available
-          schema:
-            $ref: '#/definitions/httpserver.ServerErrorForm'
-      summary: Copy file to another location into bucket
       tags:
       - files
   /cloud/{bucket}/file/download:
@@ -264,7 +265,7 @@ paths:
         name: jsonQuery
         required: true
         schema:
-          $ref: '#/definitions/httpserver.DownloadFileForm'
+          $ref: '#/definitions/v1.DownloadFileForm'
       produces:
       - application/json
       responses:
@@ -275,11 +276,11 @@ paths:
         "400":
           description: Bad Request message
           schema:
-            $ref: '#/definitions/httpserver.BadRequestForm'
+            $ref: '#/definitions/v1.BadRequestForm'
         "503":
           description: Server does not available
           schema:
-            $ref: '#/definitions/httpserver.ServerErrorForm'
+            $ref: '#/definitions/v1.ServerErrorForm'
       summary: Download file from cloud
       tags:
       - files
@@ -300,22 +301,22 @@ paths:
         name: jsonQuery
         required: true
         schema:
-          $ref: '#/definitions/httpserver.CopyFileForm'
+          $ref: '#/definitions/v1.CopyFileForm'
       produces:
       - application/json
       responses:
         "200":
           description: Ok
           schema:
-            $ref: '#/definitions/httpserver.ResponseForm'
+            $ref: '#/definitions/v1.ResponseForm'
         "400":
           description: Bad Request message
           schema:
-            $ref: '#/definitions/httpserver.BadRequestForm'
+            $ref: '#/definitions/v1.BadRequestForm'
         "503":
           description: Server does not available
           schema:
-            $ref: '#/definitions/httpserver.ServerErrorForm'
+            $ref: '#/definitions/v1.ServerErrorForm'
       summary: Move file to another location into bucket
       tags:
       - files
@@ -334,22 +335,22 @@ paths:
         name: jsonQuery
         required: true
         schema:
-          $ref: '#/definitions/httpserver.RemoveFileForm'
+          $ref: '#/definitions/v1.RemoveFileForm'
       produces:
       - application/json
       responses:
         "200":
           description: Ok
           schema:
-            $ref: '#/definitions/httpserver.ResponseForm'
+            $ref: '#/definitions/v1.ResponseForm'
         "400":
           description: Bad Request message
           schema:
-            $ref: '#/definitions/httpserver.BadRequestForm'
+            $ref: '#/definitions/v1.BadRequestForm'
         "503":
           description: Server does not available
           schema:
-            $ref: '#/definitions/httpserver.ServerErrorForm'
+            $ref: '#/definitions/v1.ServerErrorForm'
       summary: Remove file from cloud
       tags:
       - files
@@ -370,22 +371,22 @@ paths:
         name: jsonQuery
         required: true
         schema:
-          $ref: '#/definitions/httpserver.ShareFileForm'
+          $ref: '#/definitions/v1.ShareFileForm'
       produces:
       - application/json
       responses:
         "200":
           description: Ok
           schema:
-            $ref: '#/definitions/httpserver.ResponseForm'
+            $ref: '#/definitions/v1.ResponseForm'
         "400":
           description: Bad Request message
           schema:
-            $ref: '#/definitions/httpserver.BadRequestForm'
+            $ref: '#/definitions/v1.BadRequestForm'
         "503":
           description: Server does not available
           schema:
-            $ref: '#/definitions/httpserver.ServerErrorForm'
+            $ref: '#/definitions/v1.ServerErrorForm'
       summary: Get share URL for file
       tags:
       - share
@@ -416,15 +417,15 @@ paths:
         "200":
           description: Ok
           schema:
-            $ref: '#/definitions/httpserver.ResponseForm'
+            $ref: '#/definitions/v1.ResponseForm'
         "400":
           description: Bad Request message
           schema:
-            $ref: '#/definitions/httpserver.BadRequestForm'
+            $ref: '#/definitions/v1.BadRequestForm'
         "503":
           description: Server does not available
           schema:
-            $ref: '#/definitions/httpserver.ServerErrorForm'
+            $ref: '#/definitions/v1.ServerErrorForm'
       summary: Upload files to cloud
       tags:
       - files
@@ -445,22 +446,22 @@ paths:
         name: jsonQuery
         required: true
         schema:
-          $ref: '#/definitions/httpserver.GetFilesForm'
+          $ref: '#/definitions/v1.GetFilesForm'
       produces:
       - application/json
       responses:
         "200":
           description: Ok
           schema:
-            $ref: '#/definitions/httpserver.ResponseForm'
+            $ref: '#/definitions/v1.ResponseForm'
         "400":
           description: Bad Request message
           schema:
-            $ref: '#/definitions/httpserver.BadRequestForm'
+            $ref: '#/definitions/v1.BadRequestForm'
         "503":
           description: Server does not available
           schema:
-            $ref: '#/definitions/httpserver.ServerErrorForm'
+            $ref: '#/definitions/v1.ServerErrorForm'
       summary: Get files list into bucket
       tags:
       - files
@@ -476,22 +477,22 @@ paths:
         name: jsonQuery
         required: true
         schema:
-          $ref: '#/definitions/httpserver.CreateBucketForm'
+          $ref: '#/definitions/v1.CreateBucketForm'
       produces:
       - application/json
       responses:
         "200":
           description: Ok
           schema:
-            $ref: '#/definitions/httpserver.ResponseForm'
+            $ref: '#/definitions/v1.ResponseForm'
         "400":
           description: Bad Request message
           schema:
-            $ref: '#/definitions/httpserver.BadRequestForm'
+            $ref: '#/definitions/v1.BadRequestForm'
         "503":
           description: Server does not available
           schema:
-            $ref: '#/definitions/httpserver.ServerErrorForm'
+            $ref: '#/definitions/v1.ServerErrorForm'
       summary: Create new bucket into cloud
       tags:
       - buckets
@@ -511,7 +512,7 @@ paths:
         "503":
           description: Server does not available
           schema:
-            $ref: '#/definitions/httpserver.ServerErrorForm'
+            $ref: '#/definitions/v1.ServerErrorForm'
       summary: Get watched bucket list
       tags:
       - buckets
@@ -543,11 +544,11 @@ paths:
         "400":
           description: Bad Request message
           schema:
-            $ref: '#/definitions/httpserver.BadRequestForm'
+            $ref: '#/definitions/v1.BadRequestForm'
         "503":
           description: Server does not available
           schema:
-            $ref: '#/definitions/httpserver.ServerErrorForm'
+            $ref: '#/definitions/v1.ServerErrorForm'
       summary: Load processing tasks of uploaded files into bucket
       tags:
       - tasks
@@ -578,11 +579,11 @@ paths:
         "400":
           description: Bad Request message
           schema:
-            $ref: '#/definitions/httpserver.BadRequestForm'
+            $ref: '#/definitions/v1.BadRequestForm'
         "503":
           description: Server does not available
           schema:
-            $ref: '#/definitions/httpserver.ServerErrorForm'
+            $ref: '#/definitions/v1.ServerErrorForm'
       summary: Load processing task by id
       tags:
       - tasks
