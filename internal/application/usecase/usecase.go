@@ -193,7 +193,7 @@ func (uc *UseCase) processFile(ctx context.Context, taskEvent dto.TaskEvent) (st
 	return docID, nil
 }
 
-func (uc *UseCase) storeToDocSearch(ctx context.Context, taskEvent dto.TaskEvent, doc *dto.DocumentObject) (string, error) {
+func (uc *UseCase) storeToDocSearch(ctx context.Context, task dto.TaskEvent, doc *dto.DocumentObject) (string, error) {
 	allChunks := uc.textChunker.Chunk(doc.Content)
 
 	rootChunk := allChunks[0]
@@ -205,14 +205,14 @@ func (uc *UseCase) storeToDocSearch(ctx context.Context, taskEvent dto.TaskEvent
 		CreatedAt:  doc.CreatedAt,
 		ModifiedAt: doc.ModifiedAt,
 	}
-	docID, err := uc.docStorage.StoreDocument(ctx, taskEvent.Bucket, splitDoc)
+	docID, err := uc.docStorage.StoreDocument(ctx, task.Bucket, splitDoc)
 	if err != nil {
 		return "", fmt.Errorf("failed to store: %w", err)
 	}
 
 	chunkSize := len(allChunks)
 	slog.Debug("document has been split",
-		slog.String("task-id", taskEvent.ID),
+		slog.String("task-id", task.ID),
 		slog.String("file-path", doc.FilePath),
 		slog.Int("chunks", chunkSize))
 
@@ -230,7 +230,7 @@ func (uc *UseCase) storeToDocSearch(ctx context.Context, taskEvent dto.TaskEvent
 
 			if err := sem.Acquire(ctx, 1); err != nil {
 				slog.Error("internal semaphore error",
-					slog.String("task-id", taskEvent.ID),
+					slog.String("task-id", task.ID),
 					slog.String("err", err.Error()))
 				return
 			}
@@ -245,16 +245,16 @@ func (uc *UseCase) storeToDocSearch(ctx context.Context, taskEvent dto.TaskEvent
 				ModifiedAt: doc.ModifiedAt,
 			}
 
-			docID, err := uc.docStorage.StoreDocument(ctx, taskEvent.Bucket, splitDoc)
+			docID, err := uc.docStorage.StoreDocument(ctx, task.Bucket, splitDoc)
 			if err != nil {
 				slog.Error("failed to store document chunk",
-					slog.String("task-id", taskEvent.ID),
+					slog.String("task-id", task.ID),
 					slog.String("err", err.Error()))
 				return
 			}
 
 			slog.Info("doc chunk has been stored successful",
-				slog.String("task-id", taskEvent.ID),
+				slog.String("task-id", task.ID),
 				slog.String("doc-id", docID),
 				slog.String("err", err.Error()))
 		}()
@@ -266,15 +266,15 @@ func (uc *UseCase) storeToDocSearch(ctx context.Context, taskEvent dto.TaskEvent
 
 func (uc *UseCase) StoreFileToStorage(ctx context.Context, fileForm dto.FileToUpload) (*dto.TaskEvent, error) {
 	// TODO: Disabled for TechDebt
-	// id := utils.GenerateUniqID(fileForm.Bucket, fileForm.FilePath)
-	id := utils.GenerateTaskID()
+	// taskID := utils.GenerateUniqID(fileForm.Bucket, fileForm.FilePath)
+	taskID := utils.GenerateTaskID()
 	slog.Info("publishing task to queue",
-		slog.String("task-id", id),
+		slog.String("task-taskID", taskID),
 		slog.String("index", fileForm.Bucket),
 		slog.String("file-path", fileForm.FilePath))
 
 	task := dto.TaskEvent{
-		ID:         id,
+		ID:         taskID,
 		Bucket:     fileForm.Bucket,
 		FilePath:   fileForm.FilePath,
 		FileSize:   int64(fileForm.FileData.Len()),
