@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -114,7 +114,7 @@ func (r *RmqClient) StopConsuming(_ context.Context) error {
 
 func (r *RmqClient) handle(deliveries <-chan amqp.Delivery, done chan error) {
 	cleanup := func() {
-		log.Printf("handle: deliveries channel closed")
+		slog.Warn("handle: deliveries channel closed")
 		done <- nil
 	}
 
@@ -134,7 +134,7 @@ func (r *RmqClient) handleReconnect() {
 			return
 
 		case <-r.conn.NotifyClose(make(chan *amqp.Error)):
-			log.Println("Attempting to reconnect...")
+			slog.Warn("attempting to reconnect to rmq...")
 
 			rmqConfig := amqp.Config{
 				Properties: amqp.NewConnectionProperties(),
@@ -147,22 +147,22 @@ func (r *RmqClient) handleReconnect() {
 			for reconnCounter := 0; reconnCounter < 5; reconnCounter++ {
 				r.conn, err = amqp.DialConfig(r.config.Address, rmqConfig)
 				if err != nil {
-					log.Printf("failed while re-connecting to rmq: %v", err)
+					slog.Error("failed while re-connecting to rmq: ", err.Error())
 					return
 				}
 
 				r.channel, err = r.conn.Channel()
 				if err == nil {
-					log.Printf("connection to rmq has been returned!")
+					slog.Info("connection to rmq has been returned!")
 					break
 				}
 
-				log.Printf("failed to create rmq channel: %v", err)
+				slog.Error("failed to create rmq channel: ", err.Error())
 				time.Sleep(time.Duration(reconnCounter*reconnCounter) * time.Second)
 			}
 
 			if err != nil {
-				log.Println("Failed to reconnect to RabbitMQ")
+				slog.Error("failed to reconnect to rmq")
 				return
 			}
 		}

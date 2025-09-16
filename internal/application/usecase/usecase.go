@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"log/slog"
 	"path"
 	"time"
 
@@ -85,7 +86,7 @@ func (uc *UseCase) LaunchWatcherListener(ctx context.Context) {
 
 func (uc *UseCase) Processing(ctx context.Context, recvMsg dto.Message) {
 	taskEvent := recvMsg.Body
-	log.Printf("processing task event: %v", taskEvent)
+	slog.Info("processing task event: ", taskEvent)
 
 	uc.updateTaskStatus(ctx, &taskEvent, dto.Processing, EmptyMessage)
 
@@ -93,7 +94,7 @@ func (uc *UseCase) Processing(ctx context.Context, recvMsg dto.Message) {
 	msg, err := uc.processFile(ctx, recvMsg.Body)
 	if err != nil {
 		status, msg = dto.Failed, err.Error()
-		log.Printf("failed while processing file: %v", err)
+		slog.Error("failed while processing file: ", err.Error())
 	}
 
 	taskEvent.StatusText = msg
@@ -112,14 +113,14 @@ func (uc *UseCase) publishToQueue(ctx context.Context, taskEvent dto.TaskEvent) 
 func (uc *UseCase) updateTaskStatus(ctx context.Context, task *dto.TaskEvent, status dto.TaskStatus, msg string) {
 	task.Status, task.StatusText = status, msg
 	if err := uc.taskManager.Push(ctx, task); err != nil {
-		log.Printf("failed to store task to cache: %v", err)
+		slog.Error("failed to store task to cache: ", err.Error())
 	}
 }
 
 func (uc *UseCase) isTaskAlreadyProcessed(ctx context.Context, task *dto.TaskEvent) bool {
 	storageTask, err := uc.taskManager.Get(ctx, task.Bucket, task.ID)
 	if err != nil {
-		log.Printf("failed to get task from cache: %v", err)
+		slog.Error("failed to get task from cache: ", err.Error())
 		return false
 	}
 
@@ -175,7 +176,7 @@ func (uc *UseCase) processFile(ctx context.Context, taskEvent dto.TaskEvent) (st
 		}
 	}
 
-	log.Printf("successfully stored document: %s", docID)
+	slog.Info("successfully stored document: ", docID)
 	return docID, nil
 }
 

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/minio/minio-go/v7"
@@ -104,7 +104,7 @@ func (s *S3Client) GetBucketFiles(ctx context.Context, bucket, folder string) ([
 	dirObjects := make([]*dto.FileObject, 0)
 	for obj := range s.mc.ListObjects(ctx, bucket, opts) {
 		if obj.Err != nil {
-			log.Println("failed to get object: ", obj.Err)
+			slog.Warn("failed to get object from s3: ", obj.Err.Error())
 			continue
 		}
 
