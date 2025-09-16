@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"log/slog"
 	"path"
 	"sync"
 	"time"
 
 	"github.com/jonathanhecl/chunker"
+	"golang.org/x/sync/semaphore"
 	"watchtower/internal/application/dto"
 	"watchtower/internal/application/mapping"
 	"watchtower/internal/application/services/doc-storage"
@@ -20,6 +22,7 @@ import (
 )
 
 const EmptyMessage = ""
+const SEMAPHORE_WORKERS_COUNT = 10
 
 type UseCase struct {
 	processorCh chan dto.TaskEvent
@@ -198,12 +201,20 @@ func (uc *UseCase) storeToDocSearch(ctx context.Context, index string, doc *dto.
 		return docID, nil
 	}
 
+	sem := semaphore.NewWeighted(SEMAPHORE_WORKERS_COUNT)
 	wg := sync.WaitGroup{}
 	wg.Add(len(allChunks) - 1)
 	for _, chunk := range allChunks[1:] {
 		chunk := chunk
 		go func() {
 			defer wg.Done()
+
+			if err := sem.Acquire(ctx, 1); err != nil {
+				slog.Error("internal semaphore error: ", err.Error())
+				return
+			}
+			defer sem.Release(1)
+
 			splitDoc := &dto.DocumentObject{
 				FileName:   doc.FileName,
 				FilePath:   doc.FilePath,
