@@ -11,14 +11,14 @@ address = "loki:3100"
 enable_loki = true
 
 [ocr.dedoc]
-address = "http://dedoc:8004"
+address = "http://localhost:8004"
 timeout = 300
 
 [docstorage.docsearcher]
-address = "http://doc-searcher:2892"
+address = "http://localhost:2892"
 
 [cacher.redis]
-address = "redis:6379"
+address = "localhost:6379"
 username = "redis"
 password = "redis"
 expired = 3600
@@ -30,7 +30,7 @@ routing_key = "task"
 queue = "watchtower-tasks"
 
 [cloud.s3]
-address = "cloud-storage:9000"
+address = "localhost:9000"
 access_id = "minio-root"
 secret_key = "minio-root"
 enable_ssl = false
