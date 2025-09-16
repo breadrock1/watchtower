@@ -1,4 +1,4 @@
-package httpserver
+package v1
 
 import (
 	"encoding/json"
@@ -7,8 +7,8 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func (s *Server) CreateStorageBucketsGroup() error {
-	group := s.server.Group("/cloud")
+func (s *V1Server) CreateStorageBucketsGroup() error {
+	group := s.e.Group("/api/v1/cloud")
 
 	group.GET("/buckets", s.GetBuckets)
 	group.PUT("/bucket", s.CreateBucket)
@@ -26,7 +26,7 @@ func (s *Server) CreateStorageBucketsGroup() error {
 // @Success 200 {array} string "Ok"
 // @Failure	503 {object} ServerErrorForm "Server does not available"
 // @Router /cloud/buckets [get]
-func (s *Server) GetBuckets(eCtx echo.Context) error {
+func (s *V1Server) GetBuckets(eCtx echo.Context) error {
 	ctx := eCtx.Request().Context()
 	watcherDirs, err := s.uc.GetObjectStorage().GetBuckets(ctx)
 	if err != nil {
@@ -48,7 +48,7 @@ func (s *Server) GetBuckets(eCtx echo.Context) error {
 // @Failure	400 {object} BadRequestForm "Bad Request message"
 // @Failure	503 {object} ServerErrorForm "Server does not available"
 // @Router /cloud/bucket [put]
-func (s *Server) CreateBucket(eCtx echo.Context) error {
+func (s *V1Server) CreateBucket(eCtx echo.Context) error {
 	jsonForm := &CreateBucketForm{}
 	decoder := json.NewDecoder(eCtx.Request().Body)
 	err := decoder.Decode(jsonForm)
@@ -62,7 +62,7 @@ func (s *Server) CreateBucket(eCtx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	return eCtx.JSON(201, createStatusResponse("Ok"))
+	return eCtx.JSON(201, CreateStatusResponse("Ok"))
 }
 
 // RemoveBucket
@@ -76,7 +76,7 @@ func (s *Server) CreateBucket(eCtx echo.Context) error {
 // @Failure	400 {object} BadRequestForm "Bad Request message"
 // @Failure	503 {object} ServerErrorForm "Server does not available"
 // @Router /cloud/{bucket} [delete]
-func (s *Server) RemoveBucket(eCtx echo.Context) error {
+func (s *V1Server) RemoveBucket(eCtx echo.Context) error {
 	bucket := eCtx.Param("bucket")
 	ctx := eCtx.Request().Context()
 	err := s.uc.GetObjectStorage().RemoveBucket(ctx, bucket)
@@ -84,5 +84,5 @@ func (s *Server) RemoveBucket(eCtx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	return eCtx.JSON(200, createStatusResponse("Ok"))
+	return eCtx.JSON(200, CreateStatusResponse("Ok"))
 }
