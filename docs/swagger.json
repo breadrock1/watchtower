@@ -6,7 +6,62 @@
         "contact": {},
         "version": "0.0.1"
     },
+    "basePath": "/api/v1",
     "paths": {
+        "/api/v1/cloud/{bucket}/file/copy": {
+            "post": {
+                "description": "Copy file to another location into bucket",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Copy file to another location into bucket",
+                "operationId": "copy-file",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bucket name of src file",
+                        "name": "bucket",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Params to copy file",
+                        "name": "jsonQuery",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.CopyFileForm"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Ok",
+                        "schema": {
+                            "$ref": "#/definitions/v1.ResponseForm"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request message",
+                        "schema": {
+                            "$ref": "#/definitions/v1.BadRequestForm"
+                        }
+                    },
+                    "503": {
+                        "description": "Server does not available",
+                        "schema": {
+                            "$ref": "#/definitions/v1.ServerErrorForm"
+                        }
+                    }
+                }
+            }
+        },
         "/cloud/bucket": {
             "put": {
                 "description": "Create new bucket into cloud",
@@ -28,7 +83,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/httpserver.CreateBucketForm"
+                            "$ref": "#/definitions/v1.CreateBucketForm"
                         }
                     }
                 ],
@@ -36,19 +91,19 @@
                     "200": {
                         "description": "Ok",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ResponseForm"
+                            "$ref": "#/definitions/v1.ResponseForm"
                         }
                     },
                     "400": {
                         "description": "Bad Request message",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.BadRequestForm"
+                            "$ref": "#/definitions/v1.BadRequestForm"
                         }
                     },
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ServerErrorForm"
+                            "$ref": "#/definitions/v1.ServerErrorForm"
                         }
                     }
                 }
@@ -78,7 +133,7 @@
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ServerErrorForm"
+                            "$ref": "#/definitions/v1.ServerErrorForm"
                         }
                     }
                 }
@@ -108,19 +163,19 @@
                     "200": {
                         "description": "Ok",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ResponseForm"
+                            "$ref": "#/definitions/v1.ResponseForm"
                         }
                     },
                     "400": {
                         "description": "Bad Request message",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.BadRequestForm"
+                            "$ref": "#/definitions/v1.BadRequestForm"
                         }
                     },
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ServerErrorForm"
+                            "$ref": "#/definitions/v1.ServerErrorForm"
                         }
                     }
                 }
@@ -157,19 +212,19 @@
                     "200": {
                         "description": "Ok",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ResponseForm"
+                            "$ref": "#/definitions/v1.ResponseForm"
                         }
                     },
                     "400": {
                         "description": "Bad Request message",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.BadRequestForm"
+                            "$ref": "#/definitions/v1.BadRequestForm"
                         }
                     },
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ServerErrorForm"
+                            "$ref": "#/definitions/v1.ServerErrorForm"
                         }
                     }
                 }
@@ -203,7 +258,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/httpserver.GetFileAttributesForm"
+                            "$ref": "#/definitions/v1.GetFileAttributesForm"
                         }
                     }
                 ],
@@ -211,73 +266,19 @@
                     "200": {
                         "description": "Ok",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ResponseForm"
+                            "$ref": "#/definitions/v1.ResponseForm"
                         }
                     },
                     "400": {
                         "description": "Bad Request message",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.BadRequestForm"
+                            "$ref": "#/definitions/v1.BadRequestForm"
                         }
                     },
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ServerErrorForm"
-                        }
-                    }
-                }
-            }
-        },
-        "/cloud/{bucket}/file/copy": {
-            "post": {
-                "description": "Copy file to another location into bucket",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "files"
-                ],
-                "summary": "Copy file to another location into bucket",
-                "operationId": "copy-file",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Bucket name of src file",
-                        "name": "bucket",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Params to copy file",
-                        "name": "jsonQuery",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/httpserver.CopyFileForm"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Ok",
-                        "schema": {
-                            "$ref": "#/definitions/httpserver.ResponseForm"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request message",
-                        "schema": {
-                            "$ref": "#/definitions/httpserver.BadRequestForm"
-                        }
-                    },
-                    "503": {
-                        "description": "Server does not available",
-                        "schema": {
-                            "$ref": "#/definitions/httpserver.ServerErrorForm"
+                            "$ref": "#/definitions/v1.ServerErrorForm"
                         }
                     }
                 }
@@ -311,7 +312,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/httpserver.DownloadFileForm"
+                            "$ref": "#/definitions/v1.DownloadFileForm"
                         }
                     }
                 ],
@@ -325,13 +326,13 @@
                     "400": {
                         "description": "Bad Request message",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.BadRequestForm"
+                            "$ref": "#/definitions/v1.BadRequestForm"
                         }
                     },
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ServerErrorForm"
+                            "$ref": "#/definitions/v1.ServerErrorForm"
                         }
                     }
                 }
@@ -365,7 +366,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/httpserver.CopyFileForm"
+                            "$ref": "#/definitions/v1.CopyFileForm"
                         }
                     }
                 ],
@@ -373,19 +374,19 @@
                     "200": {
                         "description": "Ok",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ResponseForm"
+                            "$ref": "#/definitions/v1.ResponseForm"
                         }
                     },
                     "400": {
                         "description": "Bad Request message",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.BadRequestForm"
+                            "$ref": "#/definitions/v1.BadRequestForm"
                         }
                     },
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ServerErrorForm"
+                            "$ref": "#/definitions/v1.ServerErrorForm"
                         }
                     }
                 }
@@ -416,7 +417,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/httpserver.RemoveFileForm"
+                            "$ref": "#/definitions/v1.RemoveFileForm"
                         }
                     }
                 ],
@@ -424,19 +425,19 @@
                     "200": {
                         "description": "Ok",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ResponseForm"
+                            "$ref": "#/definitions/v1.ResponseForm"
                         }
                     },
                     "400": {
                         "description": "Bad Request message",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.BadRequestForm"
+                            "$ref": "#/definitions/v1.BadRequestForm"
                         }
                     },
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ServerErrorForm"
+                            "$ref": "#/definitions/v1.ServerErrorForm"
                         }
                     }
                 }
@@ -470,7 +471,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ShareFileForm"
+                            "$ref": "#/definitions/v1.ShareFileForm"
                         }
                     }
                 ],
@@ -478,19 +479,19 @@
                     "200": {
                         "description": "Ok",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ResponseForm"
+                            "$ref": "#/definitions/v1.ResponseForm"
                         }
                     },
                     "400": {
                         "description": "Bad Request message",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.BadRequestForm"
+                            "$ref": "#/definitions/v1.BadRequestForm"
                         }
                     },
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ServerErrorForm"
+                            "$ref": "#/definitions/v1.ServerErrorForm"
                         }
                     }
                 }
@@ -536,19 +537,19 @@
                     "200": {
                         "description": "Ok",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ResponseForm"
+                            "$ref": "#/definitions/v1.ResponseForm"
                         }
                     },
                     "400": {
                         "description": "Bad Request message",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.BadRequestForm"
+                            "$ref": "#/definitions/v1.BadRequestForm"
                         }
                     },
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ServerErrorForm"
+                            "$ref": "#/definitions/v1.ServerErrorForm"
                         }
                     }
                 }
@@ -582,7 +583,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/httpserver.GetFilesForm"
+                            "$ref": "#/definitions/v1.GetFilesForm"
                         }
                     }
                 ],
@@ -590,19 +591,19 @@
                     "200": {
                         "description": "Ok",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ResponseForm"
+                            "$ref": "#/definitions/v1.ResponseForm"
                         }
                     },
                     "400": {
                         "description": "Bad Request message",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.BadRequestForm"
+                            "$ref": "#/definitions/v1.BadRequestForm"
                         }
                     },
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ServerErrorForm"
+                            "$ref": "#/definitions/v1.ServerErrorForm"
                         }
                     }
                 }
@@ -650,13 +651,13 @@
                     "400": {
                         "description": "Bad Request message",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.BadRequestForm"
+                            "$ref": "#/definitions/v1.BadRequestForm"
                         }
                     },
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ServerErrorForm"
+                            "$ref": "#/definitions/v1.ServerErrorForm"
                         }
                     }
                 }
@@ -702,13 +703,13 @@
                     "400": {
                         "description": "Bad Request message",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.BadRequestForm"
+                            "$ref": "#/definitions/v1.BadRequestForm"
                         }
                     },
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ServerErrorForm"
+                            "$ref": "#/definitions/v1.ServerErrorForm"
                         }
                     }
                 }
@@ -762,7 +763,7 @@
                 "Successful"
             ]
         },
-        "httpserver.BadRequestForm": {
+        "v1.BadRequestForm": {
             "type": "object",
             "properties": {
                 "message": {
@@ -775,7 +776,7 @@
                 }
             }
         },
-        "httpserver.CopyFileForm": {
+        "v1.CopyFileForm": {
             "type": "object",
             "properties": {
                 "dst_path": {
@@ -788,7 +789,7 @@
                 }
             }
         },
-        "httpserver.CreateBucketForm": {
+        "v1.CreateBucketForm": {
             "type": "object",
             "properties": {
                 "bucket_name": {
@@ -797,7 +798,7 @@
                 }
             }
         },
-        "httpserver.DownloadFileForm": {
+        "v1.DownloadFileForm": {
             "type": "object",
             "properties": {
                 "file_name": {
@@ -806,7 +807,7 @@
                 }
             }
         },
-        "httpserver.GetFileAttributesForm": {
+        "v1.GetFileAttributesForm": {
             "type": "object",
             "properties": {
                 "file_path": {
@@ -815,7 +816,7 @@
                 }
             }
         },
-        "httpserver.GetFilesForm": {
+        "v1.GetFilesForm": {
             "type": "object",
             "properties": {
                 "directory": {
@@ -824,7 +825,7 @@
                 }
             }
         },
-        "httpserver.RemoveFileForm": {
+        "v1.RemoveFileForm": {
             "type": "object",
             "properties": {
                 "file_name": {
@@ -833,7 +834,7 @@
                 }
             }
         },
-        "httpserver.ResponseForm": {
+        "v1.ResponseForm": {
             "type": "object",
             "properties": {
                 "message": {
@@ -846,7 +847,7 @@
                 }
             }
         },
-        "httpserver.ServerErrorForm": {
+        "v1.ServerErrorForm": {
             "type": "object",
             "properties": {
                 "message": {
@@ -859,7 +860,7 @@
                 }
             }
         },
-        "httpserver.ShareFileForm": {
+        "v1.ShareFileForm": {
             "type": "object",
             "properties": {
                 "expired_secs": {

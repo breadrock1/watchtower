@@ -1,4 +1,4 @@
-package httpserver
+package v1
 
 import (
 	"golang.org/x/exp/slices"
@@ -9,8 +9,8 @@ import (
 	"watchtower/internal/application/mapping"
 )
 
-func (s *Server) CreateTasksGroup() error {
-	group := s.server.Group("/tasks")
+func (s *V1Server) CreateTasksGroup() error {
+	group := s.e.Group("/api/v1/tasks")
 
 	group.GET("/:bucket", s.LoadTasks)
 	group.GET("/:bucket/:task_id", s.LoadTaskByID)
@@ -31,7 +31,7 @@ func (s *Server) CreateTasksGroup() error {
 // @Failure	400 {object} BadRequestForm "Bad Request message"
 // @Failure	503 {object} ServerErrorForm "Server does not available"
 // @Router /tasks/{bucket} [get]
-func (s *Server) LoadTasks(eCtx echo.Context) error {
+func (s *V1Server) LoadTasks(eCtx echo.Context) error {
 	bucket := eCtx.Param("bucket")
 	if bucket == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, "bucket is required")
@@ -73,7 +73,7 @@ func (s *Server) LoadTasks(eCtx echo.Context) error {
 // @Failure	400 {object} BadRequestForm "Bad Request message"
 // @Failure	503 {object} ServerErrorForm "Server does not available"
 // @Router /tasks/{bucket}/{task_id} [get]
-func (s *Server) LoadTaskByID(eCtx echo.Context) error {
+func (s *V1Server) LoadTaskByID(eCtx echo.Context) error {
 	bucket := eCtx.Param("bucket")
 	if bucket == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, "bucket is required")

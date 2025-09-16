@@ -3,7 +3,7 @@ package usecase
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"path"
 	"sync"
 	"time"
@@ -72,14 +72,16 @@ func (uc *UseCase) LaunchWatcherListener(ctx context.Context) {
 				status, msg := dto.Pending, EmptyMessage
 				if err := uc.publishToQueue(ctx, taskEvent); err != nil {
 					status, msg = dto.Failed, err.Error()
-					log.Printf("failed to pulish task to queue: %v", err)
+					slog.Error("failed to publish task to queue",
+						slog.String("task-id", taskEvent.ID),
+						slog.String("err", err.Error()))
 				}
 
 				uc.updateTaskStatus(ctx, &taskEvent, status, msg)
 			case cMsg := <-uc.consumerCh:
 				uc.Processing(ctx, cMsg)
 			case <-ctx.Done():
-				log.Println("terminated processing")
+				slog.Info("terminated file processing")
 				return
 			}
 		}
@@ -88,7 +90,11 @@ func (uc *UseCase) LaunchWatcherListener(ctx context.Context) {
 
 func (uc *UseCase) Processing(ctx context.Context, recvMsg dto.Message) {
 	taskEvent := recvMsg.Body
-	log.Printf("processing task event: %v", taskEvent)
+	slog.Info("processing task event",
+		slog.String("task-id", taskEvent.ID),
+		slog.String("bucket", taskEvent.Bucket),
+		slog.String("file-path", taskEvent.FilePath),
+		slog.Time("created", taskEvent.CreatedAt))
 
 	uc.updateTaskStatus(ctx, &taskEvent, dto.Processing, EmptyMessage)
 
@@ -96,7 +102,9 @@ func (uc *UseCase) Processing(ctx context.Context, recvMsg dto.Message) {
 	msg, err := uc.processFile(ctx, recvMsg.Body)
 	if err != nil {
 		status, msg = dto.Failed, err.Error()
-		log.Printf("failed while processing file: %v", err)
+		slog.Error("failed while task processing",
+			slog.String("task-id", taskEvent.ID),
+			slog.String("err", err.Error()))
 	}
 
 	taskEvent.StatusText = msg
@@ -115,14 +123,18 @@ func (uc *UseCase) publishToQueue(ctx context.Context, taskEvent dto.TaskEvent) 
 func (uc *UseCase) updateTaskStatus(ctx context.Context, task *dto.TaskEvent, status dto.TaskStatus, msg string) {
 	task.Status, task.StatusText = status, msg
 	if err := uc.taskManager.Push(ctx, task); err != nil {
-		log.Printf("failed to store task to cache: %v", err)
+		slog.Error("failed caching task status",
+			slog.String("task-id", task.ID),
+			slog.String("err", err.Error()))
 	}
 }
 
 func (uc *UseCase) isTaskAlreadyProcessed(ctx context.Context, task *dto.TaskEvent) bool {
 	storageTask, err := uc.taskManager.Get(ctx, task.Bucket, task.ID)
 	if err != nil {
-		log.Printf("failed to get task from cache: %v", err)
+		slog.Error("failed to get task from cache",
+			slog.String("task-id", task.ID),
+			slog.String("err", err.Error()))
 		return false
 	}
 
@@ -170,16 +182,18 @@ func (uc *UseCase) processFile(ctx context.Context, taskEvent dto.TaskEvent) (st
 		ModifiedAt: taskEvent.ModifiedAt,
 	}
 
-	docID, err := uc.storeToDocSearch(ctx, taskEvent.Bucket, doc)
+	docID, err := uc.storeToDocSearch(ctx, taskEvent, doc)
 	if err != nil {
 		return "", fmt.Errorf("failed to store doc to doc-searcher %s: %w", doc.FileName, err)
 	}
 
-	log.Printf("successfully stored document: %s", docID)
+	slog.Info("successfully stored document",
+		slog.String("task-id", taskEvent.ID),
+		slog.String("doc-id", docID))
 	return docID, nil
 }
 
-func (uc *UseCase) storeToDocSearch(ctx context.Context, index string, doc *dto.DocumentObject) (string, error) {
+func (uc *UseCase) storeToDocSearch(ctx context.Context, task dto.TaskEvent, doc *dto.DocumentObject) (string, error) {
 	allChunks := uc.textChunker.Chunk(doc.Content)
 
 	rootChunk := allChunks[0]
@@ -191,12 +205,18 @@ func (uc *UseCase) storeToDocSearch(ctx context.Context, index string, doc *dto.
 		CreatedAt:  doc.CreatedAt,
 		ModifiedAt: doc.ModifiedAt,
 	}
-	docID, err := uc.docStorage.StoreDocument(ctx, index, splitDoc)
+	docID, err := uc.docStorage.StoreDocument(ctx, task.Bucket, splitDoc)
 	if err != nil {
 		return "", fmt.Errorf("failed to store: %w", err)
 	}
 
-	if len(allChunks) < 2 {
+	chunkSize := len(allChunks)
+	slog.Debug("document has been split",
+		slog.String("task-id", task.ID),
+		slog.String("file-path", doc.FilePath),
+		slog.Int("chunks", chunkSize))
+
+	if chunkSize < 2 {
 		return docID, nil
 	}
 
@@ -209,7 +229,9 @@ func (uc *UseCase) storeToDocSearch(ctx context.Context, index string, doc *dto.
 			defer waitGroup.Done()
 
 			if err := sem.Acquire(ctx, 1); err != nil {
-				log.Printf("internal semaphore error: %v", err)
+				slog.Error("internal semaphore error",
+					slog.String("task-id", task.ID),
+					slog.String("err", err.Error()))
 				return
 			}
 			defer sem.Release(1)
@@ -223,12 +245,18 @@ func (uc *UseCase) storeToDocSearch(ctx context.Context, index string, doc *dto.
 				ModifiedAt: doc.ModifiedAt,
 			}
 
-			docID, err := uc.docStorage.StoreDocument(ctx, index, splitDoc)
+			docID, err := uc.docStorage.StoreDocument(ctx, task.Bucket, splitDoc)
 			if err != nil {
-				log.Printf("failed to store doc %s: %v", doc.FileName, err)
-			} else {
-				log.Printf("stored doc chunk %s of file %s: %v", docID, doc.FileName, err)
+				slog.Error("failed to store document chunk",
+					slog.String("task-id", task.ID),
+					slog.String("err", err.Error()))
+				return
 			}
+
+			slog.Info("doc chunk has been stored successful",
+				slog.String("task-id", task.ID),
+				slog.String("doc-id", docID),
+				slog.String("err", err.Error()))
 		}()
 	}
 
@@ -238,12 +266,15 @@ func (uc *UseCase) storeToDocSearch(ctx context.Context, index string, doc *dto.
 
 func (uc *UseCase) StoreFileToStorage(ctx context.Context, fileForm dto.FileToUpload) (*dto.TaskEvent, error) {
 	// TODO: Disabled for TechDebt
-	// id := utils.GenerateUniqID(fileForm.Bucket, fileForm.FilePath)
-	id := utils.GenerateTaskID()
-	log.Printf("[%s]: publish task: %s", fileForm.Bucket, id)
+	// taskID := utils.GenerateUniqID(fileForm.Bucket, fileForm.FilePath)
+	taskID := utils.GenerateTaskID()
+	slog.Info("publishing task to queue",
+		slog.String("task-taskID", taskID),
+		slog.String("index", fileForm.Bucket),
+		slog.String("file-path", fileForm.FilePath))
 
 	task := dto.TaskEvent{
-		ID:         id,
+		ID:         taskID,
 		Bucket:     fileForm.Bucket,
 		FilePath:   fileForm.FilePath,
 		FileSize:   int64(fileForm.FileData.Len()),
