@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"log/slog"
 	"path"
 	"sync"
 	"time"
@@ -202,15 +201,15 @@ func (uc *UseCase) storeToDocSearch(ctx context.Context, index string, doc *dto.
 	}
 
 	sem := semaphore.NewWeighted(SEMAPHORE_WORKERS_COUNT)
-	wg := sync.WaitGroup{}
-	wg.Add(len(allChunks) - 1)
+	waitGroup := sync.WaitGroup{}
+	waitGroup.Add(len(allChunks) - 1)
 	for _, chunk := range allChunks[1:] {
 		chunk := chunk
 		go func() {
-			defer wg.Done()
+			defer waitGroup.Done()
 
 			if err := sem.Acquire(ctx, 1); err != nil {
-				slog.Error("internal semaphore error: ", err.Error())
+				log.Printf("internal semaphore error: %v", err)
 				return
 			}
 			defer sem.Release(1)
@@ -228,12 +227,12 @@ func (uc *UseCase) storeToDocSearch(ctx context.Context, index string, doc *dto.
 			if err != nil {
 				log.Printf("failed to store doc %s: %v", doc.FileName, err)
 			} else {
-				log.Printf("stored doc chunk %s of file %s: %w", docID, doc.FileName, err)
+				log.Printf("stored doc chunk %s of file %s: %v", docID, doc.FileName, err)
 			}
 		}()
 	}
 
-	wg.Wait()
+	waitGroup.Wait()
 	return docID, nil
 }
 
