@@ -23,9 +23,10 @@ import (
 )
 
 const (
-	TestBucketName     = "watchtower-test-bucket"
-	TestInputFilePath  = "./resources/input-file.txt"
-	TestConfigFilePath = "../configs/testing.toml"
+	TestBucketName         = "watchtower-test-bucket"
+	TestInputFilePath      = "./resources/input-file.txt"
+	TestInputLargeFilePath = "./resources/input-large-file.txt"
+	TestConfigFilePath     = "../configs/testing.toml"
 )
 
 func TestProcessing(t *testing.T) {
@@ -145,6 +146,63 @@ func TestProcessing(t *testing.T) {
 
 		docs := searcherServ.GetDocuments()
 		assert.Empty(t, docs, "stored documents is not empty")
+
+		cancel()
+	})
+
+	t.Run("Document chunking feature", func(t *testing.T) {
+		searcherServ := mocks.NewMockDocSearcherClient()
+
+		textChunkerMock := chunker.NewChunker(
+			100,
+			20,
+			chunker.DefaultSeparators,
+			false,
+			false,
+		)
+
+		cCtx, cancel := context.WithCancel(ctx)
+		useCase := usecase.NewUseCase(
+			*textChunkerMock,
+			rmqServ,
+			redisServ,
+			dedocServ,
+			searcherServ,
+			s3Serv,
+		)
+		useCase.LaunchWatcherListener(cCtx)
+
+		fileData, err := os.ReadFile(TestInputLargeFilePath)
+		data := bytes.NewBuffer(fileData)
+		assert.NoError(t, err, "failed to read test input file")
+		expired := time.Now()
+		_ = expired.Add(10 * time.Second)
+
+		fileForm := dto.FileToUpload{
+			Bucket:   TestBucketName,
+			FilePath: path.Base(TestInputFilePath),
+			FileData: data,
+			Expired:  &expired,
+		}
+
+		task, err := useCase.StoreFileToStorage(ctx, fileForm)
+		assert.NoError(t, err, "failed to upload test input file to s3")
+
+		timeoutCh := time.After(7 * time.Second)
+		<-timeoutCh
+
+		task, err = redisServ.Get(ctx, TestBucketName, task.ID)
+		assert.NoError(t, err, "failed to get task from redis")
+		assert.Equal(t, dto.TaskStatus(3), task.Status)
+		assert.Equal(t, TestBucketName, task.Bucket)
+		assert.Equal(t, path.Base(TestInputFilePath), task.FilePath)
+
+		docs := searcherServ.GetDocuments()
+		assert.Equal(t, 35, len(docs))
+
+		doc := docs[0]
+		assert.NotEmpty(t, doc, "stored documents is empty")
+		assert.Equal(t, path.Base(TestInputFilePath), doc.FilePath)
 
 		cancel()
 	})
