@@ -93,6 +93,14 @@ func FromFile(filePath string) (*Config, error) {
 	if bindErr != nil {
 		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
 	}
+	bindErr = viperInstance.BindEnv("server.http.tracer.address", "WATCHTOWER__SERVER__HTTP__TRACER__ADDRESS")
+	if bindErr != nil {
+		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
+	}
+	bindErr = viperInstance.BindEnv("server.http.tracer.enable_jaeger", "WATCHTOWER__SERVER__HTTP__TRACER__ENABLE_JAEGER")
+	if bindErr != nil {
+		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
+	}
 
 	// OCR config
 	bindErr = viperInstance.BindEnv("ocr.dedoc.address", "WATCHTOWER__OCR__DEDOC__ADDRESS")

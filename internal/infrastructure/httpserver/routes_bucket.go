@@ -28,8 +28,13 @@ func (s *Server) CreateStorageBucketsGroup() error {
 // @Router /cloud/buckets [get]
 func (s *Server) GetBuckets(eCtx echo.Context) error {
 	ctx := eCtx.Request().Context()
+
+	_, span := GetTracer().Start(ctx, "get-buckets")
+	defer span.End()
+
 	watcherDirs, err := s.uc.GetObjectStorage().GetBuckets(ctx)
 	if err != nil {
+		span.RecordError(err)
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 

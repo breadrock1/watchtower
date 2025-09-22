@@ -38,8 +38,12 @@ func (s *Server) LoadTasks(eCtx echo.Context) error {
 	}
 
 	ctx := eCtx.Request().Context()
-	tasks, err := s.uc.GetTaskManager().GetAll(ctx, bucket)
+	tCtx, span := GetTracer().Start(ctx, "load-buckets")
+	defer span.End()
+
+	tasks, err := s.uc.GetTaskManager().GetAll(tCtx, bucket)
 	if err != nil {
+		span.RecordError(err)
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
@@ -50,6 +54,7 @@ func (s *Server) LoadTasks(eCtx echo.Context) error {
 
 	inputTaskStatus, err := mapping.TaskStatusFromString(status)
 	if err != nil {
+		span.RecordError(err)
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, "unknown status")
 	}
 

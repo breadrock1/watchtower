@@ -10,6 +10,10 @@ level = "info"
 address = "loki:3100"
 enable_loki = true
 
+[server.http.tracer]
+address = "jaeger:4317"
+enable_jaeger = false
+
 [ocr.dedoc]
 address = "http://localhost:8004"
 timeout = 300
