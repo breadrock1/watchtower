@@ -78,7 +78,7 @@ func main() {
 	)
 	useCase.LaunchWatcherListener(cCtx)
 
-	httpServer := httpserver.New(&servConfig.Server.Http, useCase)
+	httpServer := httpserver.New(&servConfig.Server, useCase)
 	go func() {
 		if err := httpServer.Start(cCtx); err != nil {
 			log.Fatalf("http server start failed: %v", err)

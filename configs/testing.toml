@@ -5,12 +5,12 @@ chunk_overlap = 1000
 [server.http]
 address = "0.0.0.0:2893"
 
-[server.http.logger]
+[server.logger]
 level = "info"
 enable_loki = false
 address = "localhost:3100"
 
-[server.http.tracer]
+[server.tracer]
 address = "localhost:4317"
 enable_jaeger = false
 
@@ -18,7 +18,7 @@ enable_jaeger = false
 address = "http://localhost:8004"
 timeout = 300
 
-[docstorage.docsearcher]
+[storage.docsearcher]
 address = "http://localhost:2892"
 
 [cacher.redis]

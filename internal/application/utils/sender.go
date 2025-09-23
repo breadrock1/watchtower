@@ -9,6 +9,10 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
+	"watchtower/internal/application/utils/telemetry"
 )
 
 func PUT(ctx context.Context, body *bytes.Buffer, url, mime string, timeout time.Duration) ([]byte, error) {
@@ -19,7 +23,7 @@ func PUT(ctx context.Context, body *bytes.Buffer, url, mime string, timeout time
 
 	req.Header.Set(echo.HeaderContentType, mime)
 	client := &http.Client{Timeout: timeout}
-	return SendRequest(client, req)
+	return SendRequest(ctx, client, req)
 }
 
 func POST(ctx context.Context, body *bytes.Buffer, url, mime string, timeout time.Duration) ([]byte, error) {
@@ -30,26 +34,59 @@ func POST(ctx context.Context, body *bytes.Buffer, url, mime string, timeout tim
 
 	req.Header.Set(echo.HeaderContentType, mime)
 	client := &http.Client{Timeout: timeout}
-	return SendRequest(client, req)
+	return SendRequest(ctx, client, req)
 }
 
-func SendRequest(client *http.Client, req *http.Request) ([]byte, error) {
+func SendRequest(ctx context.Context, client *http.Client, req *http.Request) ([]byte, error) {
+	ctx, span := telemetry.GlobalTracer.Start(ctx, "http-request")
+	defer span.End()
+
+	span.SetAttributes(
+		attribute.String("request.method", req.Method),
+		attribute.String("request.uri", req.RequestURI),
+	)
+
+	injectTracingToHeader(ctx, req)
 	response, err := client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to send request: %w", err)
+		err = fmt.Errorf("failed to send request: %w", err)
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return nil, err
 	}
 	defer func() { _ = response.Body.Close() }()
 
 	respData, err := io.ReadAll(response.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response body: %w", err)
+		err = fmt.Errorf("failed to read response body: %w", err)
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return nil, err
 	}
 
 	if response.StatusCode/100 > 2 {
-		return nil, fmt.Errorf("non success response %s: %s", response.Status, string(respData))
+		err = fmt.Errorf("non success response %s: %s", response.Status, string(respData))
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return nil, err
 	}
 
 	return respData, nil
+}
+
+func injectTracingToHeader(ctx context.Context, req *http.Request) {
+	span := trace.SpanFromContext(ctx)
+	sCtx := span.SpanContext()
+
+	headers := req.Header
+	headers.Add("trace-id", sCtx.TraceID().String())
+	headers.Add("span-id", sCtx.SpanID().String())
+	headers.Add("trace-flags", sCtx.TraceFlags().String())
+	headers.Add("trace-state", sCtx.TraceState().String())
+}
+
+func extractTracingFromHeader(ctx context.Context, resp *http.Response) {
+
 }
 
 func BuildTargetURL(host, path string) string {

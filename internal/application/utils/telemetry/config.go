@@ -1,10 +1,4 @@
-package httpserver
-
-type Config struct {
-	Address string       `mapstructure:"address"`
-	Logger  LoggerConfig `mapstructure:"logger"`
-	Tracer  TracerConfig `mapstructure:"tracer"`
-}
+package telemetry
 
 type LoggerConfig struct {
 	Level      string `mapstructure:"level"`

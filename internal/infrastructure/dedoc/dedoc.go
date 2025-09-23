@@ -11,7 +11,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"watchtower/internal/application/dto"
 	"watchtower/internal/application/utils"
-	"watchtower/internal/infrastructure/httpserver"
+	"watchtower/internal/application/utils/telemetry"
 )
 
 const RecognitionURL = "/ocr_extract_text"
@@ -27,7 +27,7 @@ func New(config *Config) *DedocClient {
 }
 
 func (dc *DedocClient) Recognize(ctx context.Context, inputFile dto.InputFile) (*dto.Recognized, error) {
-	ctx, span := httpserver.GlobalTracer.Start(ctx, "recognize-file")
+	ctx, span := telemetry.GlobalTracer.Start(ctx, "recognize-file")
 	defer span.End()
 
 	var buf bytes.Buffer

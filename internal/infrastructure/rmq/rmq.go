@@ -13,10 +13,10 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
-	"watchtower/internal/infrastructure/httpserver"
+	"watchtower/internal/application/dto"
+	"watchtower/internal/application/utils/telemetry"
 
 	amqp "github.com/rabbitmq/amqp091-go"
-	"watchtower/internal/application/dto"
 )
 
 const ConsumerName = "watchtower-consumer"
@@ -62,7 +62,7 @@ func (r *RmqClient) GetConsumerChannel() chan dto.Message {
 }
 
 func (r *RmqClient) Publish(ctx context.Context, msg dto.Message) error {
-	ctx, span := httpserver.GlobalTracer.Start(ctx, "rmq-publish")
+	ctx, span := telemetry.GlobalTracer.Start(ctx, "rmq-publish")
 	defer span.End()
 
 	headers := injectSpanContextToHeaders(ctx)

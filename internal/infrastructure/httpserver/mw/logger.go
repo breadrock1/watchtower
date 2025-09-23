@@ -1,4 +1,4 @@
-package httpserver
+package mw
 
 import (
 	"context"
@@ -11,17 +11,10 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	slogloki "github.com/samber/slog-loki/v2"
+	"watchtower/internal/application/utils/telemetry"
 )
 
-const AppName = "watchtower"
-
-type SlogLokiLogger struct {
-	client    *slog.Logger
-	filterURI []string
-}
-
-func InitLocalLogger(config LoggerConfig) echo.MiddlewareFunc {
+func InitLocalLogger(config telemetry.LoggerConfig) echo.MiddlewareFunc {
 	logConfig := middleware.LoggerConfig{
 		Skipper: func(c echo.Context) bool {
 			uri := c.Path()
@@ -43,32 +36,10 @@ func InitLocalLogger(config LoggerConfig) echo.MiddlewareFunc {
 	return middleware.LoggerWithConfig(logConfig)
 }
 
-func InitLokiLogger(config LoggerConfig) SlogLokiLogger {
-	lokiConfig := slogloki.Option{
-		Endpoint:           fmt.Sprintf("%s/api/prom/push", config.Address),
-		Level:              slog.LevelInfo,
-		BatchWait:          time.Second * 5,
-		BatchEntriesNumber: 10,
-	}
-
-	logger := slog.New(lokiConfig.NewLokiHandler()).
-		With("service_name", AppName).
-		With("service", AppName).
-		With("detected_level", config.Level).
-		With("level", config.Level)
-
-	filterURI := []string{
-		"/metrics",
-		"/swagger/*",
-	}
-
-	return SlogLokiLogger{client: logger, filterURI: filterURI}
-}
-
-func (sll *SlogLokiLogger) LokiLoggerMW() echo.MiddlewareFunc {
+func CreateLokiLoggerMW(sll *telemetry.SlogLokiLogger) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(eCtx echo.Context) error {
-			if slices.Contains(sll.filterURI, eCtx.Path()) {
+			if slices.Contains(sll.FilterURI, eCtx.Path()) {
 				return next(eCtx)
 			}
 
@@ -101,7 +72,7 @@ func (sll *SlogLokiLogger) LokiLoggerMW() echo.MiddlewareFunc {
 			}
 
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			sll.client.Log(ctx, logLevel, string(jsonMessage))
+			sll.Client.Log(ctx, logLevel, string(jsonMessage))
 			defer cancel()
 
 			return err

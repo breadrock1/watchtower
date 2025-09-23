@@ -11,7 +11,7 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"go.opentelemetry.io/otel/codes"
 	"watchtower/internal/application/dto"
-	"watchtower/internal/infrastructure/httpserver"
+	"watchtower/internal/application/utils/telemetry"
 )
 
 type S3Client struct {
@@ -149,7 +149,7 @@ func (s *S3Client) MoveFile(ctx context.Context, bucket, srcPath, dstPath string
 }
 
 func (s *S3Client) DownloadFile(ctx context.Context, bucket, filePath string) (bytes.Buffer, error) {
-	ctx, span := httpserver.GlobalTracer.Start(ctx, "s3-download-file")
+	ctx, span := telemetry.GlobalTracer.Start(ctx, "s3-download-file")
 	defer span.End()
 
 	var objBody bytes.Buffer
