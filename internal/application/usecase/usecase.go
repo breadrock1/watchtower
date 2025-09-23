@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"log/slog"
 	"path"
 	"sync"
 	"time"
@@ -61,25 +62,11 @@ func (uc *UseCase) LaunchWatcherListener(ctx context.Context) {
 	go func() {
 		for {
 			select {
-			case taskEvent := <-uc.processorCh:
-				// TODO: Disabled for TechDebt
-				_ = uc.isTaskAlreadyProcessed(ctx, &taskEvent)
-				// if uc.isTaskAlreadyProcessed(ctx, &taskEvent) {
-				//	 log.Printf("task has been already processed: %s", taskEvent.ID)
-				//	 continue
-				// }
-
-				status, msg := dto.Pending, EmptyMessage
-				if err := uc.publishToQueue(ctx, taskEvent); err != nil {
-					status, msg = dto.Failed, err.Error()
-					log.Printf("failed to pulish task to queue: %v", err)
-				}
-
-				uc.updateTaskStatus(ctx, &taskEvent, status, msg)
 			case cMsg := <-uc.consumerCh:
+				ctx = cMsg.Ctx
 				uc.Processing(ctx, cMsg)
 			case <-ctx.Done():
-				log.Println("terminated processing")
+				slog.Info("terminating processing")
 				return
 			}
 		}
@@ -240,7 +227,10 @@ func (uc *UseCase) StoreFileToStorage(ctx context.Context, fileForm dto.FileToUp
 	// TODO: Disabled for TechDebt
 	// id := utils.GenerateUniqID(fileForm.Bucket, fileForm.FilePath)
 	id := utils.GenerateTaskID()
-	log.Printf("[%s]: publish task: %s", fileForm.Bucket, id)
+	slog.Info("publish task to queue",
+		slog.String("bucket", fileForm.Bucket),
+		slog.String("task-id", id),
+	)
 
 	task := dto.TaskEvent{
 		ID:         id,
@@ -261,7 +251,19 @@ func (uc *UseCase) StoreFileToStorage(ctx context.Context, fileForm dto.FileToUp
 		return nil, fmt.Errorf("failed to upload file: %w", err)
 	}
 
-	uc.processorCh <- task
+	// TODO: Disabled for TechDebt
+	_ = uc.isTaskAlreadyProcessed(ctx, &task)
+	// if uc.isTaskAlreadyProcessed(ctx, &taskEvent) {
+	//	 log.Printf("task has been already processed: %s", taskEvent.ID)
+	//	 continue
+	// }
+
+	status, msg := dto.Pending, EmptyMessage
+	if err = uc.publishToQueue(ctx, task); err != nil {
+		status, msg = dto.Failed, err.Error()
+		log.Printf("failed to pulish task to queue: %v", err)
+	}
+	uc.updateTaskStatus(ctx, &task, status, msg)
 
 	return &task, nil
 }

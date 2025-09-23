@@ -8,8 +8,10 @@ import (
 	"mime/multipart"
 	"time"
 
+	"go.opentelemetry.io/otel/codes"
 	"watchtower/internal/application/dto"
 	"watchtower/internal/application/utils"
+	"watchtower/internal/infrastructure/httpserver"
 )
 
 const RecognitionURL = "/ocr_extract_text"
@@ -25,19 +27,30 @@ func New(config *Config) *DedocClient {
 }
 
 func (dc *DedocClient) Recognize(ctx context.Context, inputFile dto.InputFile) (*dto.Recognized, error) {
+	ctx, span := httpserver.GlobalTracer.Start(ctx, "recognize-file")
+	defer span.End()
+
 	var buf bytes.Buffer
 
 	mpw := multipart.NewWriter(&buf)
 	fileForm, err := mpw.CreateFormFile("file", inputFile.Name)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create form file for dedoc: %w", err)
+		err = fmt.Errorf("failed to create form file for dedoc: %w", err)
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return nil, err
 	}
 
 	if _, err = fileForm.Write(inputFile.Data.Bytes()); err != nil {
-		return nil, fmt.Errorf("failed to write form file for dedoc: %w", err)
+		err = fmt.Errorf("failed to write form file for dedoc: %w", err)
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return nil, err
 	}
 
 	if err = mpw.Close(); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return nil, err
 	}
 
@@ -47,13 +60,19 @@ func (dc *DedocClient) Recognize(ctx context.Context, inputFile dto.InputFile) (
 
 	respData, err := utils.POST(ctx, &buf, targetURL, mimeType, timeoutReq)
 	if err != nil {
-		return nil, fmt.Errorf("failed send request: %w", err)
+		err = fmt.Errorf("failed send request: %w", err)
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return nil, err
 	}
 
 	var recData dto.Recognized
 	_ = json.Unmarshal(respData, &recData)
 	if len(recData.Text) == 0 {
-		return nil, fmt.Errorf("returned empty content data")
+		err = fmt.Errorf("returned empty content data")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return nil, err
 	}
 
 	return &recData, nil

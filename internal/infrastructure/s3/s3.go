@@ -9,7 +9,9 @@ import (
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"go.opentelemetry.io/otel/codes"
 	"watchtower/internal/application/dto"
+	"watchtower/internal/infrastructure/httpserver"
 )
 
 type S3Client struct {
@@ -147,16 +149,23 @@ func (s *S3Client) MoveFile(ctx context.Context, bucket, srcPath, dstPath string
 }
 
 func (s *S3Client) DownloadFile(ctx context.Context, bucket, filePath string) (bytes.Buffer, error) {
+	ctx, span := httpserver.GlobalTracer.Start(ctx, "s3-download-file")
+	defer span.End()
+
 	var objBody bytes.Buffer
 
 	opts := minio.GetObjectOptions{}
 	obj, err := s.mc.GetObject(ctx, bucket, filePath, opts)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return objBody, fmt.Errorf("failed to get object from s3: %w", err)
 	}
 
 	_, err = objBody.ReadFrom(obj)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return objBody, fmt.Errorf("failed to read loaded object from s3: %w", err)
 	}
 

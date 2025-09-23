@@ -1,10 +1,12 @@
 package httpserver
 
 import (
-	"golang.org/x/exp/slices"
+	"fmt"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
+	"go.opentelemetry.io/otel/codes"
+	"golang.org/x/exp/slices"
 	"watchtower/internal/application/dto"
 	"watchtower/internal/application/mapping"
 )
@@ -32,18 +34,22 @@ func (s *Server) CreateTasksGroup() error {
 // @Failure	503 {object} ServerErrorForm "Server does not available"
 // @Router /tasks/{bucket} [get]
 func (s *Server) LoadTasks(eCtx echo.Context) error {
+	ctx := eCtx.Request().Context()
+	ctx, span := s.tracer.Start(ctx, "load-tasks")
+	defer span.End()
+
 	bucket := eCtx.Param("bucket")
 	if bucket == "" {
+		err := fmt.Errorf("bucket parameter is required")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return echo.NewHTTPError(http.StatusBadRequest, "bucket is required")
 	}
 
-	ctx := eCtx.Request().Context()
-	tCtx, span := GetTracer().Start(ctx, "load-buckets")
-	defer span.End()
-
-	tasks, err := s.uc.GetTaskManager().GetAll(tCtx, bucket)
+	tasks, err := s.uc.GetTaskManager().GetAll(ctx, bucket)
 	if err != nil {
 		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
@@ -55,6 +61,7 @@ func (s *Server) LoadTasks(eCtx echo.Context) error {
 	inputTaskStatus, err := mapping.TaskStatusFromString(status)
 	if err != nil {
 		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, "unknown status")
 	}
 
@@ -79,19 +86,30 @@ func (s *Server) LoadTasks(eCtx echo.Context) error {
 // @Failure	503 {object} ServerErrorForm "Server does not available"
 // @Router /tasks/{bucket}/{task_id} [get]
 func (s *Server) LoadTaskByID(eCtx echo.Context) error {
+	ctx := eCtx.Request().Context()
+	ctx, span := s.tracer.Start(ctx, "load-task-by-id")
+	defer span.End()
+
 	bucket := eCtx.Param("bucket")
 	if bucket == "" {
+		err := fmt.Errorf("bucket parameter is required")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return echo.NewHTTPError(http.StatusBadRequest, "bucket is required")
 	}
 
 	taskID := eCtx.Param("task_id")
 	if taskID == "" {
+		err := fmt.Errorf("task-id parameter is required")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return echo.NewHTTPError(http.StatusBadRequest, "task_id is required")
 	}
 
-	ctx := eCtx.Request().Context()
 	task, err := s.uc.GetTaskManager().Get(ctx, bucket, taskID)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
