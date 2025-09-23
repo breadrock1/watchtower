@@ -12,6 +12,7 @@ var (
 		"/metrics",
 		"/favicon.ico",
 		"/static/",
+		"/api/v1/swagger",
 	}
 )
 
