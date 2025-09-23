@@ -22,6 +22,7 @@ var (
 	GlobalTracer    trace.Tracer
 	TracePropagator = propagation.NewCompositeTextMapPropagator(
 		propagation.TraceContext{},
+		propagation.Baggage{},
 	)
 )
 

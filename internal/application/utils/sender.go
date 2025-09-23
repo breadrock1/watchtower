@@ -11,6 +11,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 	"watchtower/internal/application/utils/telemetry"
 )
@@ -56,6 +57,11 @@ func SendRequest(ctx context.Context, client *http.Client, req *http.Request) ([
 	}
 	defer func() { _ = response.Body.Close() }()
 
+	// TODO: Implement extracting tracing data from headers
+	//eCtx := extractTracingFromHeader(ctx, response)
+	//span = trace.SpanFromContext(eCtx)
+	//span.AddEvent("http-response")
+
 	respData, err := io.ReadAll(response.Body)
 	if err != nil {
 		err = fmt.Errorf("failed to read response body: %w", err)
@@ -75,18 +81,23 @@ func SendRequest(ctx context.Context, client *http.Client, req *http.Request) ([
 }
 
 func injectTracingToHeader(ctx context.Context, req *http.Request) {
-	span := trace.SpanFromContext(ctx)
-	sCtx := span.SpanContext()
+	propagator := telemetry.TracePropagator
+	propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
 
-	headers := req.Header
-	headers.Add("trace-id", sCtx.TraceID().String())
-	headers.Add("span-id", sCtx.SpanID().String())
-	headers.Add("trace-flags", sCtx.TraceFlags().String())
-	headers.Add("trace-state", sCtx.TraceState().String())
+	// Add trace ID as a custom header for debugging
+	if span := trace.SpanFromContext(ctx); span.SpanContext().IsValid() {
+		traceID := span.SpanContext().TraceID().String()
+		spanID := span.SpanContext().SpanID().String()
+		req.Header.Set("x-trace-id", traceID)
+		req.Header.Set("x-span-id", spanID)
+		req.Header.Set("x-is-sampled", fmt.Sprintf("%t", span.SpanContext().IsSampled()))
+	}
 }
 
-func extractTracingFromHeader(ctx context.Context, resp *http.Response) {
-
+func extractTracingFromHeader(ctx context.Context, resp *http.Response) context.Context {
+	propagator := telemetry.TracePropagator
+	eCtx := propagator.Extract(ctx, propagation.HeaderCarrier(resp.Header))
+	return eCtx
 }
 
 func BuildTargetURL(host, path string) string {
