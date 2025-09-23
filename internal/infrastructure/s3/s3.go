@@ -300,7 +300,6 @@ func (s *S3Client) UploadFile(
 		attribute.String("bucket", bucket),
 		attribute.String("file-path", filePath),
 		attribute.Int("data-len", data.Len()),
-		attribute.Int64("expired", expired.Unix()),
 	)
 
 	opts := minio.PutObjectOptions{}

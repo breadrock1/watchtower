@@ -109,16 +109,16 @@ func (uc *UseCase) StoreFileToStorage(ctx context.Context, fileForm dto.FileToUp
 	defer span.End()
 
 	// TODO: Disabled for TechDebt
-	// id := utils.GenerateUniqID(fileForm.Bucket, fileForm.FilePath)
-	id := utils.GenerateTaskID()
+	// taskID := utils.GenerateUniqID(fileForm.Bucket, fileForm.FilePath)
+	taskID := utils.GenerateTaskID()
 	slog.Info("publish task to queue",
 		slog.String("bucket", fileForm.Bucket),
-		slog.String("task-id", id),
+		slog.String("task-taskID", taskID),
 	)
 
 	currTime := time.Now()
 	task := dto.TaskEvent{
-		ID:         id,
+		ID:         taskID,
 		Bucket:     fileForm.Bucket,
 		FilePath:   fileForm.FilePath,
 		FileSize:   int64(fileForm.FileData.Len()),
@@ -130,7 +130,7 @@ func (uc *UseCase) StoreFileToStorage(ctx context.Context, fileForm dto.FileToUp
 	span.SetAttributes(
 		attribute.String("bucket", task.Bucket),
 		attribute.String("file-path", task.FilePath),
-		attribute.String("task-id", id),
+		attribute.String("task-taskID", taskID),
 		attribute.Int("task-status", int(task.Status)),
 		attribute.Int64("time", currTime.Unix()),
 	)

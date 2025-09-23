@@ -148,7 +148,6 @@ func (r *RmqClient) handle(deliveries <-chan amqp.Delivery, done chan error) {
 	for delMsg := range deliveries {
 		ctx := extractSpanContextFromHeaders(delMsg.Headers)
 		span := trace.SpanFromContext(ctx)
-		defer span.End()
 
 		msg := &dto.Message{}
 		err := json.Unmarshal(delMsg.Body, msg)
@@ -164,6 +163,7 @@ func (r *RmqClient) handle(deliveries <-chan amqp.Delivery, done chan error) {
 
 		msg.Ctx = ctx
 		r.redirect <- *msg
+		span.End()
 	}
 }
 

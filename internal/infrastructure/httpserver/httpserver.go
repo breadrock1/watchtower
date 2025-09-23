@@ -80,7 +80,7 @@ func (s *Server) initLoggerMW() {
 }
 
 func (s *Server) initTracerMW() {
-	tp, err := telemetry.InitTracer(s.config.Tracer)
+	traceProvider, err := telemetry.InitTracer(s.config.Tracer)
 	if err != nil {
 		slog.Warn("failed to init tracer", slog.String("err", err.Error()))
 	} else {
@@ -90,5 +90,5 @@ func (s *Server) initTracerMW() {
 			otelecho.WithSkipper(mw.TracerSkipper),
 		))
 	}
-	s.tracer = tp
+	s.tracer = traceProvider
 }

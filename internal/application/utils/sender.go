@@ -57,7 +57,7 @@ func SendRequest(ctx context.Context, client *http.Client, req *http.Request) ([
 	}
 	defer func() { _ = response.Body.Close() }()
 
-	ctx = extractSpanContext(ctx, response)
+	_ = extractSpanContext(ctx, response)
 	respData, err := io.ReadAll(response.Body)
 	if err != nil {
 		err = fmt.Errorf("failed to read response body: %w", err)
