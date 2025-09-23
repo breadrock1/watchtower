@@ -13,7 +13,7 @@ import (
 	"watchtower/internal/application/services/server"
 
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 )
 
 const AppName = server.AppName
@@ -27,17 +27,7 @@ var (
 )
 
 func InitTracer(config TracerConfig) (trace.Tracer, error) {
-	client := otlptracegrpc.NewClient(
-		otlptracegrpc.WithEndpoint(config.Address),
-		otlptracegrpc.WithInsecure(),
-	)
-
-	ctx := context.Background()
-	traceExporter, err := otlptrace.New(ctx, client)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to otlp trace server: %w", err)
-	}
-
+	sampler := sdktrace.AlwaysSample()
 	res, err := resource.Merge(
 		resource.Default(),
 		resource.NewWithAttributes(
@@ -46,14 +36,30 @@ func InitTracer(config TracerConfig) (trace.Tracer, error) {
 			semconv.ServiceNameKey.String(AppName),
 		),
 	)
-	sampler := sdktrace.AlwaysSample()
-	bsp := sdktrace.NewBatchSpanProcessor(traceExporter)
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithSampler(sampler),
-		sdktrace.WithResource(res),
-		sdktrace.WithSpanProcessor(bsp),
-	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to merge trace resources: %w", err)
+	}
 
+	var traceOpts []sdktrace.TracerProviderOption
+	traceOpts = append(traceOpts, sdktrace.WithResource(res))
+	traceOpts = append(traceOpts, sdktrace.WithSampler(sampler))
+
+	if config.EnableJaeger {
+		ctx := context.Background()
+		client := otlptracegrpc.NewClient(
+			otlptracegrpc.WithEndpoint(config.Address),
+			otlptracegrpc.WithInsecure(),
+		)
+
+		traceExporter, err := otlptrace.New(ctx, client)
+		if err != nil {
+			return nil, fmt.Errorf("failed to connect to otlp trace server: %w", err)
+		}
+		bsp := sdktrace.NewBatchSpanProcessor(traceExporter)
+		traceOpts = append(traceOpts, sdktrace.WithSpanProcessor(bsp))
+	}
+
+	tp := sdktrace.NewTracerProvider(traceOpts...)
 	otel.SetTextMapPropagator(TracePropagator)
 	GlobalTracer = tp.Tracer(AppName)
 	otel.SetTracerProvider(tp)

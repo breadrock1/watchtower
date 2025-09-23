@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -39,19 +39,19 @@ func (rs *RedisClient) GetAll(ctx context.Context, bucket string) ([]*dto.TaskEv
 		cmd := rs.rsConn.Get(ctx, rKey)
 		data, err := cmd.Bytes()
 		if err != nil {
-			log.Printf("failed to get task: %v", err)
+			slog.Warn("failed to get task", slog.String("err", err.Error()))
 			continue
 		}
 
 		value := &RedisValue{}
 		if err = json.Unmarshal(data, &value); err != nil {
-			log.Printf("failed to unmarshal task: %v", err)
+			slog.Warn("failed to unmarshal task", slog.String("err", err.Error()))
 			continue
 		}
 
 		taskEvent, err := value.ConvertToTaskEvent()
 		if err != nil {
-			log.Printf("failed to unmarshal task: %v", err)
+			slog.Warn("failed to unmarshal task", slog.String("err", err.Error()))
 			continue
 		}
 
@@ -97,7 +97,7 @@ func (rs *RedisClient) Push(ctx context.Context, task *dto.TaskEvent) error {
 
 	status := rs.rsConn.Set(ctx, key, jsonData, rs.config.Expired*time.Second)
 	if status.Err() != nil {
-		return fmt.Errorf("redis set task status failed, %w", status.Err())
+		return fmt.Errorf("failed to set task: %w", status.Err())
 	}
 
 	return nil

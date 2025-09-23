@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"watchtower/internal/application/dto"
 	"watchtower/internal/application/utils/telemetry"
@@ -38,9 +39,19 @@ func New(config *Config) (*S3Client, error) {
 }
 
 func (s *S3Client) GetBuckets(ctx context.Context) ([]string, error) {
+	ctx, span := telemetry.GlobalTracer.Start(ctx, "get-buckets")
+	defer span.End()
+
+	span.SetAttributes(
+		attribute.String("client", "s3"),
+	)
+
 	buckets, err := s.mc.ListBuckets(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get list of buckets: %w", err)
+		err = fmt.Errorf("failed to get list of buckets: %w", err)
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return nil, err
 	}
 
 	bucketNames := make([]string, len(buckets))
@@ -52,32 +63,77 @@ func (s *S3Client) GetBuckets(ctx context.Context) ([]string, error) {
 }
 
 func (s *S3Client) CreateBucket(ctx context.Context, bucket string) error {
+	ctx, span := telemetry.GlobalTracer.Start(ctx, "create-bucket")
+	defer span.End()
+
+	span.SetAttributes(
+		attribute.String("client", "s3"),
+		attribute.String("bucket", bucket),
+	)
+
 	opts := minio.MakeBucketOptions{}
 	if err := s.mc.MakeBucket(ctx, bucket, opts); err != nil {
-		return fmt.Errorf("failed to create bucket %s: %w", bucket, err)
+		err = fmt.Errorf("failed to create bucket %s: %w", bucket, err)
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return err
 	}
 	return nil
 }
 
 func (s *S3Client) RemoveBucket(ctx context.Context, bucket string) error {
+	ctx, span := telemetry.GlobalTracer.Start(ctx, "remove-bucket")
+	defer span.End()
+
+	span.SetAttributes(
+		attribute.String("client", "s3"),
+		attribute.String("bucket", bucket),
+	)
+
 	if err := s.mc.RemoveBucket(ctx, bucket); err != nil {
-		return fmt.Errorf("failed to remove bucket %s: %w", bucket, err)
+		err = fmt.Errorf("failed to remove bucket %s: %w", bucket, err)
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return err
 	}
 	return nil
 }
 
 func (s *S3Client) IsBucketExist(ctx context.Context, bucket string) (bool, error) {
+	ctx, span := telemetry.GlobalTracer.Start(ctx, "is-bucket-exists")
+	defer span.End()
+
+	span.SetAttributes(
+		attribute.String("client", "s3"),
+		attribute.String("bucket", bucket),
+	)
+
 	result, err := s.mc.BucketExists(ctx, bucket)
 	if err != nil {
-		return false, fmt.Errorf("failed to check if bucket %s exists: %w", bucket, err)
+		err = fmt.Errorf("failed to check if bucket %s exists: %w", bucket, err)
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return false, err
 	}
 	return result, nil
 }
 
 func (s *S3Client) GetFileMetadata(ctx context.Context, bucket, filePath string) (*dto.FileAttributes, error) {
+	ctx, span := telemetry.GlobalTracer.Start(ctx, "get-file-metadata")
+	defer span.End()
+
+	span.SetAttributes(
+		attribute.String("client", "s3"),
+		attribute.String("bucket", bucket),
+		attribute.String("file-path", filePath),
+	)
+
 	opts := minio.StatObjectOptions{}
 	stats, err := s.mc.StatObject(ctx, bucket, filePath, opts)
 	if err != nil {
+		err = fmt.Errorf("failed to get file metadata for %s/%s: %w", bucket, filePath, err)
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
 		return nil, err
 	}
 
@@ -93,6 +149,15 @@ func (s *S3Client) GetFileMetadata(ctx context.Context, bucket, filePath string)
 }
 
 func (s *S3Client) GetBucketFiles(ctx context.Context, bucket, folder string) ([]*dto.FileObject, error) {
+	ctx, span := telemetry.GlobalTracer.Start(ctx, "get-bucket-files")
+	defer span.End()
+
+	span.SetAttributes(
+		attribute.String("client", "s3"),
+		attribute.String("bucket", bucket),
+		attribute.String("folder", folder),
+	)
+
 	opts := minio.ListObjectsOptions{
 		UseV1:     true,
 		Prefix:    folder,
@@ -100,13 +165,16 @@ func (s *S3Client) GetBucketFiles(ctx context.Context, bucket, folder string) ([
 	}
 
 	if s.mc.IsOffline() {
-		return nil, fmt.Errorf("cloud is offline")
+		err := fmt.Errorf("failed to get bucket files: %s/%s", bucket, folder)
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return nil, err
 	}
 
 	dirObjects := make([]*dto.FileObject, 0)
 	for obj := range s.mc.ListObjects(ctx, bucket, opts) {
 		if obj.Err != nil {
-			log.Println("failed to get object: ", obj.Err)
+			slog.Warn("failed to get object", slog.String("err", obj.Err.Error()))
 			continue
 		}
 
@@ -121,28 +189,66 @@ func (s *S3Client) GetBucketFiles(ctx context.Context, bucket, folder string) ([
 }
 
 func (s *S3Client) DeleteFile(ctx context.Context, bucket, filePath string) error {
+	ctx, span := telemetry.GlobalTracer.Start(ctx, "delete-file")
+	defer span.End()
+
+	span.SetAttributes(
+		attribute.String("client", "s3"),
+		attribute.String("bucket", bucket),
+		attribute.String("file-path", filePath),
+	)
+
 	opts := minio.RemoveObjectOptions{}
 	if err := s.mc.RemoveObject(ctx, bucket, filePath, opts); err != nil {
-		return fmt.Errorf("failed to remove object %s: %w", filePath, err)
+		err = fmt.Errorf("failed to remove object %s: %w", filePath, err)
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return err
 	}
 	return nil
 }
 
 func (s *S3Client) CopyFile(ctx context.Context, bucket, srcPath, dstPath string) error {
+	ctx, span := telemetry.GlobalTracer.Start(ctx, "copy-file")
+	defer span.End()
+
+	span.SetAttributes(
+		attribute.String("client", "s3"),
+		attribute.String("bucket", bucket),
+		attribute.String("src-file-path", srcPath),
+		attribute.String("dst-file-path", dstPath),
+	)
+
 	srcOpts := minio.CopySrcOptions{Bucket: bucket, Object: srcPath}
 	dstOpts := minio.CopyDestOptions{Bucket: bucket, Object: dstPath}
 	_, err := s.mc.CopyObject(ctx, dstOpts, srcOpts)
 	if err != nil {
-		return fmt.Errorf("failed to copy object %s to %s: %w", srcPath, dstPath, err)
+		err = fmt.Errorf("failed to copy object %s to %s: %w", srcPath, dstPath, err)
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return err
 	}
 
 	return nil
 }
 
 func (s *S3Client) MoveFile(ctx context.Context, bucket, srcPath, dstPath string) error {
+	ctx, span := telemetry.GlobalTracer.Start(ctx, "move-file")
+	defer span.End()
+
+	span.SetAttributes(
+		attribute.String("client", "s3"),
+		attribute.String("bucket", bucket),
+		attribute.String("src-file-path", srcPath),
+		attribute.String("dst-file-path", dstPath),
+	)
+
 	err := s.CopyFile(ctx, bucket, srcPath, dstPath)
 	if err != nil {
-		return fmt.Errorf("failed to move object %s to %s: %w", srcPath, dstPath, err)
+		err = fmt.Errorf("failed to move object %s to %s: %w", srcPath, dstPath, err)
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return err
 	}
 
 	return s.DeleteFile(ctx, bucket, srcPath)
@@ -152,21 +258,29 @@ func (s *S3Client) DownloadFile(ctx context.Context, bucket, filePath string) (b
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "s3-download-file")
 	defer span.End()
 
+	span.SetAttributes(
+		attribute.String("client", "s3"),
+		attribute.String("bucket", bucket),
+		attribute.String("file-path", filePath),
+	)
+
 	var objBody bytes.Buffer
 
 	opts := minio.GetObjectOptions{}
 	obj, err := s.mc.GetObject(ctx, bucket, filePath, opts)
 	if err != nil {
-		span.RecordError(err)
+		err = fmt.Errorf("failed to download file %s: %w", filePath, err)
 		span.SetStatus(codes.Error, err.Error())
-		return objBody, fmt.Errorf("failed to get object from s3: %w", err)
+		span.RecordError(err)
+		return objBody, err
 	}
 
 	_, err = objBody.ReadFrom(obj)
 	if err != nil {
-		span.RecordError(err)
+		err = fmt.Errorf("failed to download file %s: %w", filePath, err)
 		span.SetStatus(codes.Error, err.Error())
-		return objBody, fmt.Errorf("failed to read loaded object from s3: %w", err)
+		span.RecordError(err)
+		return objBody, err
 	}
 
 	return objBody, nil
@@ -178,6 +292,17 @@ func (s *S3Client) UploadFile(
 	data *bytes.Buffer,
 	expired *time.Time,
 ) error {
+	ctx, span := telemetry.GlobalTracer.Start(ctx, "s3-upload-file")
+	defer span.End()
+
+	span.SetAttributes(
+		attribute.String("client", "s3"),
+		attribute.String("bucket", bucket),
+		attribute.String("file-path", filePath),
+		attribute.Int("data-len", data.Len()),
+		attribute.Int64("expired", expired.Unix()),
+	)
+
 	opts := minio.PutObjectOptions{}
 	if expired != nil {
 		opts.Expires = *expired
@@ -186,15 +311,31 @@ func (s *S3Client) UploadFile(
 	dataLen := int64(data.Len())
 	_, err := s.mc.PutObject(ctx, bucket, filePath, data, dataLen, opts)
 	if err != nil {
-		return fmt.Errorf("failed to upload file to s3: %w", err)
+		err = fmt.Errorf("failed to upload file %s: %w", filePath, err)
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return err
 	}
 	return nil
 }
 
 func (s *S3Client) GenSharedURL(ctx context.Context, expired time.Duration, bucket, filePath string) (string, error) {
+	ctx, span := telemetry.GlobalTracer.Start(ctx, "share-url")
+	defer span.End()
+
+	span.SetAttributes(
+		attribute.String("client", "s3"),
+		attribute.String("bucket", bucket),
+		attribute.String("file-path", filePath),
+		attribute.Float64("expired-secs", expired.Seconds()),
+	)
+
 	url, err := s.mc.PresignedGetObject(ctx, bucket, filePath, expired, map[string][]string{})
 	if err != nil {
-		return "", fmt.Errorf("failed to generate url: %w", err)
+		err = fmt.Errorf("failed to generate url for %s: %w", filePath, err)
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return "", err
 	}
 
 	return url.RequestURI(), nil

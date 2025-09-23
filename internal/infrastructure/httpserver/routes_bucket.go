@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v4"
-	"go.opentelemetry.io/otel/codes"
 )
 
 func (s *Server) CreateStorageBucketsGroup() error {
@@ -29,13 +28,8 @@ func (s *Server) CreateStorageBucketsGroup() error {
 // @Router /cloud/buckets [get]
 func (s *Server) GetBuckets(eCtx echo.Context) error {
 	ctx := eCtx.Request().Context()
-	ctx, span := s.tracer.Start(ctx, "get-buckets")
-	defer span.End()
-
 	watcherDirs, err := s.uc.GetObjectStorage().GetBuckets(ctx)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
@@ -56,22 +50,16 @@ func (s *Server) GetBuckets(eCtx echo.Context) error {
 // @Router /cloud/bucket [put]
 func (s *Server) CreateBucket(eCtx echo.Context) error {
 	ctx := eCtx.Request().Context()
-	ctx, span := s.tracer.Start(ctx, "create-bucket")
-	defer span.End()
 
 	jsonForm := &CreateBucketForm{}
 	decoder := json.NewDecoder(eCtx.Request().Body)
 	err := decoder.Decode(jsonForm)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
 	err = s.uc.GetObjectStorage().CreateBucket(ctx, jsonForm.BucketName)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
@@ -91,14 +79,10 @@ func (s *Server) CreateBucket(eCtx echo.Context) error {
 // @Router /cloud/{bucket} [delete]
 func (s *Server) RemoveBucket(eCtx echo.Context) error {
 	ctx := eCtx.Request().Context()
-	ctx, span := s.tracer.Start(ctx, "remove-bucket")
-	defer span.End()
 
 	bucket := eCtx.Param("bucket")
 	err := s.uc.GetObjectStorage().RemoveBucket(ctx, bucket)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 

@@ -8,7 +8,6 @@ import (
 	"log/slog"
 	"time"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
@@ -235,8 +234,7 @@ func (r *RmqClient) CreateQueue(exchange, queue, routingKey string) error {
 
 func injectSpanContextToHeaders(ctx context.Context) amqp.Table {
 	carrier := propagation.HeaderCarrier{}
-	propagator := otel.GetTextMapPropagator()
-	propagator.Inject(ctx, carrier)
+	telemetry.TracePropagator.Inject(ctx, carrier)
 
 	span := trace.SpanFromContext(ctx)
 	sCtx := span.SpanContext()

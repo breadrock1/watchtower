@@ -38,12 +38,12 @@ func New(config *config.ServerConfig, watcherUC *usecase.UseCase) *Server {
 func (s *Server) setupServer() {
 	s.server = echo.New()
 
+	s.server.Use(middleware.CORS())
+	s.server.Use(middleware.Recover())
+
 	s.initMeterMW()
 	s.initLoggerMW()
 	s.initTracerMW()
-
-	s.server.Use(middleware.CORS())
-	s.server.Use(middleware.Recover())
 
 	_ = s.CreateTasksGroup()
 	_ = s.CreateStorageBucketsGroup()
@@ -80,17 +80,15 @@ func (s *Server) initLoggerMW() {
 }
 
 func (s *Server) initTracerMW() {
-	if s.config.Tracer.EnableJaeger {
-		tp, err := telemetry.InitTracer(s.config.Tracer)
-		if err != nil {
-			slog.Error("failed to initialize tracer", slog.String("err", err.Error()))
-		} else {
-			s.tracer = tp
-			s.server.Use(otelecho.Middleware(
-				server.AppName,
-				otelecho.WithPropagators(telemetry.TracePropagator),
-				otelecho.WithSkipper(mw.TracerSkipper),
-			))
-		}
+	tp, err := telemetry.InitTracer(s.config.Tracer)
+	if err != nil {
+		slog.Warn("failed to init tracer", slog.String("err", err.Error()))
+	} else {
+		s.server.Use(otelecho.Middleware(
+			server.AppName,
+			otelecho.WithPropagators(telemetry.TracePropagator),
+			otelecho.WithSkipper(mw.TracerSkipper),
+		))
 	}
+	s.tracer = tp
 }
