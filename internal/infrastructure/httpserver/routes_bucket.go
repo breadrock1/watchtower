@@ -9,7 +9,7 @@ import (
 )
 
 func (s *Server) CreateStorageBucketsGroup() error {
-	group := s.server.Group("/cloud")
+	group := s.server.Group("/api/v1/cloud")
 
 	group.GET("/buckets", s.GetBuckets)
 	group.PUT("/bucket", s.CreateBucket)

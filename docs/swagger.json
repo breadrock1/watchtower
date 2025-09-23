@@ -6,6 +6,8 @@
         "contact": {},
         "version": "0.0.1"
     },
+    "host": "localhost:2893",
+    "basePath": "/api/v1",
     "paths": {
         "/cloud/bucket": {
             "put": {

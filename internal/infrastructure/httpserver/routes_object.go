@@ -14,7 +14,7 @@ import (
 )
 
 func (s *Server) CreateStorageObjectsGroup() error {
-	group := s.server.Group("/cloud")
+	group := s.server.Group("/api/v1/cloud")
 
 	group.POST("/:bucket/files", s.GetFiles)
 	group.POST("/:bucket/file/copy", s.CopyFile)

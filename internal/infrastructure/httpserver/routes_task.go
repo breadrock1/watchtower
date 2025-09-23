@@ -12,7 +12,7 @@ import (
 )
 
 func (s *Server) CreateTasksGroup() error {
-	group := s.server.Group("/tasks")
+	group := s.server.Group("/api/v1/tasks")
 
 	group.GET("/:bucket", s.LoadTasks)
 	group.GET("/:bucket/:task_id", s.LoadTaskByID)

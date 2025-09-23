@@ -49,7 +49,7 @@ func (s *Server) setupServer() {
 	_ = s.CreateStorageBucketsGroup()
 	_ = s.CreateStorageObjectsGroup()
 
-	s.server.GET("/swagger/*", echoSwagger.WrapHandler)
+	s.server.GET("/api/v1/swagger/*", echoSwagger.WrapHandler)
 }
 
 func (s *Server) Start(_ context.Context) error {

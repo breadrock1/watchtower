@@ -1,3 +1,4 @@
+basePath: /api/v1
 definitions:
   dto.TaskEvent:
     properties:
@@ -107,6 +108,7 @@ definitions:
         example: test-file.docx
         type: string
     type: object
+host: localhost:2893
 info:
   contact: {}
   description: Watchtower is a project designed to provide processing files created
