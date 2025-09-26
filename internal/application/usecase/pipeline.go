@@ -61,23 +61,23 @@ func (puc *PipelineUseCase) LaunchWatcherListener(ctx context.Context) {
 	}()
 }
 
-func (puc *PipelineUseCase) CreateAndPublishTask(ctx context.Context, fileForm dto.FileToUpload) (*dto.TaskEvent, error) {
+func (puc *PipelineUseCase) CreateAndPublishTask(ctx context.Context, form dto.FileToUpload) (*dto.TaskEvent, error) {
 	// TODO: Disabled for TechDebt
-	// taskID := utils.GenerateUniqID(fileForm.Bucket, fileForm.FilePath)
+	// taskID := utils.GenerateUniqID(form.Bucket, form.FilePath)
 	taskID := utils.GenerateTaskID()
 
 	slog.Info("created new task",
 		slog.String("task-taskID", taskID),
-		slog.String("bucket", fileForm.Bucket),
-		slog.String("file-path", fileForm.FilePath),
+		slog.String("bucket", form.Bucket),
+		slog.String("file-path", form.FilePath),
 	)
 
 	currTime := time.Now()
 	task := dto.TaskEvent{
 		ID:         taskID,
-		Bucket:     fileForm.Bucket,
-		FilePath:   fileForm.FilePath,
-		FileSize:   int64(fileForm.FileData.Len()),
+		Bucket:     form.Bucket,
+		FilePath:   form.FilePath,
+		FileSize:   int64(form.FileData.Len()),
 		CreatedAt:  currTime,
 		ModifiedAt: currTime,
 		Status:     dto.Received,
@@ -94,7 +94,7 @@ func (puc *PipelineUseCase) CreateAndPublishTask(ctx context.Context, fileForm d
 		attribute.Int64("time", currTime.Unix()),
 	)
 
-	if err := puc.storageUC.UploadObject(ctx, fileForm); err != nil {
+	if err := puc.storageUC.UploadObject(ctx, form); err != nil {
 		err = fmt.Errorf("failed to upload file: %w", err)
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
