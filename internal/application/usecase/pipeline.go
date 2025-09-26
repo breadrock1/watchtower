@@ -9,6 +9,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"golang.org/x/sync/semaphore"
 	"watchtower/internal/application/dto"
 	"watchtower/internal/application/mapping"
 	"watchtower/internal/application/services/recognizer"
@@ -51,8 +52,19 @@ func (puc *PipelineUseCase) LaunchWatcherListener(ctx context.Context) {
 			select {
 			case cMsg := <-puc.consumerCh:
 				ctx = cMsg.Ctx
-				task := puc.handleConsumedTask(ctx, cMsg)
-				puc.taskMangerUC.UpdateTaskStatus(ctx, &task)
+
+				sem := semaphore.NewWeighted(10)
+				go func() {
+					if err := sem.Acquire(ctx, 1); err != nil {
+						slog.Error("internal semaphore error", slog.String("err", err.Error()))
+						return
+					}
+					defer sem.Release(1)
+
+					task := puc.handleConsumedTask(ctx, cMsg)
+					puc.taskMangerUC.UpdateTaskStatus(ctx, &task)
+				}()
+
 			case <-ctx.Done():
 				slog.Info("terminating processing")
 				return
