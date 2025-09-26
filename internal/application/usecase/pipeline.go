@@ -18,6 +18,8 @@ import (
 	"watchtower/internal/application/utils/telemetry"
 )
 
+const SemaphoreSize = 10
+
 type PipelineUseCase struct {
 	processorCh chan dto.TaskEvent
 	consumerCh  <-chan dto.Message
@@ -53,7 +55,7 @@ func (puc *PipelineUseCase) LaunchWatcherListener(ctx context.Context) {
 			case cMsg := <-puc.consumerCh:
 				ctx = cMsg.Ctx
 
-				sem := semaphore.NewWeighted(10)
+				sem := semaphore.NewWeighted(SemaphoreSize)
 				go func() {
 					if err := sem.Acquire(ctx, 1); err != nil {
 						slog.Error("internal semaphore error", slog.String("err", err.Error()))
