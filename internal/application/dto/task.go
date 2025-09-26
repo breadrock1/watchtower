@@ -4,6 +4,8 @@ import (
 	"time"
 )
 
+const EmptyMessage = ""
+
 type TaskStatus int
 
 const (

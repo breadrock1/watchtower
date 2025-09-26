@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"watchtower/internal/application/dto"
+	"watchtower/internal/application/mapping"
 )
 
 type RedisValue struct {
@@ -29,7 +30,7 @@ func (rv *RedisValue) ConvertToTaskEvent() (*dto.TaskEvent, error) {
 		FileSize:   rv.FileSize,
 		CreatedAt:  createDt,
 		ModifiedAt: modDt,
-		Status:     dto.TaskStatus(rv.Status),
+		Status:     mapping.TaskStatusFromInt(rv.Status),
 		StatusText: rv.StatusText,
 	}
 

@@ -28,7 +28,7 @@ func (s *Server) CreateStorageBucketsGroup() error {
 // @Router /cloud/buckets [get]
 func (s *Server) GetBuckets(eCtx echo.Context) error {
 	ctx := eCtx.Request().Context()
-	watcherDirs, err := s.uc.GetObjectStorage().GetBuckets(ctx)
+	watcherDirs, err := s.storage.GetObjectStorage().GetBuckets(ctx)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
@@ -58,7 +58,7 @@ func (s *Server) CreateBucket(eCtx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	err = s.uc.GetObjectStorage().CreateBucket(ctx, jsonForm.BucketName)
+	err = s.storage.GetObjectStorage().CreateBucket(ctx, jsonForm.BucketName)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
@@ -81,7 +81,7 @@ func (s *Server) RemoveBucket(eCtx echo.Context) error {
 	ctx := eCtx.Request().Context()
 
 	bucket := eCtx.Param("bucket")
-	err := s.uc.GetObjectStorage().RemoveBucket(ctx, bucket)
+	err := s.storage.GetObjectStorage().RemoveBucket(ctx, bucket)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}

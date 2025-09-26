@@ -5,16 +5,15 @@ import (
 	"context"
 	"os"
 	"path"
-	"strings"
 	"testing"
 	"time"
 
-	"github.com/jonathanhecl/chunker"
 	"github.com/stretchr/testify/assert"
 	"watchtower/internal/application/dto"
 	"watchtower/internal/application/mapping"
 	"watchtower/internal/application/usecase"
 	"watchtower/internal/application/utils"
+	"watchtower/internal/application/utils/telemetry"
 	"watchtower/internal/infrastructure/config"
 	"watchtower/internal/infrastructure/redis"
 	"watchtower/internal/infrastructure/rmq"
@@ -23,10 +22,9 @@ import (
 )
 
 const (
-	TestBucketName         = "watchtower-test-bucket"
-	TestInputFilePath      = "./resources/input-file.txt"
-	TestInputLargeFilePath = "./resources/input-large-file.txt"
-	TestConfigFilePath     = "../configs/testing.toml"
+	TestBucketName     = "watchtower-test-bucket"
+	TestInputFilePath  = "./resources/input-file.txt"
+	TestConfigFilePath = "../configs/testing.toml"
 )
 
 func TestProcessing(t *testing.T) {
@@ -36,16 +34,10 @@ func TestProcessing(t *testing.T) {
 	servConfig, initErr := config.FromFile(TestConfigFilePath)
 	assert.NoError(t, initErr, "failed to load testing config")
 
-	dedocServ := &mocks.MockDedocClient{}
+	tracerProvider, _ := telemetry.InitTracer(servConfig.Server.Tracer)
+	telemetry.GlobalTracer = tracerProvider
 
-	settings := servConfig.Settings
-	textChunker := chunker.NewChunker(
-		settings.ChunkSize,
-		settings.ChunkOverlap,
-		chunker.DefaultSeparators,
-		false,
-		false,
-	)
+	dedocServ := &mocks.MockDedocClient{}
 
 	redisServ := redis.New(&servConfig.Cacher.Redis)
 	rmqServ, initErr := rmq.New(&servConfig.Queue.Rmq)
@@ -61,19 +53,14 @@ func TestProcessing(t *testing.T) {
 		searcherServ := mocks.NewMockDocSearcherClient()
 
 		cCtx, cancel := context.WithCancel(ctx)
-		useCase := usecase.NewUseCase(
-			*textChunker,
-			rmqServ,
-			redisServ,
-			dedocServ,
-			searcherServ,
-			s3Serv,
-		)
-		useCase.LaunchWatcherListener(cCtx)
+		taskMangerUC := usecase.NewTaskManagerUseCase(redisServ)
+		storageUC := usecase.NewStorageUseCase(searcherServ, s3Serv)
+		processorUC := usecase.NewPipelineUseCase(storageUC, taskMangerUC, rmqServ, dedocServ)
+		processorUC.LaunchWatcherListener(cCtx)
 
 		fileData, err := os.ReadFile(TestInputFilePath)
 		data := bytes.NewBuffer(fileData)
-		dataStr := strings.Trim(data.String(), "\n")
+		dataStr := data.String()
 		assert.NoError(t, err, "failed to read test input file")
 		expired := time.Now()
 		_ = expired.Add(10 * time.Second)
@@ -85,7 +72,7 @@ func TestProcessing(t *testing.T) {
 			Expired:  &expired,
 		}
 
-		task, err := useCase.StoreFileToStorage(ctx, fileForm)
+		task, err := processorUC.CreateAndPublishTask(ctx, fileForm)
 		assert.NoError(t, err, "failed to upload test input file to s3")
 
 		timeoutCh := time.After(7 * time.Second)
@@ -93,7 +80,7 @@ func TestProcessing(t *testing.T) {
 
 		task, err = redisServ.Get(ctx, TestBucketName, task.ID)
 		assert.NoError(t, err, "failed to get task from redis")
-		assert.Equal(t, dto.TaskStatus(3), task.Status)
+		assert.Equal(t, mapping.TaskStatusFromInt(3), task.Status)
 		assert.Equal(t, TestBucketName, task.Bucket)
 		assert.Equal(t, path.Base(TestInputFilePath), task.FilePath)
 
@@ -109,15 +96,10 @@ func TestProcessing(t *testing.T) {
 		searcherServ := mocks.NewMockDocSearcherClient()
 
 		cCtx, cancel := context.WithCancel(ctx)
-		useCase := usecase.NewUseCase(
-			*textChunker,
-			rmqServ,
-			redisServ,
-			dedocServ,
-			searcherServ,
-			s3Serv,
-		)
-		useCase.LaunchWatcherListener(cCtx)
+		taskMangerUC := usecase.NewTaskManagerUseCase(redisServ)
+		storageUC := usecase.NewStorageUseCase(searcherServ, s3Serv)
+		processorUC := usecase.NewPipelineUseCase(storageUC, taskMangerUC, rmqServ, dedocServ)
+		processorUC.LaunchWatcherListener(cCtx)
 
 		taskID := utils.GenerateUniqID(TestBucketName, TestInputFilePath)
 		taskEvent := dto.TaskEvent{
@@ -140,69 +122,12 @@ func TestProcessing(t *testing.T) {
 
 		task, err := redisServ.Get(ctx, TestBucketName, taskID)
 		assert.NoError(t, err, "failed to get task from redis")
-		assert.Equal(t, dto.TaskStatus(-1), task.Status)
+		assert.Equal(t, mapping.TaskStatusFromInt(-1), task.Status)
 		assert.Equal(t, TestBucketName, task.Bucket)
 		assert.Equal(t, TestInputFilePath, task.FilePath)
 
 		docs := searcherServ.GetDocuments()
 		assert.Empty(t, docs, "stored documents is not empty")
-
-		cancel()
-	})
-
-	t.Run("Document chunking feature", func(t *testing.T) {
-		searcherServ := mocks.NewMockDocSearcherClient()
-
-		textChunkerMock := chunker.NewChunker(
-			100,
-			20,
-			chunker.DefaultSeparators,
-			false,
-			false,
-		)
-
-		cCtx, cancel := context.WithCancel(ctx)
-		useCase := usecase.NewUseCase(
-			*textChunkerMock,
-			rmqServ,
-			redisServ,
-			dedocServ,
-			searcherServ,
-			s3Serv,
-		)
-		useCase.LaunchWatcherListener(cCtx)
-
-		fileData, err := os.ReadFile(TestInputLargeFilePath)
-		data := bytes.NewBuffer(fileData)
-		assert.NoError(t, err, "failed to read test input file")
-		expired := time.Now()
-		_ = expired.Add(10 * time.Second)
-
-		fileForm := dto.FileToUpload{
-			Bucket:   TestBucketName,
-			FilePath: path.Base(TestInputFilePath),
-			FileData: data,
-			Expired:  &expired,
-		}
-
-		task, err := useCase.StoreFileToStorage(ctx, fileForm)
-		assert.NoError(t, err, "failed to upload test input file to s3")
-
-		timeoutCh := time.After(7 * time.Second)
-		<-timeoutCh
-
-		task, err = redisServ.Get(ctx, TestBucketName, task.ID)
-		assert.NoError(t, err, "failed to get task from redis")
-		assert.Equal(t, dto.TaskStatus(3), task.Status)
-		assert.Equal(t, TestBucketName, task.Bucket)
-		assert.Equal(t, path.Base(TestInputFilePath), task.FilePath)
-
-		docs := searcherServ.GetDocuments()
-		assert.Equal(t, 35, len(docs))
-
-		doc := docs[0]
-		assert.NotEmpty(t, doc, "stored documents is empty")
-		assert.Equal(t, path.Base(TestInputFilePath), doc.FilePath)
 
 		cancel()
 	})

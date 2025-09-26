@@ -38,7 +38,7 @@ func (s *Server) LoadTasks(eCtx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "bucket is required")
 	}
 
-	tasks, err := s.uc.GetTaskManager().GetAll(ctx, bucket)
+	tasks, err := s.taskManager.GetTaskManager().GetAll(ctx, bucket)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
@@ -85,7 +85,7 @@ func (s *Server) LoadTaskByID(eCtx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "task_id is required")
 	}
 
-	task, err := s.uc.GetTaskManager().Get(ctx, bucket, taskID)
+	task, err := s.taskManager.GetTaskManager().Get(ctx, bucket, taskID)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}

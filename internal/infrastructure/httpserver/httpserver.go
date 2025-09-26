@@ -3,7 +3,6 @@ package httpserver
 import (
 	"context"
 	"fmt"
-	"log/slog"
 
 	"github.com/labstack/echo-contrib/echoprometheus"
 	"github.com/labstack/echo/v4"
@@ -25,13 +24,25 @@ type Server struct {
 	server *echo.Echo
 	tracer trace.Tracer
 
-	uc *usecase.UseCase
+	processor   *usecase.PipelineUseCase
+	storage     *usecase.StorageUseCase
+	taskManager *usecase.TaskMangerUseCase
 }
 
-func New(config *config.ServerConfig, watcherUC *usecase.UseCase) *Server {
+func New(
+	config *config.ServerConfig,
+	tracer trace.Tracer,
+	processor *usecase.PipelineUseCase,
+	storage *usecase.StorageUseCase,
+	taskManager *usecase.TaskMangerUseCase,
+) *Server {
 	return &Server{
 		config: config,
-		uc:     watcherUC,
+		tracer: tracer,
+
+		processor:   processor,
+		storage:     storage,
+		taskManager: taskManager,
 	}
 }
 
@@ -80,15 +91,9 @@ func (s *Server) initLoggerMW() {
 }
 
 func (s *Server) initTracerMW() {
-	traceProvider, err := telemetry.InitTracer(s.config.Tracer)
-	if err != nil {
-		slog.Warn("failed to init tracer", slog.String("err", err.Error()))
-	} else {
-		s.server.Use(otelecho.Middleware(
-			server.AppName,
-			otelecho.WithPropagators(telemetry.TracePropagator),
-			otelecho.WithSkipper(mw.TracerSkipper),
-		))
-	}
-	s.tracer = traceProvider
+	s.server.Use(otelecho.Middleware(
+		server.AppName,
+		otelecho.WithPropagators(telemetry.TracePropagator),
+		otelecho.WithSkipper(mw.TracerSkipper),
+	))
 }

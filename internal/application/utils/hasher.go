@@ -16,7 +16,3 @@ func GenerateUniqID(bucket, suffix string) string {
 	suffix = fmt.Sprintf("%x", md5.Sum([]byte(mask)))
 	return suffix
 }
-
-func ConstructUniqID(bucket, taskID string) string {
-	return fmt.Sprintf("watchtower:%s:%s", bucket, taskID)
-}

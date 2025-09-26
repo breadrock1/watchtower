@@ -24,7 +24,7 @@ func PUT(ctx context.Context, body *bytes.Buffer, url, mime string, timeout time
 
 	req.Header.Set(echo.HeaderContentType, mime)
 	client := &http.Client{Timeout: timeout}
-	return SendRequest(ctx, client, req)
+	return sendRequest(ctx, client, req)
 }
 
 func POST(ctx context.Context, body *bytes.Buffer, url, mime string, timeout time.Duration) ([]byte, error) {
@@ -35,10 +35,10 @@ func POST(ctx context.Context, body *bytes.Buffer, url, mime string, timeout tim
 
 	req.Header.Set(echo.HeaderContentType, mime)
 	client := &http.Client{Timeout: timeout}
-	return SendRequest(ctx, client, req)
+	return sendRequest(ctx, client, req)
 }
 
-func SendRequest(ctx context.Context, client *http.Client, req *http.Request) ([]byte, error) {
+func sendRequest(ctx context.Context, client *http.Client, req *http.Request) ([]byte, error) {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "http-request")
 	defer span.End()
 
