@@ -5,13 +5,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"watchtower/internal/application/dto"
 	"watchtower/internal/application/utils"
+	"watchtower/internal/application/utils/telemetry"
 )
 
 const DocumentJsonMime = "application/json"
@@ -32,6 +35,9 @@ func (dsc *DocSearcherClient) StoreDocument(
 	folder string,
 	doc *dto.DocumentObject,
 ) (string, error) {
+	ctx, span := telemetry.GlobalTracer.Start(ctx, "store-document")
+	defer span.End()
+
 	storeDoc := StoreDocumentForm{
 		FileName:   doc.FileName,
 		FilePath:   doc.FilePath,
@@ -43,7 +49,10 @@ func (dsc *DocSearcherClient) StoreDocument(
 
 	jsonData, err := json.Marshal(storeDoc)
 	if err != nil {
-		return "", fmt.Errorf("failed while marshaling doc: %w", err)
+		err = fmt.Errorf("failed while marshaling doc: %w", err)
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return "", err
 	}
 
 	buildURL := strings.Builder{}
@@ -51,20 +60,34 @@ func (dsc *DocSearcherClient) StoreDocument(
 	buildURL.WriteString(fmt.Sprintf("%s/storage/%s/create?force=true", ApiVersionPrefix, folder))
 	targetURL := buildURL.String()
 
-	log.Printf("storing document to index %s", folder)
+	slog.Debug("storing document to index",
+		slog.String("index", folder),
+		slog.String("file-path", doc.FilePath),
+	)
 
 	reqBody := bytes.NewBuffer(jsonData)
 	timeoutReq := time.Duration(300) * time.Second
 	respData, err := utils.PUT(ctx, reqBody, targetURL, DocumentJsonMime, timeoutReq)
 	if err != nil {
-		return "", fmt.Errorf("failed to store document to storage: %w", err)
+		err = fmt.Errorf("failed to store document to storage: %w", err)
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return "", err
 	}
 
 	status := &StoreDocumentResult{}
 	err = json.Unmarshal(respData, status)
 	if err != nil {
-		return "", fmt.Errorf("failed to unmarshal response body: %w", err)
+		err = fmt.Errorf("failed to unmarshal response body: %w", err)
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return "", err
 	}
+
+	span.SetAttributes(
+		attribute.String("index-id", folder),
+		attribute.String("file-path", doc.FilePath),
+	)
 
 	return status.Message, nil
 }
@@ -77,66 +100,6 @@ func (dsc *DocSearcherClient) DeleteDocument(ctx context.Context, folder, id str
 	buildURL := strings.Builder{}
 	buildURL.WriteString(dsc.config.Address)
 	buildURL.WriteString(fmt.Sprintf("%s/storage/%s/%s", ApiVersionPrefix, folder, id))
-	targetURL := buildURL.String()
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, targetURL, bytes.NewReader([]byte{}))
-	if err != nil {
-		return fmt.Errorf("failed while creating new request: %w", err)
-	}
-
-	client := &http.Client{Timeout: time.Duration(100) * time.Second}
-	response, err := client.Do(req)
-	if err != nil {
-		return fmt.Errorf("failed while sending request: %w", err)
-	}
-
-	if response.StatusCode/100 > 2 {
-		return fmt.Errorf("bad response error status %s", response.Status)
-	}
-
-	return nil
-}
-
-func (dsc *DocSearcherClient) CreateIndex(ctx context.Context, folder string) error {
-	form := &CreateIndexForm{
-		folder,
-		folder,
-		"./",
-	}
-
-	data, err := json.Marshal(form)
-	if err != nil {
-		return fmt.Errorf("failed while marshaling form: %w", err)
-	}
-
-	buildURL := strings.Builder{}
-	buildURL.WriteString(dsc.config.Address)
-	buildURL.WriteString(fmt.Sprintf("%s/storage/%s", ApiVersionPrefix, folder))
-	targetURL := buildURL.String()
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, targetURL, bytes.NewReader(data))
-	if err != nil {
-		return fmt.Errorf("failed while creating new request: %w", err)
-	}
-
-	req.Header.Set("Content-Type", DocumentJsonMime)
-	client := &http.Client{Timeout: time.Duration(100) * time.Second}
-	response, err := client.Do(req)
-	if err != nil {
-		return fmt.Errorf("failed while sending request: %w", err)
-	}
-
-	if response.StatusCode/100 > 2 {
-		return fmt.Errorf("bad response error status: %s", response.Status)
-	}
-
-	return nil
-}
-
-func (dsc *DocSearcherClient) DeleteIndex(ctx context.Context, folder string) error {
-	buildURL := strings.Builder{}
-	buildURL.WriteString(dsc.config.Address)
-	buildURL.WriteString(fmt.Sprintf("%s/storage/%s", ApiVersionPrefix, folder))
 	targetURL := buildURL.String()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, targetURL, bytes.NewReader([]byte{}))

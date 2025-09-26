@@ -8,7 +8,7 @@ import (
 )
 
 func (s *Server) CreateStorageBucketsGroup() error {
-	group := s.server.Group("/cloud")
+	group := s.server.Group("/api/v1/cloud")
 
 	group.GET("/buckets", s.GetBuckets)
 	group.PUT("/bucket", s.CreateBucket)
@@ -28,7 +28,7 @@ func (s *Server) CreateStorageBucketsGroup() error {
 // @Router /cloud/buckets [get]
 func (s *Server) GetBuckets(eCtx echo.Context) error {
 	ctx := eCtx.Request().Context()
-	watcherDirs, err := s.uc.GetObjectStorage().GetBuckets(ctx)
+	watcherDirs, err := s.storage.GetObjectStorage().GetBuckets(ctx)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
@@ -49,6 +49,8 @@ func (s *Server) GetBuckets(eCtx echo.Context) error {
 // @Failure	503 {object} ServerErrorForm "Server does not available"
 // @Router /cloud/bucket [put]
 func (s *Server) CreateBucket(eCtx echo.Context) error {
+	ctx := eCtx.Request().Context()
+
 	jsonForm := &CreateBucketForm{}
 	decoder := json.NewDecoder(eCtx.Request().Body)
 	err := decoder.Decode(jsonForm)
@@ -56,8 +58,7 @@ func (s *Server) CreateBucket(eCtx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	ctx := eCtx.Request().Context()
-	err = s.uc.GetObjectStorage().CreateBucket(ctx, jsonForm.BucketName)
+	err = s.storage.GetObjectStorage().CreateBucket(ctx, jsonForm.BucketName)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
@@ -77,9 +78,10 @@ func (s *Server) CreateBucket(eCtx echo.Context) error {
 // @Failure	503 {object} ServerErrorForm "Server does not available"
 // @Router /cloud/{bucket} [delete]
 func (s *Server) RemoveBucket(eCtx echo.Context) error {
-	bucket := eCtx.Param("bucket")
 	ctx := eCtx.Request().Context()
-	err := s.uc.GetObjectStorage().RemoveBucket(ctx, bucket)
+
+	bucket := eCtx.Param("bucket")
+	err := s.storage.GetObjectStorage().RemoveBucket(ctx, bucket)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}

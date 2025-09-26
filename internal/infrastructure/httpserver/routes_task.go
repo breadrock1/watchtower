@@ -1,16 +1,16 @@
 package httpserver
 
 import (
-	"golang.org/x/exp/slices"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
+	"golang.org/x/exp/slices"
 	"watchtower/internal/application/dto"
 	"watchtower/internal/application/mapping"
 )
 
 func (s *Server) CreateTasksGroup() error {
-	group := s.server.Group("/tasks")
+	group := s.server.Group("/api/v1/tasks")
 
 	group.GET("/:bucket", s.LoadTasks)
 	group.GET("/:bucket/:task_id", s.LoadTaskByID)
@@ -32,13 +32,13 @@ func (s *Server) CreateTasksGroup() error {
 // @Failure	503 {object} ServerErrorForm "Server does not available"
 // @Router /tasks/{bucket} [get]
 func (s *Server) LoadTasks(eCtx echo.Context) error {
+	ctx := eCtx.Request().Context()
 	bucket := eCtx.Param("bucket")
 	if bucket == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, "bucket is required")
 	}
 
-	ctx := eCtx.Request().Context()
-	tasks, err := s.uc.GetTaskManager().GetAll(ctx, bucket)
+	tasks, err := s.taskManager.GetTaskManager().GetAll(ctx, bucket)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
@@ -74,6 +74,7 @@ func (s *Server) LoadTasks(eCtx echo.Context) error {
 // @Failure	503 {object} ServerErrorForm "Server does not available"
 // @Router /tasks/{bucket}/{task_id} [get]
 func (s *Server) LoadTaskByID(eCtx echo.Context) error {
+	ctx := eCtx.Request().Context()
 	bucket := eCtx.Param("bucket")
 	if bucket == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, "bucket is required")
@@ -84,8 +85,7 @@ func (s *Server) LoadTaskByID(eCtx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "task_id is required")
 	}
 
-	ctx := eCtx.Request().Context()
-	task, err := s.uc.GetTaskManager().Get(ctx, bucket, taskID)
+	task, err := s.taskManager.GetTaskManager().Get(ctx, bucket, taskID)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}

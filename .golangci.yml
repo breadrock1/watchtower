@@ -4,7 +4,6 @@ linters:
     - asasalint
     - asciicheck
     - bidichk
-    - containedctx
     - decorder
     - dogsled
     - dupl
@@ -61,6 +60,7 @@ linters:
   disable:
     - bodyclose
     - contextcheck
+    - containedctx
     - cyclop
     - depguard
     - godox

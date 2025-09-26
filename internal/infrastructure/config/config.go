@@ -6,9 +6,9 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
+	"watchtower/internal/application/utils/telemetry"
 	"watchtower/internal/infrastructure/dedoc"
 	"watchtower/internal/infrastructure/doc-storage"
-	"watchtower/internal/infrastructure/httpserver"
 	"watchtower/internal/infrastructure/redis"
 	"watchtower/internal/infrastructure/rmq"
 	"watchtower/internal/infrastructure/s3"
@@ -17,7 +17,7 @@ import (
 type Config struct {
 	Server     ServerConfig     `mapstructure:"server"`
 	Ocr        OcrConfig        `mapstructure:"ocr"`
-	DocStorage DocStorageConfig `mapstructure:"docstorage"`
+	DocStorage DocStorageConfig `mapstructure:"storage"`
 	Cacher     CacherConfig     `mapstructure:"cacher"`
 	Queue      QueueConfig      `mapstructure:"queue"`
 	Cloud      CloudConfig      `mapstructure:"cloud"`
@@ -30,7 +30,13 @@ type SettingsConfig struct {
 }
 
 type ServerConfig struct {
-	Http httpserver.Config `mapstructure:"http"`
+	Http   HttpServerConfig       `mapstructure:"http"`
+	Logger telemetry.LoggerConfig `mapstructure:"logger"`
+	Tracer telemetry.TracerConfig `mapstructure:"tracer"`
+}
+
+type HttpServerConfig struct {
+	Address string `mapstructure:"address"`
 }
 
 type OcrConfig struct {
@@ -81,15 +87,25 @@ func FromFile(filePath string) (*Config, error) {
 	if bindErr != nil {
 		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
 	}
-	bindErr = viperInstance.BindEnv("server.http.logger.level", "WATCHTOWER__SERVER__HTTP__LOGGER__LEVEL")
+
+	bindErr = viperInstance.BindEnv("server.logger.level", "WATCHTOWER__SERVER__LOGGER__LEVEL")
 	if bindErr != nil {
 		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
 	}
-	bindErr = viperInstance.BindEnv("server.http.logger.address", "WATCHTOWER__SERVER__HTTP__LOGGER__ADDRESS")
+	bindErr = viperInstance.BindEnv("server.logger.address", "WATCHTOWER__SERVER__LOGGER__ADDRESS")
 	if bindErr != nil {
 		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
 	}
-	bindErr = viperInstance.BindEnv("server.http.logger.enable_loki", "WATCHTOWER__SERVER__HTTP__LOGGER__ENABLE_LOKI")
+	bindErr = viperInstance.BindEnv("server.logger.enable_loki", "WATCHTOWER__SERVER__LOGGER__ENABLE_LOKI")
+
+	if bindErr != nil {
+		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
+	}
+	bindErr = viperInstance.BindEnv("server.tracer.address", "WATCHTOWER__SERVER__TRACER__ADDRESS")
+	if bindErr != nil {
+		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
+	}
+	bindErr = viperInstance.BindEnv("server.tracer.enable_jaeger", "WATCHTOWER__SERVER__TRACER__ENABLE_JAEGER")
 	if bindErr != nil {
 		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
 	}
@@ -105,7 +121,7 @@ func FromFile(filePath string) (*Config, error) {
 	}
 
 	// Storage doc-searcher config
-	bindErr = viperInstance.BindEnv("docstorage.docsearcher.address", "WATCHTOWER__DOCSTORAGE__DOC_SEARCHER__ADDRESS")
+	bindErr = viperInstance.BindEnv("storage.docsearcher.address", "WATCHTOWER__STORAGE__DOC_SEARCHER__ADDRESS")
 	if bindErr != nil {
 		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
 	}

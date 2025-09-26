@@ -3,13 +3,14 @@ package main
 import (
 	"context"
 	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/jonathanhecl/chunker"
 	"watchtower/cmd"
 	"watchtower/internal/application/usecase"
+	"watchtower/internal/application/utils/telemetry"
 	"watchtower/internal/infrastructure/dedoc"
 	"watchtower/internal/infrastructure/doc-storage"
 	"watchtower/internal/infrastructure/httpserver"
@@ -27,8 +28,11 @@ import (
 // 	Failed -> -1;
 //	Received -> 0;
 //	Pending -> 1;
-//	Processing -> 2;
+//	processConsumedTask -> 2;
 //	Successful -> 3.
+//
+// @host      localhost:2893
+// @BasePath  /api/v1
 //
 // @tag.name buckets
 // @tag.description CRUD APIs to manage cloud buckets
@@ -38,7 +42,6 @@ import (
 
 // @tag.name share
 // @tag.description Share files by URL API
-
 func main() {
 	ctx := context.Background()
 	servConfig := cmd.Execute()
@@ -58,27 +61,18 @@ func main() {
 		log.Fatalf("s3 connection failed: %v", err)
 	}
 
-	settings := servConfig.Settings
-	textChunker := chunker.NewChunker(
-		settings.ChunkSize,
-		settings.ChunkOverlap,
-		chunker.DefaultSeparators,
-		false,
-		false,
-	)
-
 	cCtx, cancel := context.WithCancel(ctx)
-	useCase := usecase.NewUseCase(
-		*textChunker,
-		rmqServ,
-		redisServ,
-		dedocServ,
-		searcherServ,
-		s3Serv,
-	)
-	useCase.LaunchWatcherListener(cCtx)
+	taskMangerUC := usecase.NewTaskManagerUseCase(redisServ)
+	storageUC := usecase.NewStorageUseCase(searcherServ, s3Serv)
+	processorUC := usecase.NewPipelineUseCase(storageUC, taskMangerUC, rmqServ, dedocServ)
+	processorUC.LaunchWatcherListener(cCtx)
 
-	httpServer := httpserver.New(&servConfig.Server.Http, useCase)
+	traceProvider, err := telemetry.InitTracer(servConfig.Server.Tracer)
+	if err != nil {
+		slog.Warn("failed to init tracer", slog.String("err", err.Error()))
+	}
+
+	httpServer := httpserver.New(&servConfig.Server, traceProvider, processorUC, storageUC, taskMangerUC)
 	go func() {
 		if err := httpServer.Start(cCtx); err != nil {
 			log.Fatalf("http server start failed: %v", err)

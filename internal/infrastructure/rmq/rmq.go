@@ -5,10 +5,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"log/slog"
 	"time"
 
-	amqp "github.com/rabbitmq/amqp091-go"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/trace"
 	"watchtower/internal/application/dto"
+	"watchtower/internal/application/utils/telemetry"
+
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 const ConsumerName = "watchtower-consumer"
@@ -53,9 +60,15 @@ func (r *RmqClient) GetConsumerChannel() chan dto.Message {
 	return r.redirect
 }
 
-func (r *RmqClient) Publish(_ context.Context, msg dto.Message) error {
+func (r *RmqClient) Publish(ctx context.Context, msg dto.Message) error {
+	ctx, span := telemetry.GlobalTracer.Start(ctx, "rmq-publish")
+	defer span.End()
+
+	headers := injectSpanContextToHeaders(ctx)
 	body, err := json.Marshal(msg)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("failed while marshalling rmq body: %w", err)
 	}
 
@@ -66,14 +79,26 @@ func (r *RmqClient) Publish(_ context.Context, msg dto.Message) error {
 		false,
 		amqp.Publishing{
 			ContentType: "application/json",
+			Headers:     headers,
 			Body:        body,
+			Timestamp:   time.Now(),
 		},
 	)
 
+	span.SetAttributes(
+		attribute.Int("message.size", len(body)),
+		attribute.String("messaging.system", "rabbitmq"),
+		attribute.String("messaging.destination", r.config.Exchange),
+		attribute.String("messaging.rabbitmq.routing_key", r.config.RoutingKey),
+	)
+
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("failed while publishing rmq message: %w", err)
 	}
 
+	span.SetStatus(codes.Ok, "success")
 	return nil
 }
 
@@ -121,9 +146,24 @@ func (r *RmqClient) handle(deliveries <-chan amqp.Delivery, done chan error) {
 	defer cleanup()
 
 	for delMsg := range deliveries {
+		ctx := extractSpanContextFromHeaders(delMsg.Headers)
+		span := trace.SpanFromContext(ctx)
+
 		msg := &dto.Message{}
-		_ = json.Unmarshal(delMsg.Body, msg)
+		err := json.Unmarshal(delMsg.Body, msg)
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			slog.Error("failed while read rmq message", slog.String("err", err.Error()))
+			continue
+		}
+
+		span.SetName("rmq-consume")
+		span.SetAttributes(attribute.String("task-id", msg.EventId.String()))
+
+		msg.Ctx = ctx
 		r.redirect <- *msg
+		span.End()
 	}
 }
 
@@ -190,4 +230,39 @@ func (r *RmqClient) CreateQueue(exchange, queue, routingKey string) error {
 	}
 
 	return nil
+}
+
+func injectSpanContextToHeaders(ctx context.Context) amqp.Table {
+	carrier := propagation.HeaderCarrier{}
+	telemetry.TracePropagator.Inject(ctx, carrier)
+
+	span := trace.SpanFromContext(ctx)
+	sCtx := span.SpanContext()
+
+	headers := amqp.Table{}
+	headers["trace-id"] = sCtx.TraceID().String()
+	headers["span-id"] = sCtx.SpanID().String()
+	headers["trace-flags"] = sCtx.TraceFlags().String()
+	headers["trace-state"] = sCtx.TraceState().String()
+
+	return headers
+}
+
+func extractSpanContextFromHeaders(headers amqp.Table) context.Context {
+	ctx := context.Background()
+	if headers == nil {
+		return ctx
+	}
+
+	traceID, _ := trace.TraceIDFromHex(headers["trace-id"].(string))
+	spanID, _ := trace.SpanIDFromHex(headers["span-id"].(string))
+	sCtx := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    traceID,
+		SpanID:     spanID,
+		TraceFlags: trace.FlagsSampled,
+		TraceState: trace.TraceState{},
+		Remote:     true,
+	})
+
+	return trace.ContextWithSpanContext(ctx, sCtx)
 }
