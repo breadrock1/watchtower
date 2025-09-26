@@ -9,9 +9,10 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/propagation"
 	"watchtower/internal/application/utils/telemetry"
 )
 
@@ -23,7 +24,7 @@ func PUT(ctx context.Context, body *bytes.Buffer, url, mime string, timeout time
 
 	req.Header.Set(echo.HeaderContentType, mime)
 	client := &http.Client{Timeout: timeout}
-	return SendRequest(ctx, client, req)
+	return sendRequest(ctx, client, req)
 }
 
 func POST(ctx context.Context, body *bytes.Buffer, url, mime string, timeout time.Duration) ([]byte, error) {
@@ -34,10 +35,10 @@ func POST(ctx context.Context, body *bytes.Buffer, url, mime string, timeout tim
 
 	req.Header.Set(echo.HeaderContentType, mime)
 	client := &http.Client{Timeout: timeout}
-	return SendRequest(ctx, client, req)
+	return sendRequest(ctx, client, req)
 }
 
-func SendRequest(ctx context.Context, client *http.Client, req *http.Request) ([]byte, error) {
+func sendRequest(ctx context.Context, client *http.Client, req *http.Request) ([]byte, error) {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "http-request")
 	defer span.End()
 
@@ -46,7 +47,7 @@ func SendRequest(ctx context.Context, client *http.Client, req *http.Request) ([
 		attribute.String("request.uri", req.RequestURI),
 	)
 
-	injectTracingToHeader(ctx, req)
+	injectSpanContext(ctx, req)
 	response, err := client.Do(req)
 	if err != nil {
 		err = fmt.Errorf("failed to send request: %w", err)
@@ -56,6 +57,7 @@ func SendRequest(ctx context.Context, client *http.Client, req *http.Request) ([
 	}
 	defer func() { _ = response.Body.Close() }()
 
+	_ = extractSpanContext(ctx, response)
 	respData, err := io.ReadAll(response.Body)
 	if err != nil {
 		err = fmt.Errorf("failed to read response body: %w", err)
@@ -74,19 +76,16 @@ func SendRequest(ctx context.Context, client *http.Client, req *http.Request) ([
 	return respData, nil
 }
 
-func injectTracingToHeader(ctx context.Context, req *http.Request) {
-	span := trace.SpanFromContext(ctx)
-	sCtx := span.SpanContext()
-
-	headers := req.Header
-	headers.Add("trace-id", sCtx.TraceID().String())
-	headers.Add("span-id", sCtx.SpanID().String())
-	headers.Add("trace-flags", sCtx.TraceFlags().String())
-	headers.Add("trace-state", sCtx.TraceState().String())
+func extractSpanContext(ctx context.Context, resp *http.Response) context.Context {
+	propagator := telemetry.TracePropagator
+	carrier := propagation.HeaderCarrier(resp.Header)
+	return propagator.Extract(ctx, carrier)
 }
 
-func extractTracingFromHeader(ctx context.Context, resp *http.Response) {
-
+func injectSpanContext(ctx context.Context, req *http.Request) {
+	propagator := otel.GetTextMapPropagator()
+	carrier := propagation.HeaderCarrier(req.Header)
+	propagator.Inject(ctx, carrier)
 }
 
 func BuildTargetURL(host, path string) string {

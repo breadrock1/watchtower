@@ -1,6 +1,7 @@
 package mw
 
 import (
+	"net/http"
 	"strings"
 
 	"github.com/labstack/echo/v4"
@@ -12,19 +13,16 @@ var (
 		"/metrics",
 		"/favicon.ico",
 		"/static/",
+		"/api/v1/swagger",
 	}
 )
 
-func TracerSkipper(c echo.Context) bool {
+func TracerSkipper(eCtx echo.Context) bool {
 	for _, excluded := range excludedPaths {
-		if strings.HasPrefix(c.Path(), excluded) {
+		if strings.HasPrefix(eCtx.Path(), excluded) {
 			return true
 		}
 	}
 
-	if c.Request().Method == "OPTIONS" {
-		return true
-	}
-
-	return false
+	return eCtx.Request().Method == http.MethodOptions
 }

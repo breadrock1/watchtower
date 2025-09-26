@@ -3,7 +3,6 @@ package httpserver
 import (
 	"context"
 	"fmt"
-	"log/slog"
 
 	"github.com/labstack/echo-contrib/echoprometheus"
 	"github.com/labstack/echo/v4"
@@ -25,25 +24,37 @@ type Server struct {
 	server *echo.Echo
 	tracer trace.Tracer
 
-	uc *usecase.UseCase
+	processor   *usecase.PipelineUseCase
+	storage     *usecase.StorageUseCase
+	taskManager *usecase.TaskMangerUseCase
 }
 
-func New(config *config.ServerConfig, watcherUC *usecase.UseCase) *Server {
+func New(
+	config *config.ServerConfig,
+	tracer trace.Tracer,
+	processor *usecase.PipelineUseCase,
+	storage *usecase.StorageUseCase,
+	taskManager *usecase.TaskMangerUseCase,
+) *Server {
 	return &Server{
 		config: config,
-		uc:     watcherUC,
+		tracer: tracer,
+
+		processor:   processor,
+		storage:     storage,
+		taskManager: taskManager,
 	}
 }
 
 func (s *Server) setupServer() {
 	s.server = echo.New()
 
+	s.server.Use(middleware.CORS())
+	s.server.Use(middleware.Recover())
+
 	s.initMeterMW()
 	s.initLoggerMW()
 	s.initTracerMW()
-
-	s.server.Use(middleware.CORS())
-	s.server.Use(middleware.Recover())
 
 	_ = s.CreateTasksGroup()
 	_ = s.CreateStorageBucketsGroup()
@@ -80,17 +91,9 @@ func (s *Server) initLoggerMW() {
 }
 
 func (s *Server) initTracerMW() {
-	if s.config.Tracer.EnableJaeger {
-		tp, err := telemetry.InitTracer(s.config.Tracer)
-		if err != nil {
-			slog.Error("failed to initialize tracer", slog.String("err", err.Error()))
-		} else {
-			s.tracer = tp
-			s.server.Use(otelecho.Middleware(
-				server.AppName,
-				otelecho.WithPropagators(telemetry.TracePropagator),
-				otelecho.WithSkipper(mw.TracerSkipper),
-			))
-		}
-	}
+	s.server.Use(otelecho.Middleware(
+		server.AppName,
+		otelecho.WithPropagators(telemetry.TracePropagator),
+		otelecho.WithSkipper(mw.TracerSkipper),
+	))
 }
