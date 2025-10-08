@@ -4,8 +4,6 @@ import (
 	"time"
 )
 
-const EmptyMessage = ""
-
 type TaskStatus int
 
 const (
@@ -16,6 +14,9 @@ const (
 	Successful
 )
 
+const PublishedStatusText = "publisher"
+const ProcessingStatusText = "processing"
+
 type TaskEvent struct {
 	ID         string     `json:"id"`
 	Bucket     string     `json:"bucket"`
@@ -25,4 +26,9 @@ type TaskEvent struct {
 	ModifiedAt time.Time  `json:"modified_at"`
 	Status     TaskStatus `json:"status"`
 	StatusText string     `json:"status_text"`
+}
+
+func (te *TaskEvent) SetStatusAndText(status TaskStatus, text string) {
+	te.Status = status
+	te.StatusText = text
 }
