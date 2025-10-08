@@ -33,7 +33,7 @@ func (suc *StorageUseCase) GetObjectStorage() object_storage.IObjectStorage {
 	return suc.objStorage
 }
 
-func (suc *StorageUseCase) DownloadObject(ctx context.Context, task dto.TaskEvent) (bytes.Buffer, error) {
+func (suc *StorageUseCase) DownloadObject(ctx context.Context, task *dto.TaskEvent) (bytes.Buffer, error) {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "download-object")
 	defer span.End()
 

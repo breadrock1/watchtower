@@ -60,7 +60,6 @@ func (dc *DedocClient) Recognize(ctx context.Context, inputFile dto.InputFile) (
 
 	respData, err := utils.POST(ctx, &buf, targetURL, mimeType, timeoutReq)
 	if err != nil {
-		err = fmt.Errorf("failed send request: %w", err)
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 		return nil, err
