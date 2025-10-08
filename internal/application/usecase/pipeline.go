@@ -63,8 +63,9 @@ func (puc *PipelineUseCase) LaunchWatcherListener(ctx context.Context) {
 					}
 					defer sem.Release(1)
 
-					task := puc.handleConsumedTask(ctx, cMsg)
-					puc.taskMangerUC.UpdateTaskStatus(ctx, &task)
+					taskEvent := &cMsg.Body
+					puc.handleConsumedTask(ctx, taskEvent)
+					puc.taskMangerUC.UpdateTaskStatus(ctx, taskEvent)
 				}()
 
 			case <-ctx.Done():
@@ -80,7 +81,7 @@ func (puc *PipelineUseCase) CreateAndPublishTask(ctx context.Context, form dto.F
 	// taskID := utils.GenerateUniqID(form.Bucket, form.FilePath)
 	taskID := utils.GenerateTaskID()
 
-	slog.Info("created new task",
+	slog.Info("creating new task",
 		slog.String("task-taskID", taskID),
 		slog.String("bucket", form.Bucket),
 		slog.String("file-path", form.FilePath),
@@ -95,6 +96,7 @@ func (puc *PipelineUseCase) CreateAndPublishTask(ctx context.Context, form dto.F
 		CreatedAt:  currTime,
 		ModifiedAt: currTime,
 		Status:     dto.Received,
+		StatusText: dto.PublishedStatusText,
 	}
 
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "create-and-publish-task")
@@ -142,8 +144,7 @@ func (puc *PipelineUseCase) publishTaskToQueue(ctx context.Context, taskEvent dt
 	return nil
 }
 
-func (puc *PipelineUseCase) handleConsumedTask(ctx context.Context, recvMessage dto.Message) dto.TaskEvent {
-	taskEvent := recvMessage.Body
+func (puc *PipelineUseCase) handleConsumedTask(ctx context.Context, taskEvent *dto.TaskEvent) {
 	slog.Info("processing task event", slog.String("task-id", taskEvent.ID))
 
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "handle-task-from-queue")
@@ -155,31 +156,24 @@ func (puc *PipelineUseCase) handleConsumedTask(ctx context.Context, recvMessage 
 		attribute.String("file-path", taskEvent.FilePath),
 	)
 
-	taskEvent.Status = dto.Processing
-	taskEvent.StatusText = dto.EmptyMessage
-	puc.taskMangerUC.UpdateTaskStatus(ctx, &taskEvent)
+	taskEvent.SetStatusAndText(dto.Processing, dto.ProcessingStatusText)
+	puc.taskMangerUC.UpdateTaskStatus(ctx, taskEvent)
 
-	err := puc.processTaskEvent(ctx, recvMessage.Body)
+	err := puc.processTaskEvent(ctx, taskEvent)
 	if err != nil {
-		err = fmt.Errorf("failed while processing file: %w", err)
+		err = fmt.Errorf("failed while processing task: %w", err)
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
-
-		taskEvent.Status = dto.Failed
-		taskEvent.StatusText = err.Error()
-
-		return taskEvent
+		slog.Error(err.Error())
+		return
 	}
 
 	msg := fmt.Sprintf("task %s has been processed successful", taskEvent.ID)
+	taskEvent.SetStatusAndText(dto.Successful, msg)
 	slog.Info(msg)
-	taskEvent.StatusText = msg
-	taskEvent.Status = dto.Successful
-
-	return taskEvent
 }
 
-func (puc *PipelineUseCase) processTaskEvent(ctx context.Context, taskEvent dto.TaskEvent) error {
+func (puc *PipelineUseCase) processTaskEvent(ctx context.Context, taskEvent *dto.TaskEvent) error {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "task-processing")
 	defer span.End()
 
@@ -191,6 +185,7 @@ func (puc *PipelineUseCase) processTaskEvent(ctx context.Context, taskEvent dto.
 
 	fileData, err := puc.storageUC.DownloadObject(ctx, taskEvent)
 	if err != nil {
+		taskEvent.SetStatusAndText(dto.Failed, "failed to download file")
 		err = fmt.Errorf("failed to download file: %w", err)
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
@@ -204,6 +199,7 @@ func (puc *PipelineUseCase) processTaskEvent(ctx context.Context, taskEvent dto.
 
 	recData, err := puc.recognizer.Recognize(ctx, inputFile)
 	if err != nil {
+		taskEvent.SetStatusAndText(dto.Failed, "failed to recognize file")
 		err = fmt.Errorf("failed to recognize file: %w", err)
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
@@ -221,6 +217,7 @@ func (puc *PipelineUseCase) processTaskEvent(ctx context.Context, taskEvent dto.
 
 	docID, err := puc.storageUC.StoreDocument(ctx, taskEvent.Bucket, doc)
 	if err != nil {
+		taskEvent.SetStatusAndText(dto.Failed, "failed to store document")
 		err = fmt.Errorf("failed to store document %s: %w", doc.FileName, err)
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
