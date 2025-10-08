@@ -133,7 +133,6 @@ func (s *Server) UploadFile(eCtx echo.Context) error {
 	timeVal, timeParseErr := time.Parse(time.RFC3339, expired)
 	if timeParseErr != nil {
 		slog.Warn("failed to parse expired time param",
-			slog.String("expired", expired),
 			slog.String("err", timeParseErr.Error()),
 		)
 	}
