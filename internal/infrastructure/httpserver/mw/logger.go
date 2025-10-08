@@ -20,13 +20,13 @@ func InitLocalLogger(config telemetry.LoggerConfig) echo.MiddlewareFunc {
 			uri := c.Path()
 			return strings.Contains(uri, "swagger")
 		},
-
+		CustomTimeFormat: "2006/01/02 15:04:05",
 		Format: fmt.Sprintf(
-			"%s  %s %s request{%s}: %s %s ms %s\n",
-			"${time_rfc3339}",
+			"%s %s http-response={%s %s %s %s %s}\n",
+			"${time_custom}",
 			config.Level,
-			"${id}",
-			"method=${method} uri=${path}",
+			"method=${method}",
+			"uri=${path}",
 			"latency=${latency}",
 			"status=${status}",
 			"error=\"${error}\"",

@@ -46,5 +46,6 @@ func ConvertFromTaskEvent(taskEvent *dto.TaskEvent) *RedisValue {
 		CreatedAt:  taskEvent.CreatedAt.Unix(),
 		ModifiedAt: taskEvent.ModifiedAt.Unix(),
 		Status:     int(taskEvent.Status),
+		StatusText: taskEvent.StatusText,
 	}
 }
