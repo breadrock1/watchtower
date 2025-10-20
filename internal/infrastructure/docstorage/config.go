@@ -1,4 +1,4 @@
-package dedoc
+package docstorage
 
 import "time"
 

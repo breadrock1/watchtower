@@ -7,26 +7,23 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 	"watchtower/internal/application/utils/telemetry"
-	"watchtower/internal/infrastructure/dedoc"
-	"watchtower/internal/infrastructure/doc-storage"
+	"watchtower/internal/infrastructure/docparser"
+	"watchtower/internal/infrastructure/docstorage"
 	"watchtower/internal/infrastructure/redis"
 	"watchtower/internal/infrastructure/rmq"
 	"watchtower/internal/infrastructure/s3"
 )
 
 type Config struct {
-	Server     ServerConfig     `mapstructure:"server"`
-	Ocr        OcrConfig        `mapstructure:"ocr"`
-	DocStorage DocStorageConfig `mapstructure:"storage"`
-	Cacher     CacherConfig     `mapstructure:"cacher"`
-	Queue      QueueConfig      `mapstructure:"queue"`
-	Cloud      CloudConfig      `mapstructure:"cloud"`
 	Settings   SettingsConfig   `mapstructure:"settings"`
+	Server     ServerConfig     `mapstructure:"server"`
+	Recognizer RecognizerConfig `mapstructure:"recognizer"`
+	Task       TaskConfig       `mapstructure:"task"`
+	Storage    StorageConfig    `mapstructure:"storage"`
 }
 
 type SettingsConfig struct {
-	ChunkSize    int `mapstructure:"chunk_size"`
-	ChunkOverlap int `mapstructure:"chunk_overlap"`
+	PipelineSemaphoreSize int `mapstructure:"pipeline_semaphore_size"`
 }
 
 type ServerConfig struct {
@@ -39,24 +36,34 @@ type HttpServerConfig struct {
 	Address string `mapstructure:"address"`
 }
 
-type OcrConfig struct {
-	Dedoc dedoc.Config `mapstructure:"dedoc"`
+type RecognizerConfig struct {
+	DocParser docparser.Config `mapstructure:"docparser"`
 }
 
-type DocStorageConfig struct {
-	DocSearcher doc_storage.Config `mapstructure:"docsearcher"`
+type TaskConfig struct {
+	TaskStorage TaskStorageConfig `mapstructure:"storage"`
+	TaskQueue   TaskQueueConfig   `mapstructure:"queue"`
 }
 
-type CacherConfig struct {
+type StorageConfig struct {
+	ObjectStorage   ObjectStorageConfig   `mapstructure:"object"`
+	DocumentStorage DocumentStorageConfig `mapstructure:"document"`
+}
+
+type TaskStorageConfig struct {
 	Redis redis.Config `mapstructure:"redis"`
 }
 
-type QueueConfig struct {
+type TaskQueueConfig struct {
 	Rmq rmq.Config `mapstructure:"rmq"`
 }
 
-type CloudConfig struct {
+type ObjectStorageConfig struct {
 	S3 s3.Config `mapstructure:"s3"`
+}
+
+type DocumentStorageConfig struct {
+	DocSearcher docstorage.Config `mapstructure:"docsearcher"`
 }
 
 func FromFile(filePath string) (*Config, error) {
@@ -72,17 +79,16 @@ func FromFile(filePath string) (*Config, error) {
 	viperInstance.SetEnvPrefix("watchtower")
 	viperInstance.SetEnvKeyReplacer(strings.NewReplacer(".", "__"))
 
-	// Settings server config
-	bindErr := viperInstance.BindEnv("settings.chunk_size", "WATCHTOWER__SETTINGS__CHUNK_SIZE")
-	if bindErr != nil {
-		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
-	}
-	bindErr = viperInstance.BindEnv("settings.chunk_overlap", "WATCHTOWER__SETTINGS__CHUNK_OVERLAP")
+	// Settings config
+	bindErr := viperInstance.BindEnv(
+		"settings.pipeline_semaphore_size",
+		"WATCHTOWER__SETTINGS__PIPELINE_SEMAPHORE_SIZE",
+	)
 	if bindErr != nil {
 		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
 	}
 
-	// Http server config
+	// Server config
 	bindErr = viperInstance.BindEnv("server.http.address", "WATCHTOWER__SERVER__HTTP__ADDRESS")
 	if bindErr != nil {
 		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
@@ -110,80 +116,101 @@ func FromFile(filePath string) (*Config, error) {
 		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
 	}
 
-	// OCR config
-	bindErr = viperInstance.BindEnv("ocr.dedoc.address", "WATCHTOWER__OCR__DEDOC__ADDRESS")
+	// Recognizer config
+	bindErr = viperInstance.BindEnv("recognizer.docparser.address", "WATCHTOWER__RECOGNIZER__DOCPARSER__ADDRESS")
 	if bindErr != nil {
 		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
 	}
-	bindErr = viperInstance.BindEnv("ocr.dedoc.timeout", "WATCHTOWER__OCR__DEDOC__TIMEOUT")
+	bindErr = viperInstance.BindEnv("recognizer.docparser.timeout", "WATCHTOWER__RECOGNIZER__DOCPARSER__TIMEOUT")
 	if bindErr != nil {
 		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
 	}
 
-	// Storage doc-searcher config
-	bindErr = viperInstance.BindEnv("storage.docsearcher.address", "WATCHTOWER__STORAGE__DOC_SEARCHER__ADDRESS")
+	// Storage config
+	bindErr = viperInstance.BindEnv(
+		"storage.document.docsearcher.address",
+		"WATCHTOWER__STORAGE__DOCUMENT__DOCSEARCHER__ADDRESS",
+	)
+	if bindErr != nil {
+		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
+	}
+	bindErr = viperInstance.BindEnv(
+		"storage.document.docsearcher.timeout",
+		"WATCHTOWER__STORAGE__DOCUMENT__DOCSEARCHER__TIMEOUT",
+	)
 	if bindErr != nil {
 		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
 	}
 
 	// Cache redis config
-	bindErr = viperInstance.BindEnv("cacher.redis.address", "WATCHTOWER__CACHER__REDIS__ADDRESS")
+	bindErr = viperInstance.BindEnv("task.storage.redis.address", "WATCHTOWER__TASK__STORAGE__REDIS__ADDRESS")
 	if bindErr != nil {
 		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
 	}
-	bindErr = viperInstance.BindEnv("cacher.redis.username", "WATCHTOWER__CACHER__REDIS__USERNAME")
+	bindErr = viperInstance.BindEnv("task.storage.redis.username", "WATCHTOWER__TASK__STORAGE__REDIS__USERNAME")
 	if bindErr != nil {
 		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
 	}
-	bindErr = viperInstance.BindEnv("cacher.redis.password", "WATCHTOWER__CACHER__REDIS__PASSWORD")
+	bindErr = viperInstance.BindEnv("task.storage.redis.password", "WATCHTOWER__TASK__STORAGE__REDIS__PASSWORD")
 	if bindErr != nil {
 		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
 	}
-	bindErr = viperInstance.BindEnv("cacher.redis.expired", "WATCHTOWER__CACHER__REDIS__EXPIRED")
+	bindErr = viperInstance.BindEnv("task.storage.redis.expired", "WATCHTOWER__TASK__STORAGE__REDIS__EXPIRED")
 	if bindErr != nil {
 		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
 	}
 
 	// Queue emq config
-	bindErr = viperInstance.BindEnv("queue.rmq.address", "WATCHTOWER__QUEUE__RMQ__ADDRESS")
+	bindErr = viperInstance.BindEnv("task.queue.rmq.address", "WATCHTOWER__TASK__QUEUE__RMQ__ADDRESS")
 	if bindErr != nil {
 		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
 	}
-	bindErr = viperInstance.BindEnv("queue.rmq.exchange", "WATCHTOWER__QUEUE__RMQ__EXCHANGE")
+	bindErr = viperInstance.BindEnv("task.queue.rmq.exchange", "WATCHTOWER__TASK__QUEUE__RMQ__EXCHANGE")
 	if bindErr != nil {
 		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
 	}
-	bindErr = viperInstance.BindEnv("queue.rmq.routing_key", "WATCHTOWER__QUEUE__RMQ__ROUTING_KEY")
+	bindErr = viperInstance.BindEnv("task.queue.rmq.routing_key", "WATCHTOWER__TASK__QUEUE__RMQ__ROUTING_KEY")
 	if bindErr != nil {
 		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
 	}
-	bindErr = viperInstance.BindEnv("queue.rmq.queue", "WATCHTOWER__QUEUE__RMQ__QUEUE")
+	bindErr = viperInstance.BindEnv("task.queue.rmq.queue", "WATCHTOWER__TASK__QUEUE__RMQ__QUEUE")
 	if bindErr != nil {
 		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
 	}
 
-	// MinIO config
-	bindErr = viperInstance.BindEnv("cloud.s3.address", "WATCHTOWER__CLOUD__S3__ADDRESS")
+	// Storage s3 config
+	bindErr = viperInstance.BindEnv(
+		"storage.object.s3.address",
+		"WATCHTOWER__STORAGE__OBJECT__CLOUD__S3__ADDRESS",
+	)
 	if bindErr != nil {
 		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
 	}
-	bindErr = viperInstance.BindEnv("cloud.s3.access_id", "WATCHTOWER__CLOUD__S3__ACCESS_ID")
+	bindErr = viperInstance.BindEnv(
+		"storage.object.s3.access_id",
+		"WATCHTOWER__STORAGE__OBJECT__CLOUD__S3__ACCESS_ID",
+	)
 	if bindErr != nil {
 		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
 	}
-	bindErr = viperInstance.BindEnv("cloud.s3.secret_key", "WATCHTOWER__CLOUD__S3__SECRET_KEY")
+	bindErr = viperInstance.BindEnv(
+		"storage.object.s3.secret_key",
+		"WATCHTOWER__STORAGE__OBJECT__CLOUD__S3__SECRET_KEY",
+	)
 	if bindErr != nil {
 		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
 	}
-	bindErr = viperInstance.BindEnv("cloud.s3.enable_ssl", "WATCHTOWER__CLOUD__S3__ENABLE_SSL")
+	bindErr = viperInstance.BindEnv(
+		"storage.object.s3.enable_ssl",
+		"WATCHTOWER__STORAGE__OBJECT__CLOUD__S3__ENABLE_SSL",
+	)
 	if bindErr != nil {
 		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
 	}
-	bindErr = viperInstance.BindEnv("cloud.s3.token", "WATCHTOWER__CLOUD__S3__TOKEN")
-	if bindErr != nil {
-		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
-	}
-	bindErr = viperInstance.BindEnv("cloud.s3.watched_dirs", "WATCHTOWER__CLOUD__S3__WATCHED_DIRS")
+	bindErr = viperInstance.BindEnv(
+		"storage.object.s3.token",
+		"WATCHTOWER__STORAGE__OBJECT__CLOUD__S3__TOKEN",
+	)
 	if bindErr != nil {
 		return nil, fmt.Errorf("failed to bine env varialbe: %w", bindErr)
 	}

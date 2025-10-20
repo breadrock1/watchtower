@@ -5,8 +5,8 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"golang.org/x/exp/slices"
-	"watchtower/internal/application/dto"
 	"watchtower/internal/application/mapping"
+	"watchtower/internal/application/models"
 )
 
 func (s *Server) CreateTasksGroup() error {
@@ -38,7 +38,7 @@ func (s *Server) LoadTasks(eCtx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "bucket is required")
 	}
 
-	tasks, err := s.taskManager.GetTaskManager().GetAll(ctx, bucket)
+	tasks, err := s.taskManager.GetAllTasks(ctx, bucket)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
@@ -53,8 +53,8 @@ func (s *Server) LoadTasks(eCtx echo.Context) error {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, "unknown status")
 	}
 
-	foundedTasks := slices.DeleteFunc(tasks, func(event *dto.TaskEvent) bool {
-		return event.Status != inputTaskStatus
+	foundedTasks := slices.DeleteFunc(tasks, func(event *models.TaskEvent) bool {
+		return event.Status != int(inputTaskStatus)
 	})
 
 	return eCtx.JSON(200, foundedTasks)
@@ -85,7 +85,7 @@ func (s *Server) LoadTaskByID(eCtx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "task_id is required")
 	}
 
-	task, err := s.taskManager.GetTaskManager().Get(ctx, bucket, taskID)
+	task, err := s.taskManager.GetTaskByID(ctx, bucket, taskID)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}

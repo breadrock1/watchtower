@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"log/slog"
 	"time"
 
@@ -12,7 +11,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
-	"watchtower/internal/application/dto"
+	"watchtower/internal/application/models"
 	"watchtower/internal/application/utils/telemetry"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -20,15 +19,15 @@ import (
 
 const ConsumerName = "watchtower-consumer"
 
-type RmqClient struct {
+type RabbitMQClient struct {
 	conn     *amqp.Connection
 	channel  *amqp.Channel
 	config   *Config
-	redirect chan dto.Message
+	redirect chan models.Message
 	done     chan error
 }
 
-func New(config *Config) (*RmqClient, error) {
+func New(config *Config) (*RabbitMQClient, error) {
 	rmqConfig := amqp.Config{
 		Properties: amqp.NewConnectionProperties(),
 		Heartbeat:  10 * time.Second,
@@ -45,22 +44,22 @@ func New(config *Config) (*RmqClient, error) {
 		return nil, fmt.Errorf("failed to create rmq channel: %w", err)
 	}
 
-	client := &RmqClient{
+	client := &RabbitMQClient{
 		conn,
 		rmqCh,
 		config,
-		make(chan dto.Message),
+		make(chan models.Message),
 		make(chan error),
 	}
 
 	return client, nil
 }
 
-func (r *RmqClient) GetConsumerChannel() chan dto.Message {
+func (r *RabbitMQClient) GetConsumerChannel() chan models.Message {
 	return r.redirect
 }
 
-func (r *RmqClient) Publish(ctx context.Context, msg dto.Message) error {
+func (r *RabbitMQClient) Publish(ctx context.Context, msg models.Message) error {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "rmq-publish")
 	defer span.End()
 
@@ -69,7 +68,7 @@ func (r *RmqClient) Publish(ctx context.Context, msg dto.Message) error {
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("failed while marshalling rmq body: %w", err)
+		return fmt.Errorf("rmq: serialization error: %w", err)
 	}
 
 	err = r.channel.Publish(
@@ -95,14 +94,14 @@ func (r *RmqClient) Publish(ctx context.Context, msg dto.Message) error {
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("failed while publishing rmq message: %w", err)
+		return fmt.Errorf("rmq: publish error: %w", err)
 	}
 
 	span.SetStatus(codes.Ok, "success")
 	return nil
 }
 
-func (r *RmqClient) Consume(_ context.Context) error {
+func (r *RabbitMQClient) Consume(_ context.Context) error {
 	go r.handleReconnect()
 
 	deliveries, err := r.channel.Consume(
@@ -116,30 +115,30 @@ func (r *RmqClient) Consume(_ context.Context) error {
 	)
 
 	if err != nil {
-		return fmt.Errorf("failed to init rmq consumer: %w", err)
+		return fmt.Errorf("rmq: consume error: %w", err)
 	}
 
-	go r.handle(deliveries, r.done)
+	go r.handleMessage(deliveries, r.done)
 
 	return nil
 }
 
-func (r *RmqClient) StopConsuming(_ context.Context) error {
+func (r *RabbitMQClient) StopConsuming(_ context.Context) error {
 	if err := r.channel.Cancel(ConsumerName, true); err != nil {
-		return fmt.Errorf("consumer cancel failed: %w", err)
+		return fmt.Errorf("rmq: consumer cancel failed: %w", err)
 	}
 
 	if err := r.conn.Close(); err != nil {
-		return fmt.Errorf("amqp connection close error: %w", err)
+		return fmt.Errorf("rmq: close connection failed: %w", err)
 	}
 
-	// wait for handle() to exit
+	// wait for handleMessage() to exit
 	return <-r.done
 }
 
-func (r *RmqClient) handle(deliveries <-chan amqp.Delivery, done chan error) {
+func (r *RabbitMQClient) handleMessage(deliveries <-chan amqp.Delivery, done chan error) {
 	cleanup := func() {
-		log.Printf("handle: deliveries channel closed")
+		slog.Warn("rmq: deliveries channel closed")
 		done <- nil
 	}
 
@@ -149,12 +148,12 @@ func (r *RmqClient) handle(deliveries <-chan amqp.Delivery, done chan error) {
 		ctx := extractSpanContextFromHeaders(delMsg.Headers)
 		span := trace.SpanFromContext(ctx)
 
-		msg := &dto.Message{}
+		msg := &models.Message{}
 		err := json.Unmarshal(delMsg.Body, msg)
 		if err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
-			slog.Error("failed while read rmq message", slog.String("err", err.Error()))
+			slog.Error("rmq: failed while deserialize msg", slog.String("err", err.Error()))
 			continue
 		}
 
@@ -167,14 +166,14 @@ func (r *RmqClient) handle(deliveries <-chan amqp.Delivery, done chan error) {
 	}
 }
 
-func (r *RmqClient) handleReconnect() {
+func (r *RabbitMQClient) handleReconnect() {
 	for {
 		select {
 		case <-r.done:
 			return
 
 		case <-r.conn.NotifyClose(make(chan *amqp.Error)):
-			log.Println("Attempting to reconnect...")
+			slog.Warn("attempting to reconnect...")
 
 			rmqConfig := amqp.Config{
 				Properties: amqp.NewConnectionProperties(),
@@ -184,52 +183,31 @@ func (r *RmqClient) handleReconnect() {
 			rmqConfig.Properties.SetClientConnectionName(ConsumerName)
 
 			var err error
-			for reconnCounter := 0; reconnCounter < 5; reconnCounter++ {
+			var reconnectDelay int
+			for reconnectCounter := 0; reconnectCounter < 5; reconnectCounter++ {
 				r.conn, err = amqp.DialConfig(r.config.Address, rmqConfig)
 				if err != nil {
-					log.Printf("failed while re-connecting to rmq: %v", err)
+					slog.Warn("rmq: failed while re-connecting", slog.String("err", err.Error()))
 					return
 				}
 
 				r.channel, err = r.conn.Channel()
 				if err == nil {
-					log.Printf("connection to rmq has been returned!")
+					slog.Warn("rmq: connection has been returned")
 					break
 				}
 
-				log.Printf("failed to create rmq channel: %v", err)
-				time.Sleep(time.Duration(reconnCounter*reconnCounter) * time.Second)
+				slog.Error("rmq: failed to create channel", slog.String("err", err.Error()))
+				reconnectDelay = reconnectCounter * reconnectCounter
+				time.Sleep(time.Duration(reconnectDelay) * time.Second)
 			}
 
 			if err != nil {
-				log.Println("Failed to reconnect to RabbitMQ")
+				slog.Error("rmq: failed to restore connection", slog.String("err", err.Error()))
 				return
 			}
 		}
 	}
-}
-
-func (r *RmqClient) CreateExchange(name string) error {
-	err := r.channel.ExchangeDeclare(name, "direct", true, false, false, false, nil)
-	if err != nil {
-		return fmt.Errorf("failed while declaring exchange: %w", err)
-	}
-
-	return nil
-}
-
-func (r *RmqClient) CreateQueue(exchange, queue, routingKey string) error {
-	_, err := r.channel.QueueDeclare(queue, true, false, false, false, nil)
-	if err != nil {
-		return fmt.Errorf("failed while declaring queue: %w", err)
-	}
-
-	err = r.channel.QueueBind(queue, routingKey, exchange, false, nil)
-	if err != nil {
-		return fmt.Errorf("failed while binding queue: %w", err)
-	}
-
-	return nil
 }
 
 func injectSpanContextToHeaders(ctx context.Context) amqp.Table {
