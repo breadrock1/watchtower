@@ -20,14 +20,14 @@ type TaskEvent struct {
 
 func (te *TaskEvent) ToDomain() *domain.TaskEvent {
 	return &domain.TaskEvent{
-		te.ID,
-		te.Bucket,
-		te.FilePath,
-		te.FileSize,
-		te.StatusText,
-		domain.TaskStatus(te.Status),
-		te.CreatedAt,
-		te.ModifiedAt,
+		ID:         te.ID,
+		Bucket:     te.Bucket,
+		FilePath:   te.FilePath,
+		FileSize:   te.FileSize,
+		StatusText: te.StatusText,
+		Status:     domain.TaskStatus(te.Status),
+		CreatedAt:  te.CreatedAt,
+		ModifiedAt: te.ModifiedAt,
 	}
 }
 
