@@ -7,8 +7,8 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 	"watchtower/internal/application/utils/telemetry"
-	"watchtower/internal/infrastructure/doc-parser"
-	"watchtower/internal/infrastructure/doc-storage"
+	"watchtower/internal/infrastructure/docparser"
+	"watchtower/internal/infrastructure/docstorage"
 	"watchtower/internal/infrastructure/redis"
 	"watchtower/internal/infrastructure/rmq"
 	"watchtower/internal/infrastructure/s3"
@@ -37,7 +37,7 @@ type HttpServerConfig struct {
 }
 
 type RecognizerConfig struct {
-	DocParser doc_parser.Config `mapstructure:"docparser"`
+	DocParser docparser.Config `mapstructure:"docparser"`
 }
 
 type TaskConfig struct {
@@ -63,7 +63,7 @@ type ObjectStorageConfig struct {
 }
 
 type DocumentStorageConfig struct {
-	DocSearcher doc_storage.Config `mapstructure:"docsearcher"`
+	DocSearcher docstorage.Config `mapstructure:"docsearcher"`
 }
 
 func FromFile(filePath string) (*Config, error) {

@@ -41,7 +41,8 @@ func (s *StorageUseCase) StoreDocument(
 		attribute.String("file-path", taskEvent.FilePath),
 	)
 
-	doc := &models.DocumentObject{
+	doc := &domain.Document{
+		Index:      taskEvent.Bucket,
 		FileName:   path.Base(taskEvent.FilePath),
 		FilePath:   taskEvent.FilePath,
 		FileSize:   fileData.Len(),
@@ -50,7 +51,7 @@ func (s *StorageUseCase) StoreDocument(
 		ModifiedAt: taskEvent.ModifiedAt,
 	}
 
-	docID, err := s.docStorage.StoreDocument(ctx, taskEvent.Bucket, doc)
+	docID, err := s.docStorage.StoreDocument(ctx, doc)
 	if err != nil {
 		err = fmt.Errorf("failed to store document: %w", err)
 		span.SetStatus(codes.Error, err.Error())

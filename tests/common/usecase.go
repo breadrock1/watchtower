@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"time"
-
 	"watchtower/internal/application/models"
 	"watchtower/internal/application/usecase"
 	"watchtower/internal/application/utils/telemetry"

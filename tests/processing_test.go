@@ -49,15 +49,16 @@ func TestProcessing(t *testing.T) {
 			CreatedAt:  time.Now(),
 			ModifiedAt: time.Now(),
 		}
-		matchedStoreDocument := mock.MatchedBy(func(doc *models.DocumentObject) bool {
+		matchedStoreDocument := mock.MatchedBy(func(doc *domain.Document) bool {
+			indexFlag := doc.Index == TestBucketName
 			fileNameFlag := doc.FileName == docObject.FileName
 			filePathFlag := doc.FilePath == docObject.FilePath
 			fileSizeFlag := doc.FileSize == docObject.FileSize
 			contentFlag := doc.Content == docObject.Content
-			return fileNameFlag && filePathFlag && fileSizeFlag && contentFlag
+			return indexFlag && fileNameFlag && filePathFlag && fileSizeFlag && contentFlag
 		})
 		testEnv.Recognizer.On("Recognize", inputFile).Return(&recData, nil).Once()
-		testEnv.DocStorage.On("StoreDocument", TestBucketName, matchedStoreDocument).Return(docID, nil).Once()
+		testEnv.DocStorage.On("StoreDocument", matchedStoreDocument).Return(docID, nil).Once()
 
 		task, err := testEnv.PipelineUC.CreateTask(ctx, *fileForm)
 		assert.NoError(t, err, "failed to upload test input file to s3")
@@ -157,16 +158,17 @@ func TestProcessing(t *testing.T) {
 			CreatedAt:  time.Now(),
 			ModifiedAt: time.Now(),
 		}
-		matchedStoreDocument := mock.MatchedBy(func(doc *models.DocumentObject) bool {
+		matchedStoreDocument := mock.MatchedBy(func(doc *domain.Document) bool {
+			indexFlag := doc.Index == TestBucketName
 			fileNameFlag := doc.FileName == docObject.FileName
 			filePathFlag := doc.FilePath == docObject.FilePath
 			fileSizeFlag := doc.FileSize == docObject.FileSize
 			contentFlag := doc.Content == docObject.Content
-			return fileNameFlag && filePathFlag && fileSizeFlag && contentFlag
+			return indexFlag && fileNameFlag && filePathFlag && fileSizeFlag && contentFlag
 		})
 		docErr := fmt.Errorf("service unavailable")
 		testEnv.Recognizer.On("Recognize", inputFile).Return(&recData, nil).Once()
-		testEnv.DocStorage.On("StoreDocument", TestBucketName, matchedStoreDocument).Return("", docErr).Once()
+		testEnv.DocStorage.On("StoreDocument", matchedStoreDocument).Return("", docErr).Once()
 
 		task, err := testEnv.PipelineUC.CreateTask(ctx, *fileForm)
 		assert.NoError(t, err, "failed to upload test input file to s3")

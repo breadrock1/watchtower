@@ -11,8 +11,8 @@ import (
 	"watchtower/cmd"
 	"watchtower/internal/application/usecase"
 	"watchtower/internal/application/utils/telemetry"
-	"watchtower/internal/infrastructure/doc-parser"
-	"watchtower/internal/infrastructure/doc-storage"
+	"watchtower/internal/infrastructure/docparser"
+	"watchtower/internal/infrastructure/docstorage"
 	"watchtower/internal/infrastructure/httpserver"
 	"watchtower/internal/infrastructure/redis"
 	"watchtower/internal/infrastructure/rmq"
@@ -23,7 +23,7 @@ func main() {
 	ctx := context.Background()
 	servConfig := cmd.Execute()
 
-	recognizer := doc_parser.New(&servConfig.Recognizer.DocParser)
+	recognizer := docparser.New(&servConfig.Recognizer.DocParser)
 
 	taskStorage := redis.New(&servConfig.Task.TaskStorage.Redis)
 	taskQueue, err := rmq.New(&servConfig.Task.TaskQueue.Rmq)
@@ -32,7 +32,7 @@ func main() {
 	}
 	launchTasksConsumer(ctx, taskQueue)
 
-	docStorage := doc_storage.New(&servConfig.Storage.DocumentStorage.DocSearcher)
+	docStorage := docstorage.New(&servConfig.Storage.DocumentStorage.DocSearcher)
 	objStorage, err := s3.New(&servConfig.Storage.ObjectStorage.S3)
 	if err != nil {
 		log.Fatalf("s3 connection failed: %v", err)

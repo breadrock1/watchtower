@@ -5,6 +5,7 @@ import (
 	"context"
 
 	"watchtower/internal/application/models"
+	"watchtower/internal/domain/core/structures"
 )
 
 type IObjectStorage interface {
@@ -42,5 +43,5 @@ type IFileLoader interface {
 }
 
 type IDocumentManager interface {
-	StoreDocument(ctx context.Context, index string, document *models.DocumentObject) (string, error)
+	StoreDocument(ctx context.Context, document *domain.Document) (string, error)
 }

@@ -1,4 +1,4 @@
-package doc_parser
+package docparser
 
 import (
 	"bytes"

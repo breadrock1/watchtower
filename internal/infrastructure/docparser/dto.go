@@ -1,4 +1,4 @@
-package doc_parser
+package docparser
 
 import "watchtower/internal/application/models"
 

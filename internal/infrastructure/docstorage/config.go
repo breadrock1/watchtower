@@ -1,4 +1,4 @@
-package doc_parser
+package docstorage
 
 import "time"
 

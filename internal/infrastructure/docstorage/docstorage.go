@@ -1,4 +1,4 @@
-package doc_storage
+package docstorage
 
 import (
 	"bytes"
@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"watchtower/internal/application/models"
 	"watchtower/internal/application/utils"
+	"watchtower/internal/domain/core/structures"
 )
 
 const DocumentJsonMime = "application/json"
@@ -25,7 +25,8 @@ func New(config *Config) *DocSearchClient {
 	}
 }
 
-func (d *DocSearchClient) StoreDocument(ctx context.Context, index string, doc *models.DocumentObject) (string, error) {
+func (d *DocSearchClient) StoreDocument(ctx context.Context, doc *domain.Document) (string, error) {
+	index := doc.Index
 	storeDoc := StoreDocumentForm{
 		FileName:   doc.FileName,
 		FilePath:   doc.FilePath,
