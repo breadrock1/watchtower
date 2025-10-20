@@ -133,16 +133,16 @@ func (p *PipelineUseCase) handleTask(ctx context.Context, taskEvent *domain.Task
 
 	err := p.processTask(ctx, taskEvent)
 	if err != nil {
-		err = fmt.Errorf("failed while processing task: %w", err)
+		err = fmt.Errorf("pipeline error: %w", err)
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
-		slog.Error(err.Error())
+		slog.Error(err.Error(), slog.String("task-id", taskEvent.ID.String()))
 		return
 	}
 
-	msg := fmt.Sprintf("task %s has been processed successful", taskEvent.ID)
+	msg := "task has been processed successful"
 	taskEvent.SetStatusAndText(domain.Successful, msg)
-	slog.Info(msg)
+	slog.Info(msg, slog.String("task-id", taskEvent.ID.String()))
 }
 
 func (p *PipelineUseCase) processTask(ctx context.Context, taskEvent *domain.TaskEvent) error {
@@ -158,7 +158,7 @@ func (p *PipelineUseCase) processTask(ctx context.Context, taskEvent *domain.Tas
 	fileData, err := p.loadObject(ctx, taskEvent)
 	if err != nil {
 		taskEvent.SetStatusAndText(domain.Failed, "failed to load object from storage")
-		err = fmt.Errorf("failed while processing %s: %w", taskEvent.ID, err)
+		err = fmt.Errorf("task processing failed: %w", err)
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
 		return err
@@ -167,7 +167,7 @@ func (p *PipelineUseCase) processTask(ctx context.Context, taskEvent *domain.Tas
 	recData, err := p.recognizeObject(ctx, taskEvent, fileData)
 	if err != nil {
 		taskEvent.SetStatusAndText(domain.Failed, "failed to recognize object data")
-		err = fmt.Errorf("failed while processing %s: %w", taskEvent.ID, err)
+		err = fmt.Errorf("task processing failed: %w", err)
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
 		return err
@@ -176,7 +176,7 @@ func (p *PipelineUseCase) processTask(ctx context.Context, taskEvent *domain.Tas
 	_, err = p.storageUC.StoreDocument(ctx, taskEvent, fileData, recData)
 	if err != nil {
 		taskEvent.SetStatusAndText(domain.Failed, "failed to store document")
-		err = fmt.Errorf("failed while processing %s: %w", taskEvent.ID, err)
+		err = fmt.Errorf("task processing failed: %w", err)
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
 		return err
@@ -197,8 +197,8 @@ func (p *PipelineUseCase) loadObject(ctx context.Context, taskEvent *domain.Task
 
 	fileData, err := p.storageUC.DownloadObjectByTask(ctx, taskEvent)
 	if err != nil {
-		taskEvent.SetStatusAndText(domain.Failed, "failed to download file")
-		err = fmt.Errorf("failed to download file %s: %w", taskEvent.FilePath, err)
+		err = fmt.Errorf("load object error: %w", err)
+		taskEvent.SetStatusAndText(domain.Failed, err.Error())
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
 		return bytes.Buffer{}, err

@@ -23,7 +23,7 @@ type RedisValue struct {
 func (rv *RedisValue) ConvertToTaskEvent() (*models.TaskEvent, error) {
 	modDt := time.Unix(rv.ModifiedAt, 0)
 	createDt := time.Unix(rv.CreatedAt, 0)
-	taskID, err := uuid.FromBytes([]byte(rv.ID))
+	taskID, err := uuid.Parse(rv.ID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid task id: %w", err)
 	}

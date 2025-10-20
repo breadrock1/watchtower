@@ -33,10 +33,6 @@ func TaskStatusFromString(enumVal string) (domain.TaskStatus, error) {
 	}
 }
 
-func TaskStatusToInt(ts domain.TaskStatus) int {
-	return int(ts)
-}
-
 func TaskStatusFromInt(enum int) domain.TaskStatus {
 	return domain.TaskStatus(enum)
 }

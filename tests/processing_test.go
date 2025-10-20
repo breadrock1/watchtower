@@ -6,13 +6,13 @@ import (
 	"path"
 	"testing"
 	"time"
-	domain "watchtower/internal/domain/core/structures"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"watchtower/internal/application/mapping"
 	"watchtower/internal/application/models"
+	"watchtower/internal/domain/core/structures"
 	"watchtower/tests/common"
 )
 
@@ -68,11 +68,11 @@ func TestProcessing(t *testing.T) {
 		testEnv.Recognizer.AssertExpectations(t)
 		testEnv.DocStorage.AssertExpectations(t)
 
-		task, err = testEnv.TaskManager.Get(ctx, TestBucketName, task.ID)
+		taskEvent, err := testEnv.TaskManager.Get(ctx, TestBucketName, task.ID.String())
 		assert.NoError(t, err, "failed to get task from redis")
-		assert.Equal(t, mapping.TaskStatusFromInt(3), task.Status)
-		assert.Equal(t, TestBucketName, task.Bucket)
-		assert.Equal(t, TestInputFilePath, task.FilePath)
+		assert.Equal(t, 3, taskEvent.Status)
+		assert.Equal(t, TestBucketName, taskEvent.Bucket)
+		assert.Equal(t, TestInputFilePath, taskEvent.FilePath)
 
 		cancel()
 	})
@@ -82,19 +82,10 @@ func TestProcessing(t *testing.T) {
 		cCtx, cancel := context.WithCancel(ctx)
 		testEnv.PipelineUC.LaunchListener(cCtx)
 
-		taskID := domain.GenerateUniqID(TestBucketName, TestInputFilePath)
-		taskEvent := models.TaskEvent{
-			ID:         taskID,
-			Bucket:     TestBucketName,
-			FilePath:   path.Base(TestInputFilePath),
-			FileSize:   0,
-			CreatedAt:  time.Now(),
-			ModifiedAt: time.Now(),
-			Status:     1,
-			StatusText: "",
-		}
+		task := domain.CreateNewTaskEvent(TestBucketName, path.Base(TestInputFilePath), 0)
+		taskID := task.ID
 
-		rmqMsg := mapping.MessageFromTaskEvent(taskEvent)
+		rmqMsg := mapping.MessageFromTaskEvent(task)
 		err := testEnv.TaskQueue.Publish(ctx, rmqMsg)
 		assert.NoError(t, err, "failed to publish task event")
 
@@ -104,11 +95,11 @@ func TestProcessing(t *testing.T) {
 		testEnv.Recognizer.AssertNotCalled(t, "Recognize")
 		testEnv.DocStorage.AssertNotCalled(t, "StoreDocument")
 
-		task, err := testEnv.TaskManager.Get(ctx, TestBucketName, taskID)
+		taskEvent, err := testEnv.TaskManager.Get(ctx, TestBucketName, taskID.String())
 		assert.NoError(t, err, "failed to get task from redis")
-		assert.Equal(t, mapping.TaskStatusFromInt(-1), task.Status)
-		assert.Equal(t, TestBucketName, task.Bucket)
-		assert.Equal(t, path.Base(TestInputFilePath), task.FilePath)
+		assert.Equal(t, -1, taskEvent.Status)
+		assert.Equal(t, TestBucketName, taskEvent.Bucket)
+		assert.Equal(t, path.Base(TestInputFilePath), taskEvent.FilePath)
 
 		cancel()
 	})
@@ -137,11 +128,11 @@ func TestProcessing(t *testing.T) {
 		testEnv.Recognizer.AssertExpectations(t)
 		testEnv.DocStorage.AssertNotCalled(t, "StoreDocument")
 
-		task, err = testEnv.TaskManager.Get(ctx, TestBucketName, task.ID)
+		taskEvent, err := testEnv.TaskManager.Get(ctx, TestBucketName, task.ID.String())
 		assert.NoError(t, err, "failed to get task from redis")
-		assert.Equal(t, mapping.TaskStatusFromInt(-1), task.Status)
-		assert.Equal(t, TestBucketName, task.Bucket)
-		assert.Equal(t, TestInputFilePath, task.FilePath)
+		assert.Equal(t, -1, taskEvent.Status)
+		assert.Equal(t, TestBucketName, taskEvent.Bucket)
+		assert.Equal(t, TestInputFilePath, taskEvent.FilePath)
 
 		cancel()
 	})
@@ -186,11 +177,11 @@ func TestProcessing(t *testing.T) {
 		testEnv.Recognizer.AssertExpectations(t)
 		testEnv.DocStorage.AssertExpectations(t)
 
-		task, err = testEnv.TaskManager.Get(ctx, TestBucketName, task.ID)
+		taskEvent, err := testEnv.TaskManager.Get(ctx, TestBucketName, task.ID.String())
 		assert.NoError(t, err, "failed to get task from redis")
-		assert.Equal(t, mapping.TaskStatusFromInt(-1), task.Status)
-		assert.Equal(t, TestBucketName, task.Bucket)
-		assert.Equal(t, TestInputFilePath, task.FilePath)
+		assert.Equal(t, -1, taskEvent.Status)
+		assert.Equal(t, TestBucketName, taskEvent.Bucket)
+		assert.Equal(t, TestInputFilePath, taskEvent.FilePath)
 
 		cancel()
 	})

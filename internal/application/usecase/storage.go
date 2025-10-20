@@ -5,14 +5,13 @@ import (
 	"context"
 	"fmt"
 	"path"
-	domain "watchtower/internal/domain/core/structures"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"watchtower/internal/application/mapping"
 	"watchtower/internal/application/models"
 	"watchtower/internal/application/services/storage"
 	"watchtower/internal/application/utils/telemetry"
+	"watchtower/internal/domain/core/structures"
 )
 
 type StorageUseCase struct {
@@ -303,7 +302,7 @@ func (s *StorageUseCase) DownloadObjectByTask(ctx context.Context, task *domain.
 		attribute.String("task-id", task.ID.String()),
 		attribute.String("bucket", task.Bucket),
 		attribute.String("file-path", task.FilePath),
-		attribute.Int("task-status", mapping.TaskStatusToInt(task.Status)),
+		attribute.Int("task-status", int(task.Status)),
 	)
 
 	data, err := s.objStorage.DownloadObject(ctx, task.Bucket, task.FilePath)
