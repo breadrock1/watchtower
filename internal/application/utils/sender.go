@@ -50,7 +50,7 @@ func sendRequest(ctx context.Context, client *http.Client, req *http.Request) ([
 	injectSpanContext(ctx, req)
 	response, err := client.Do(req)
 	if err != nil {
-		err = fmt.Errorf("failed to send request: %w", err)
+		err = fmt.Errorf("sending request error: %w", err)
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
 		return nil, err
@@ -60,7 +60,7 @@ func sendRequest(ctx context.Context, client *http.Client, req *http.Request) ([
 	_ = extractSpanContext(ctx, response)
 	respData, err := io.ReadAll(response.Body)
 	if err != nil {
-		err = fmt.Errorf("failed to read response body: %w", err)
+		err = fmt.Errorf("read response body error: %w", err)
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
 		return nil, err

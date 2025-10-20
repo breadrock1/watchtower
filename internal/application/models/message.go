@@ -1,7 +1,8 @@
-package dto
+package models
 
 import (
 	"context"
+
 	"github.com/google/uuid"
 )
 

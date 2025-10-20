@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
-	"watchtower/internal/application/dto"
+	"watchtower/internal/application/models"
 )
 
 type RedisClient struct {
@@ -25,15 +25,15 @@ func New(config *Config) *RedisClient {
 	}
 }
 
-func (rs *RedisClient) GetAll(ctx context.Context, bucket string) ([]*dto.TaskEvent, error) {
+func (rs *RedisClient) GetAll(ctx context.Context, bucket string) ([]*models.TaskEvent, error) {
 	key := rs.generateUniqID(bucket, "*")
 	status := rs.rsConn.Scan(ctx, 0, key, -1)
 	if status.Err() != nil {
-		return nil, fmt.Errorf("failed to get tasks: %w", status.Err())
+		return nil, fmt.Errorf("redis error: %w", status.Err())
 	}
 
 	rKeys, _ := status.Val()
-	tasks := make([]*dto.TaskEvent, len(rKeys))
+	tasks := make([]*models.TaskEvent, len(rKeys))
 	for index, rKey := range rKeys {
 		cmd := rs.rsConn.Get(ctx, rKey)
 		data, err := cmd.Bytes()
@@ -60,43 +60,43 @@ func (rs *RedisClient) GetAll(ctx context.Context, bucket string) ([]*dto.TaskEv
 	return tasks, nil
 }
 
-func (rs *RedisClient) Get(ctx context.Context, bucket, taskID string) (*dto.TaskEvent, error) {
+func (rs *RedisClient) Get(ctx context.Context, bucket, taskID string) (*models.TaskEvent, error) {
 	key := rs.generateUniqID(bucket, taskID)
 	cmd := rs.rsConn.Get(ctx, key)
 	if cmd.Err() != nil {
-		return nil, fmt.Errorf("failed to get tasks: %w", cmd.Err())
+		return nil, fmt.Errorf("redis error: %w", cmd.Err())
 	}
 
 	data, err := cmd.Bytes()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get task: %w", err)
+		return nil, fmt.Errorf("read bytes data error: %w", err)
 	}
 
 	value := &RedisValue{}
 	if err = json.Unmarshal(data, &value); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal task: %w", err)
+		return nil, fmt.Errorf("deserialize error: %w", err)
 	}
 
 	taskEvent, err := value.ConvertToTaskEvent()
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal task: %w", err)
+		return nil, fmt.Errorf("task validation error: %w", err)
 	}
 
 	return taskEvent, nil
 }
 
-func (rs *RedisClient) Push(ctx context.Context, task *dto.TaskEvent) error {
-	key := rs.generateUniqID(task.Bucket, task.ID)
+func (rs *RedisClient) Push(ctx context.Context, task *models.TaskEvent) error {
+	key := rs.generateUniqID(task.Bucket, task.ID.String())
 
 	value := ConvertFromTaskEvent(task)
 	jsonData, err := json.Marshal(value)
 	if err != nil {
-		return fmt.Errorf("failed to marshal task: %w", err)
+		return fmt.Errorf("serialize error: %w", err)
 	}
 
 	status := rs.rsConn.Set(ctx, key, jsonData, rs.config.Expired*time.Second)
 	if status.Err() != nil {
-		return fmt.Errorf("failed to set task: %w", status.Err())
+		return fmt.Errorf("redis error: %w", status.Err())
 	}
 
 	return nil

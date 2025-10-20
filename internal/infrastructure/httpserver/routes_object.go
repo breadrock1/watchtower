@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"watchtower/internal/application/dto"
+	"watchtower/internal/application/models"
 )
 
 func (s *Server) CreateStorageObjectsGroup() error {
@@ -53,7 +53,7 @@ func (s *Server) CopyFile(eCtx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	err = s.storage.GetObjectStorage().CopyFile(ctx, bucket, jsonForm.SrcPath, jsonForm.DstPath)
+	err = s.storage.CopyObject(ctx, bucket, jsonForm.SrcPath, jsonForm.DstPath)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
@@ -85,7 +85,7 @@ func (s *Server) MoveFile(eCtx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	err = s.storage.GetObjectStorage().CopyFile(ctx, bucket, jsonForm.SrcPath, jsonForm.DstPath)
+	err = s.storage.MoveObject(ctx, bucket, jsonForm.SrcPath, jsonForm.DstPath)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
@@ -118,7 +118,7 @@ func (s *Server) UploadFile(eCtx echo.Context) error {
 	}
 
 	bucket := eCtx.Param("bucket")
-	exist, err := s.storage.GetObjectStorage().IsBucketExist(eCtx.Request().Context(), bucket)
+	exist, err := s.storage.IsBucketExists(eCtx.Request().Context(), bucket)
 	if err != nil || !exist {
 		retErr := fmt.Errorf("specified bucket %s does not exist", bucket)
 		return echo.NewHTTPError(http.StatusBadRequest, retErr.Error())
@@ -137,7 +137,7 @@ func (s *Server) UploadFile(eCtx echo.Context) error {
 		)
 	}
 
-	uploadedFiles := make([]*dto.TaskEvent, len(multipartForm.File["files"]))
+	uploadedFiles := make([]*models.TaskEvent, len(multipartForm.File["files"]))
 	for index, fileForm := range multipartForm.File["files"] {
 		fileName := fileForm.Filename
 		fileHandler, err := fileForm.Open()
@@ -165,14 +165,14 @@ func (s *Server) UploadFile(eCtx echo.Context) error {
 			continue
 		}
 
-		uploadItem := dto.FileToUpload{
+		uploadItem := models.UploadFileParams{
 			Bucket:   bucket,
 			FilePath: fileName,
 			FileData: &fileData,
 			Expired:  &timeVal,
 		}
 
-		task, err := s.processor.CreateAndPublishTask(ctx, uploadItem)
+		task, err := s.processor.CreateTask(ctx, uploadItem)
 		if err != nil {
 			slog.Error("failed to upload file to cloud",
 				slog.String("file", fileName),
@@ -181,7 +181,8 @@ func (s *Server) UploadFile(eCtx echo.Context) error {
 			continue
 		}
 
-		uploadedFiles[index] = task
+		modelTask := models.FromDomain(task)
+		uploadedFiles[index] = &modelTask
 	}
 
 	return eCtx.JSON(200, uploadedFiles)
@@ -210,7 +211,7 @@ func (s *Server) DownloadFile(eCtx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	fileData, err := s.storage.GetObjectStorage().DownloadFile(ctx, bucket, jsonForm.FileName)
+	fileData, err := s.storage.DownloadObject(ctx, bucket, jsonForm.FileName)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
@@ -241,7 +242,7 @@ func (s *Server) RemoveFile(eCtx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	if err := s.storage.GetObjectStorage().DeleteFile(ctx, bucket, jsonForm.FileName); err != nil {
+	if err := s.storage.DeleteObject(ctx, bucket, jsonForm.FileName); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
@@ -264,7 +265,7 @@ func (s *Server) RemoveFile2(eCtx echo.Context) error {
 	ctx := eCtx.Request().Context()
 	bucket := eCtx.Param("bucket")
 	fileName := eCtx.QueryParam("file_name")
-	if err := s.storage.GetObjectStorage().DeleteFile(ctx, bucket, fileName); err != nil {
+	if err := s.storage.DeleteObject(ctx, bucket, fileName); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
@@ -295,7 +296,7 @@ func (s *Server) GetFiles(eCtx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	listObjects, err := s.storage.GetObjectStorage().GetBucketFiles(ctx, bucket, jsonForm.DirectoryName)
+	listObjects, err := s.storage.GetBucketObjects(ctx, bucket, jsonForm.DirectoryName)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
@@ -327,7 +328,7 @@ func (s *Server) GetFileAttributes(eCtx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	listObjects, err := s.storage.GetObjectStorage().GetFileMetadata(ctx, bucket, jsonForm.FilePath)
+	listObjects, err := s.storage.GetFileMetadata(ctx, bucket, jsonForm.FilePath)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
@@ -360,7 +361,8 @@ func (s *Server) ShareFile(eCtx echo.Context) error {
 	}
 
 	expired := time.Second * time.Duration(form.ExpiredSecs)
-	url, err := s.storage.GetObjectStorage().GenSharedURL(ctx, expired, bucket, form.FilePath)
+	params := models.ShareObjectParams{Bucket: bucket, FilePath: form.FilePath, Expired: &expired}
+	url, err := s.storage.ShareObject(ctx, params)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
