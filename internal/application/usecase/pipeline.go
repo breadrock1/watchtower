@@ -1,58 +1,52 @@
 package usecase
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"log/slog"
-	"path"
-	"time"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"golang.org/x/sync/semaphore"
-	"watchtower/internal/application/dto"
-	"watchtower/internal/application/mapping"
+	"watchtower/internal/application/models"
 	"watchtower/internal/application/services/recognizer"
-	"watchtower/internal/application/services/task-queue"
-	"watchtower/internal/application/utils"
 	"watchtower/internal/application/utils/telemetry"
+	"watchtower/internal/domain/core/structures"
 )
 
 const SemaphoreSize = 10
 
 type PipelineUseCase struct {
-	processorCh chan dto.TaskEvent
-	consumerCh  <-chan dto.Message
+	processorCh chan models.TaskEvent
+	consumerCh  <-chan models.Message
 
 	storageUC    *StorageUseCase
-	taskMangerUC *TaskMangerUseCase
-	taskQueue    task_queue.ITaskQueue
+	taskMangerUC *TaskUseCase
 	recognizer   recognizer.IRecognizer
 }
 
 func NewPipelineUseCase(
 	storageUC *StorageUseCase,
-	taskMangerUC *TaskMangerUseCase,
-	taskQueue task_queue.ITaskQueue,
+	taskMangerUC *TaskUseCase,
 	recognizer recognizer.IRecognizer,
 ) *PipelineUseCase {
-	consumerCh := taskQueue.GetConsumerChannel()
-	processorCh := make(chan dto.TaskEvent)
+	consumerCh := taskMangerUC.GetConsumeChannel()
+	processorCh := make(chan models.TaskEvent)
 	return &PipelineUseCase{
 		processorCh:  processorCh,
 		consumerCh:   consumerCh,
 		storageUC:    storageUC,
 		taskMangerUC: taskMangerUC,
-		taskQueue:    taskQueue,
 		recognizer:   recognizer,
 	}
 }
 
-func (puc *PipelineUseCase) LaunchWatcherListener(ctx context.Context) {
+func (p *PipelineUseCase) LaunchListener(ctx context.Context) {
 	go func() {
 		for {
 			select {
-			case cMsg := <-puc.consumerCh:
+			case cMsg := <-p.consumerCh:
 				ctx = cMsg.Ctx
 
 				sem := semaphore.NewWeighted(SemaphoreSize)
@@ -63,9 +57,9 @@ func (puc *PipelineUseCase) LaunchWatcherListener(ctx context.Context) {
 					}
 					defer sem.Release(1)
 
-					taskEvent := &cMsg.Body
-					puc.handleConsumedTask(ctx, taskEvent)
-					puc.taskMangerUC.UpdateTaskStatus(ctx, taskEvent)
+					taskEvent := cMsg.Body.ToDomain()
+					p.handleTask(ctx, taskEvent)
+					p.taskMangerUC.UpdateTaskStatus(ctx, taskEvent)
 				}()
 
 			case <-ctx.Done():
@@ -76,90 +70,68 @@ func (puc *PipelineUseCase) LaunchWatcherListener(ctx context.Context) {
 	}()
 }
 
-func (puc *PipelineUseCase) CreateAndPublishTask(ctx context.Context, form dto.FileToUpload) (*dto.TaskEvent, error) {
-	// TODO: Disabled for TechDebt
-	// taskID := utils.GenerateUniqID(form.Bucket, form.FilePath)
-	taskID := utils.GenerateTaskID()
+func (p *PipelineUseCase) CreateTask(ctx context.Context, form models.UploadFileParams) (*domain.TaskEvent, error) {
+	task := domain.CreateNewTaskEvent(form.Bucket, form.FilePath, int64(form.FileData.Len()))
 
+	taskID := task.ID.String()
 	slog.Info("creating new task",
-		slog.String("task-taskID", taskID),
+		slog.String("task-id", taskID),
 		slog.String("bucket", form.Bucket),
 		slog.String("file-path", form.FilePath),
 	)
-
-	currTime := time.Now()
-	task := dto.TaskEvent{
-		ID:         taskID,
-		Bucket:     form.Bucket,
-		FilePath:   form.FilePath,
-		FileSize:   int64(form.FileData.Len()),
-		CreatedAt:  currTime,
-		ModifiedAt: currTime,
-		Status:     dto.Received,
-		StatusText: dto.PublishedStatusText,
-	}
 
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "create-and-publish-task")
 	defer span.End()
 
 	span.SetAttributes(
+		attribute.String("task-id", taskID),
 		attribute.String("bucket", task.Bucket),
 		attribute.String("file-path", task.FilePath),
-		attribute.String("task-id", taskID),
-		attribute.Int("task-status", mapping.TaskStatusToInt(task.Status)),
-		attribute.Int64("time", currTime.Unix()),
+		attribute.Int("task-status", int(task.Status)),
+		attribute.Int64("time", task.CreatedAt.Unix()),
 	)
 
-	if err := puc.storageUC.UploadObject(ctx, form); err != nil {
-		err = fmt.Errorf("failed to upload file: %w", err)
+	if err := p.storageUC.UploadObject(ctx, form); err != nil {
+		err = fmt.Errorf("pipeline error: %w", err)
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
 		return nil, err
 	}
 
-	if err := puc.publishTaskToQueue(ctx, task); err != nil {
-		err = fmt.Errorf("failed to publish task to queue: %w", err)
+	if err := p.taskMangerUC.PublishTaskToQueue(ctx, task); err != nil {
+		err = fmt.Errorf("pipeline error: %w", err)
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
 		return nil, err
 	}
 
-	puc.taskMangerUC.UpdateTaskStatus(ctx, &task)
+	p.taskMangerUC.UpdateTaskStatus(ctx, task)
 	// TODO: Disabled for TechDebt
-	// _ = puc.taskMangerUC.CheckTaskAlreadyCreated(ctx, &task)
-	// if puc.isTaskAlreadyProcessed(ctx, &taskEvent) {
+	// _ = p.taskMangerUC.CheckTaskAlreadyCreated(ctx, &task)
+	// if p.isTaskAlreadyProcessed(ctx, &taskEvent) {
 	//	 log.Printf("task has been already processed: %s", taskEvent.ID)
 	//	 continue
 	// }
 
-	return &task, nil
+	return task, nil
 }
 
-func (puc *PipelineUseCase) publishTaskToQueue(ctx context.Context, taskEvent dto.TaskEvent) error {
-	msg := mapping.MessageFromTaskEvent(taskEvent)
-	err := puc.taskQueue.Publish(ctx, msg)
-	if err != nil {
-		return fmt.Errorf("failed to publish task event to queue: %w", err)
-	}
-	return nil
-}
-
-func (puc *PipelineUseCase) handleConsumedTask(ctx context.Context, taskEvent *dto.TaskEvent) {
-	slog.Info("processing task event", slog.String("task-id", taskEvent.ID))
+func (p *PipelineUseCase) handleTask(ctx context.Context, taskEvent *domain.TaskEvent) {
+	slog.Info("processing task event", slog.String("task-id", taskEvent.ID.String()))
 
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "handle-task-from-queue")
 	defer span.End()
 
 	span.SetAttributes(
-		attribute.String("task-id", taskEvent.ID),
+		attribute.String("task-id", taskEvent.ID.String()),
 		attribute.String("bucket", taskEvent.Bucket),
 		attribute.String("file-path", taskEvent.FilePath),
 	)
 
-	taskEvent.SetStatusAndText(dto.Processing, dto.ProcessingStatusText)
-	puc.taskMangerUC.UpdateTaskStatus(ctx, taskEvent)
+	taskEvent.SetStatusAndText(domain.Processing, domain.ProcessingStatusText)
+	p.taskMangerUC.UpdateTaskStatus(ctx, taskEvent)
 
-	err := puc.processTaskEvent(ctx, taskEvent)
+	err := p.processTask(ctx, taskEvent)
 	if err != nil {
 		err = fmt.Errorf("failed while processing task: %w", err)
 		span.SetStatus(codes.Error, err.Error())
@@ -169,66 +141,99 @@ func (puc *PipelineUseCase) handleConsumedTask(ctx context.Context, taskEvent *d
 	}
 
 	msg := fmt.Sprintf("task %s has been processed successful", taskEvent.ID)
-	taskEvent.SetStatusAndText(dto.Successful, msg)
+	taskEvent.SetStatusAndText(domain.Successful, msg)
 	slog.Info(msg)
 }
 
-func (puc *PipelineUseCase) processTaskEvent(ctx context.Context, taskEvent *dto.TaskEvent) error {
+func (p *PipelineUseCase) processTask(ctx context.Context, taskEvent *domain.TaskEvent) error {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "task-processing")
 	defer span.End()
 
 	span.SetAttributes(
-		attribute.String("task-id", taskEvent.ID),
+		attribute.String("task-id", taskEvent.ID.String()),
 		attribute.String("bucket", taskEvent.Bucket),
 		attribute.String("file-path", taskEvent.FilePath),
 	)
 
-	fileData, err := puc.storageUC.DownloadObject(ctx, taskEvent)
+	fileData, err := p.loadObject(ctx, taskEvent)
 	if err != nil {
-		taskEvent.SetStatusAndText(dto.Failed, "failed to download file")
-		err = fmt.Errorf("failed to download file: %w", err)
+		taskEvent.SetStatusAndText(domain.Failed, "failed to load object from storage")
+		err = fmt.Errorf("failed while processing %s: %w", taskEvent.ID, err)
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
 		return err
 	}
 
-	inputFile := dto.InputFile{
-		Data: fileData,
-		Name: path.Base(taskEvent.FilePath),
-	}
-
-	recData, err := puc.recognizer.Recognize(ctx, inputFile)
+	recData, err := p.recognizeObject(ctx, taskEvent, fileData)
 	if err != nil {
-		taskEvent.SetStatusAndText(dto.Failed, "failed to recognize file")
-		err = fmt.Errorf("failed to recognize file: %w", err)
+		taskEvent.SetStatusAndText(domain.Failed, "failed to recognize object data")
+		err = fmt.Errorf("failed while processing %s: %w", taskEvent.ID, err)
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
 		return err
 	}
 
-	doc := &dto.DocumentObject{
-		FileName:   path.Base(taskEvent.FilePath),
-		FilePath:   taskEvent.FilePath,
-		FileSize:   fileData.Len(),
-		Content:    recData.Text,
-		CreatedAt:  taskEvent.CreatedAt,
-		ModifiedAt: taskEvent.ModifiedAt,
-	}
-
-	docID, err := puc.storageUC.StoreDocument(ctx, taskEvent.Bucket, doc)
+	_, err = p.storageUC.StoreDocument(ctx, taskEvent, fileData, recData)
 	if err != nil {
-		taskEvent.SetStatusAndText(dto.Failed, "failed to store document")
-		err = fmt.Errorf("failed to store document %s: %w", doc.FileName, err)
+		taskEvent.SetStatusAndText(domain.Failed, "failed to store document")
+		err = fmt.Errorf("failed while processing %s: %w", taskEvent.ID, err)
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
 		return err
 	}
-
-	slog.Debug("document has been stored",
-		slog.String("task-id", taskEvent.ID),
-		slog.String("bucket", taskEvent.Bucket),
-		slog.String("document-id", docID),
-	)
 
 	return nil
+}
+
+func (p *PipelineUseCase) loadObject(ctx context.Context, taskEvent *domain.TaskEvent) (bytes.Buffer, error) {
+	ctx, span := telemetry.GlobalTracer.Start(ctx, "load-object-from-storage")
+	defer span.End()
+
+	span.SetAttributes(
+		attribute.String("task-id", taskEvent.ID.String()),
+		attribute.String("bucket", taskEvent.Bucket),
+		attribute.String("file-path", taskEvent.FilePath),
+	)
+
+	fileData, err := p.storageUC.DownloadObjectByTask(ctx, taskEvent)
+	if err != nil {
+		taskEvent.SetStatusAndText(domain.Failed, "failed to download file")
+		err = fmt.Errorf("failed to download file %s: %w", taskEvent.FilePath, err)
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return bytes.Buffer{}, err
+	}
+
+	return fileData, nil
+}
+
+func (p *PipelineUseCase) recognizeObject(
+	ctx context.Context,
+	taskEvent *domain.TaskEvent,
+	fileData bytes.Buffer,
+) (*models.Recognized, error) {
+	ctx, span := telemetry.GlobalTracer.Start(ctx, "recognize-object-data")
+	defer span.End()
+
+	span.SetAttributes(
+		attribute.String("task-id", taskEvent.ID.String()),
+		attribute.String("bucket", taskEvent.Bucket),
+		attribute.String("file-path", taskEvent.FilePath),
+	)
+
+	inputFile := models.InputFile{
+		Data: fileData,
+		Name: taskEvent.FilePath,
+	}
+
+	recData, err := p.recognizer.Recognize(ctx, inputFile)
+	if err != nil {
+		taskEvent.SetStatusAndText(domain.Failed, "failed to recognize file")
+		err = fmt.Errorf("failed to recognize file %s: %w", taskEvent.ID, err)
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return nil, err
+	}
+
+	return recData, err
 }

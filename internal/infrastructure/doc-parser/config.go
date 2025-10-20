@@ -1,4 +1,4 @@
-package dedoc
+package doc_parser
 
 import "time"
 
