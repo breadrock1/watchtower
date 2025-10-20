@@ -19,6 +19,31 @@ import (
 	_ "watchtower/docs"
 )
 
+// Server
+// @title          Watchtower service
+// @version        0.0.1
+// @description    Watchtower is a project designed to provide processing files created into cloud by events.
+//
+// @tag.name tasks
+// @tag.description APIs to get status tasks. When TaskStatus may be:
+//
+//	Failed -> -1;
+//	Received -> 0;
+//	Pending -> 1;
+//	processConsumedTask -> 2;
+//	Successful -> 3.
+//
+// @host      localhost:2893
+// @BasePath  /api/v1
+//
+// @tag.name buckets
+// @tag.description CRUD APIs to manage cloud buckets
+//
+// @tag.name files
+// @tag.description CRUD APIs to manage files into bucket
+//
+// @tag.name share
+// @tag.description Share files by URL API
 type Server struct {
 	config *config.ServerConfig
 	server *echo.Echo
@@ -26,7 +51,7 @@ type Server struct {
 
 	processor   *usecase.PipelineUseCase
 	storage     *usecase.StorageUseCase
-	taskManager *usecase.TaskMangerUseCase
+	taskManager *usecase.TaskUseCase
 }
 
 func New(
@@ -34,7 +59,7 @@ func New(
 	tracer trace.Tracer,
 	processor *usecase.PipelineUseCase,
 	storage *usecase.StorageUseCase,
-	taskManager *usecase.TaskMangerUseCase,
+	taskManager *usecase.TaskUseCase,
 ) *Server {
 	return &Server{
 		config: config,

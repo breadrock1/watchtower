@@ -3,9 +3,9 @@ package recognizer
 import (
 	"context"
 
-	"watchtower/internal/application/dto"
+	"watchtower/internal/application/models"
 )
 
 type IRecognizer interface {
-	Recognize(ctx context.Context, inputFile dto.InputFile) (*dto.Recognized, error)
+	Recognize(ctx context.Context, inputFile models.InputFile) (*models.Recognized, error)
 }

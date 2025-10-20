@@ -56,7 +56,6 @@ linters:
     - varnamelen
     - wastedassign
     - whitespace
-    - wsl
   disable:
     - bodyclose
     - contextcheck

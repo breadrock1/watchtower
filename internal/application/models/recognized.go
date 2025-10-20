@@ -1,4 +1,4 @@
-package dto
+package models
 
 import "bytes"
 
@@ -8,5 +8,5 @@ type InputFile struct {
 }
 
 type Recognized struct {
-	Text string `json:"text"`
+	Text string
 }

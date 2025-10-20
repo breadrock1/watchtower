@@ -4,37 +4,35 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"watchtower/internal/application/dto"
+	"watchtower/internal/application/models"
+	"watchtower/internal/domain/core/structures"
 )
 
-func MessageFromTaskEvent(event dto.TaskEvent) dto.Message {
-	return dto.Message{
+func MessageFromTaskEvent(event *domain.TaskEvent) models.Message {
+	taskEventDto := models.FromDomain(event)
+	return models.Message{
 		EventId: uuid.New(),
-		Body:    event,
+		Body:    taskEventDto,
 	}
 }
 
-func TaskStatusFromString(enumVal string) (dto.TaskStatus, error) {
+func TaskStatusFromString(enumVal string) (domain.TaskStatus, error) {
 	switch enumVal {
 	case "received":
-		return dto.Received, nil
+		return domain.Received, nil
 	case "pending":
-		return dto.Pending, nil
+		return domain.Pending, nil
 	case "processing":
-		return dto.Processing, nil
+		return domain.Processing, nil
 	case "successful":
-		return dto.Successful, nil
+		return domain.Successful, nil
 	case "failed":
-		return dto.Failed, nil
+		return domain.Failed, nil
 	default:
-		return dto.Pending, fmt.Errorf("unknown task status: %s", enumVal)
+		return domain.Pending, fmt.Errorf("unknown task status: %s", enumVal)
 	}
 }
 
-func TaskStatusToInt(ts dto.TaskStatus) int {
-	return int(ts)
-}
-
-func TaskStatusFromInt(enum int) dto.TaskStatus {
-	return dto.TaskStatus(enum)
+func TaskStatusFromInt(enum int) domain.TaskStatus {
+	return domain.TaskStatus(enum)
 }

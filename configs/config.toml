@@ -1,6 +1,5 @@
 [settings]
-chunk_size = 50000
-chunk_overlap = 1000
+pipeline_semaphore_size = 10
 
 [server.http]
 address = "0.0.0.0:2893"
@@ -14,26 +13,31 @@ enable_loki = true
 address = "jaeger:4317"
 enable_jaeger = false
 
-[ocr.dedoc]
-address = "http://localhost:8004"
+[recognizer.dedoc]
+address = "http://localhost:8012/api/v1"
 timeout = 300
 
-[storage.docsearcher]
-address = "http://localhost:2892"
+[recognizer.docparser]
+address = "http://localhost:8012/api/v1"
+timeout = 300
 
-[cacher.redis]
+[storage.document.docsearcher]
+address = "http://localhost:2892/api/v1"
+timeout = 300
+
+[task.storage.redis]
 address = "localhost:6379"
 username = "redis"
 password = "redis"
 expired = 3600
 
-[queue.rmq]
+[task.queue.rmq]
 address = "amqp://localhost:5672"
 exchange = "watchtower"
 routing_key = "task"
 queue = "watchtower-tasks"
 
-[cloud.s3]
+[storage.object.s3]
 address = "localhost:9000"
 access_id = "minio-root"
 secret_key = "minio-root"

@@ -1,4 +1,4 @@
-package doc_storage
+package docstorage
 
 type CreateIndexForm struct {
 	ID   string `json:"id"`
