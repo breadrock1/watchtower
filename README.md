@@ -8,6 +8,46 @@ build and store knowledge graph of content entities and store to ELK system.
 
 ![architecture.png](docs/architecture.png)
 
+### Domain
+
+There are following domains:
+
+```
+domain
+   |----> Task
+   |        |----> create new task
+   |        |----> publish task to queue
+   |        |----> consume task from queue
+   |        |----> get/update task status into storage
+   |
+   |----> Processing
+   |        |----> recognize file text content
+   |        |----> store recognized document to index
+   |
+   |----> Storage
+   |        |----> Bucket
+   |        |        |----> CRUD of bucket
+   |        |
+   |        |----> Object
+   |        |        |----> CRUD of object
+   |        |        |----> generate object share URL
+```
+
+And there are usecases:
+
+```
+usecase
+   |----> Task Processing
+   |        |----> task management into storage and queue
+   |        |----> task processing stages like recognizing and indexing
+   |
+   |----> Object Storage
+   |        |----> CRUD of bucket and object
+   |        |----> generate share URL of stored object
+   |        |----> check that user has access to ressource 
+   |        |----> upload file to storage and create new task processing event
+```
+
 ## Features
 
  - S3 event monitoring - listen for file creation and copy events.
