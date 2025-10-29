@@ -10,7 +10,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"watchtower/internal/application/mapping"
 	"watchtower/internal/application/models"
 	"watchtower/internal/domain/core/structures"
 	"watchtower/tests/common"
@@ -31,7 +30,7 @@ func TestProcessing(t *testing.T) {
 	t.Run("Positive pipeline", func(t *testing.T) {
 		ctx := context.Background()
 		cCtx, cancel := context.WithCancel(ctx)
-		testEnv.PipelineUC.LaunchListener(cCtx)
+		testEnv.TaskProcessing.LaunchListener(cCtx)
 
 		fileForm, err := common.CreateUploadFileParams(TestInputFilePath)
 		if err != nil {
@@ -41,26 +40,27 @@ func TestProcessing(t *testing.T) {
 		docID := uuid.New().String()
 		recData := models.Recognized{Text: fileForm.FileData.String()}
 		inputFile := models.InputFile{Name: fileForm.FilePath, Data: *fileForm.FileData}
-		docObject := models.DocumentObject{
-			FileName:   path.Base(fileForm.FilePath),
-			FilePath:   fileForm.FilePath,
-			FileSize:   fileForm.FileData.Len(),
+		docObject := models.Document{
+			Index:      TestBucketName,
+			Name:       path.Base(fileForm.FilePath),
+			Path:       fileForm.FilePath,
+			Size:       fileForm.FileData.Len(),
 			Content:    fileForm.FileData.String(),
 			CreatedAt:  time.Now(),
 			ModifiedAt: time.Now(),
 		}
-		matchedStoreDocument := mock.MatchedBy(func(doc *domain.Document) bool {
+		matchedStoreDocument := mock.MatchedBy(func(doc *models.Document) bool {
 			indexFlag := doc.Index == TestBucketName
-			fileNameFlag := doc.FileName == docObject.FileName
-			filePathFlag := doc.FilePath == docObject.FilePath
-			fileSizeFlag := doc.FileSize == docObject.FileSize
+			fileNameFlag := doc.Name == docObject.Name
+			filePathFlag := doc.Path == docObject.Path
+			fileSizeFlag := doc.Size == docObject.Size
 			contentFlag := doc.Content == docObject.Content
 			return indexFlag && fileNameFlag && filePathFlag && fileSizeFlag && contentFlag
 		})
 		testEnv.Recognizer.On("Recognize", inputFile).Return(&recData, nil).Once()
 		testEnv.DocStorage.On("StoreDocument", matchedStoreDocument).Return(docID, nil).Once()
 
-		task, err := testEnv.PipelineUC.CreateTask(ctx, *fileForm)
+		task, err := testEnv.TaskProcessing.CreateTask(ctx, *fileForm)
 		assert.NoError(t, err, "failed to upload test input file to s3")
 
 		timeoutCh := time.After(7 * time.Second)
@@ -81,12 +81,12 @@ func TestProcessing(t *testing.T) {
 	t.Run("Failed to load object pipeline", func(t *testing.T) {
 		ctx := context.Background()
 		cCtx, cancel := context.WithCancel(ctx)
-		testEnv.PipelineUC.LaunchListener(cCtx)
+		testEnv.TaskProcessing.LaunchListener(cCtx)
 
 		task := domain.CreateNewTaskEvent(TestBucketName, path.Base(TestInputFilePath), 0)
 		taskID := task.ID
 
-		rmqMsg := mapping.MessageFromTaskEvent(task)
+		rmqMsg := models.MessageFromTask(task)
 		err := testEnv.TaskQueue.Publish(ctx, rmqMsg)
 		assert.NoError(t, err, "failed to publish task event")
 
@@ -108,7 +108,7 @@ func TestProcessing(t *testing.T) {
 	t.Run("Failed to recognize pipeline", func(t *testing.T) {
 		ctx := context.Background()
 		cCtx, cancel := context.WithCancel(ctx)
-		testEnv.PipelineUC.LaunchListener(cCtx)
+		testEnv.TaskProcessing.LaunchListener(cCtx)
 
 		fileForm, err := common.CreateUploadFileParams(TestInputFilePath)
 		if err != nil {
@@ -120,7 +120,7 @@ func TestProcessing(t *testing.T) {
 		recErr := fmt.Errorf("service unavailable")
 		testEnv.Recognizer.On("Recognize", inputFile).Return(&recData, recErr).Once()
 
-		task, err := testEnv.PipelineUC.CreateTask(ctx, *fileForm)
+		task, err := testEnv.TaskProcessing.CreateTask(ctx, *fileForm)
 		assert.NoError(t, err, "failed to upload test input file to s3")
 
 		timeoutCh := time.After(7 * time.Second)
@@ -141,7 +141,7 @@ func TestProcessing(t *testing.T) {
 	t.Run("Failed to store document pipeline", func(t *testing.T) {
 		ctx := context.Background()
 		cCtx, cancel := context.WithCancel(ctx)
-		testEnv.PipelineUC.LaunchListener(cCtx)
+		testEnv.TaskProcessing.LaunchListener(cCtx)
 
 		fileForm, err := common.CreateUploadFileParams(TestInputFilePath)
 		if err != nil {
@@ -150,19 +150,20 @@ func TestProcessing(t *testing.T) {
 
 		recData := models.Recognized{Text: fileForm.FileData.String()}
 		inputFile := models.InputFile{Name: fileForm.FilePath, Data: *fileForm.FileData}
-		docObject := models.DocumentObject{
-			FileName:   path.Base(fileForm.FilePath),
-			FilePath:   fileForm.FilePath,
-			FileSize:   fileForm.FileData.Len(),
+		docObject := models.Document{
+			Index:      TestBucketName,
+			Name:       path.Base(fileForm.FilePath),
+			Path:       fileForm.FilePath,
+			Size:       fileForm.FileData.Len(),
 			Content:    fileForm.FileData.String(),
 			CreatedAt:  time.Now(),
 			ModifiedAt: time.Now(),
 		}
-		matchedStoreDocument := mock.MatchedBy(func(doc *domain.Document) bool {
+		matchedStoreDocument := mock.MatchedBy(func(doc *models.Document) bool {
 			indexFlag := doc.Index == TestBucketName
-			fileNameFlag := doc.FileName == docObject.FileName
-			filePathFlag := doc.FilePath == docObject.FilePath
-			fileSizeFlag := doc.FileSize == docObject.FileSize
+			fileNameFlag := doc.Name == docObject.Name
+			filePathFlag := doc.Path == docObject.Path
+			fileSizeFlag := doc.Size == docObject.Size
 			contentFlag := doc.Content == docObject.Content
 			return indexFlag && fileNameFlag && filePathFlag && fileSizeFlag && contentFlag
 		})
@@ -170,7 +171,7 @@ func TestProcessing(t *testing.T) {
 		testEnv.Recognizer.On("Recognize", inputFile).Return(&recData, nil).Once()
 		testEnv.DocStorage.On("StoreDocument", matchedStoreDocument).Return("", docErr).Once()
 
-		task, err := testEnv.PipelineUC.CreateTask(ctx, *fileForm)
+		task, err := testEnv.TaskProcessing.CreateTask(ctx, *fileForm)
 		assert.NoError(t, err, "failed to upload test input file to s3")
 
 		timeoutCh := time.After(7 * time.Second)

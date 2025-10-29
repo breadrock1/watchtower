@@ -31,7 +31,7 @@ const docTemplate = `{
                 "operationId": "create-bucket",
                 "parameters": [
                     {
-                        "description": "Bucket name to create",
+                        "description": "Name name to create",
                         "name": "jsonQuery",
                         "in": "body",
                         "required": true,
@@ -106,7 +106,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Bucket name to remove",
+                        "description": "Name name to remove",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -148,7 +148,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Bucket name to remove file",
+                        "description": "Name name to remove file",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -200,7 +200,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Bucket name to get list files",
+                        "description": "Name name to get list files",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -254,7 +254,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Bucket name of src file",
+                        "description": "Name name of src file",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -308,7 +308,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Bucket name to download file",
+                        "description": "Name name to download file",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -362,7 +362,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Bucket name of src file",
+                        "description": "Name name of src file",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -413,7 +413,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Bucket name to remove file",
+                        "description": "Name name to remove file",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -467,7 +467,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Bucket name to share file",
+                        "description": "Name name to share file",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -521,7 +521,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Bucket name to upload files",
+                        "description": "Name name to upload files",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -579,7 +579,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Bucket name to get list files",
+                        "description": "Name name to get list files",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -633,7 +633,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Bucket id of uploaded files",
+                        "description": "Name id of uploaded files",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -687,7 +687,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Bucket id of processing task",
+                        "description": "Name id of processing task",
                         "name": "bucket",
                         "in": "path",
                         "required": true

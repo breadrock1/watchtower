@@ -11,42 +11,145 @@ import (
 	"golang.org/x/sync/semaphore"
 	"watchtower/internal/application/models"
 	"watchtower/internal/application/services/recognizer"
+	"watchtower/internal/application/services/task"
 	"watchtower/internal/application/utils/telemetry"
 	"watchtower/internal/domain/core/structures"
 )
 
 const SemaphoreSize = 10
 
-type PipelineUseCase struct {
-	processorCh chan models.TaskEvent
-	consumerCh  <-chan models.Message
-
-	storageUC    *StorageUseCase
-	taskMangerUC *TaskUseCase
-	recognizer   recognizer.IRecognizer
+type TaskProcessing struct {
+	storageUC   *ObjectStorage
+	taskStorage task.ITaskManager
+	taskQueue   task.ITaskQueue
+	recognizer  recognizer.IRecognizer
 }
 
-func NewPipelineUseCase(
-	storageUC *StorageUseCase,
-	taskMangerUC *TaskUseCase,
+func NewTaskProcessing(
+	storageUC *ObjectStorage,
+	taskStorage task.ITaskManager,
+	taskQueue task.ITaskQueue,
 	recognizer recognizer.IRecognizer,
-) *PipelineUseCase {
-	consumerCh := taskMangerUC.GetConsumeChannel()
-	processorCh := make(chan models.TaskEvent)
-	return &PipelineUseCase{
-		processorCh:  processorCh,
-		consumerCh:   consumerCh,
-		storageUC:    storageUC,
-		taskMangerUC: taskMangerUC,
-		recognizer:   recognizer,
+) *TaskProcessing {
+	return &TaskProcessing{
+		storageUC:   storageUC,
+		taskStorage: taskStorage,
+		taskQueue:   taskQueue,
+		recognizer:  recognizer,
 	}
 }
 
-func (p *PipelineUseCase) LaunchListener(ctx context.Context) {
+func (t *TaskProcessing) GetAllTasks(ctx context.Context, bucket string) ([]*models.Task, error) {
+	ctx, span := telemetry.GlobalTracer.Start(ctx, "load-all-tasks")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("bucket", bucket))
+
+	tasks, err := t.taskStorage.GetAll(ctx, bucket)
+	if err != nil {
+		err = fmt.Errorf("task manager error: %w", err)
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return nil, err
+	}
+
+	return tasks, nil
+}
+
+func (t *TaskProcessing) GetTaskByID(ctx context.Context, bucket, taskID string) (*models.Task, error) {
+	ctx, span := telemetry.GlobalTracer.Start(ctx, "get-task-by-id")
+	defer span.End()
+
+	span.SetAttributes(
+		attribute.String("bucket", bucket),
+		attribute.String("task-id", taskID),
+	)
+
+	taskEvent, err := t.taskStorage.Get(ctx, bucket, taskID)
+	if err != nil {
+		err = fmt.Errorf("ftask manager error: %w", err)
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return nil, err
+	}
+
+	return taskEvent, nil
+}
+
+func (t *TaskProcessing) UpdateTaskStatus(ctx context.Context, task *domain.Task) {
+	ctx, span := telemetry.GlobalTracer.Start(ctx, "update-task-status")
+	defer span.End()
+
+	span.SetAttributes(
+		attribute.String("task-id", task.ID.String()),
+		attribute.String("bucket", task.Bucket),
+		attribute.String("message", task.StatusText),
+		attribute.Int("status", int(task.Status)),
+	)
+
+	taskEventDto := models.FromDomainTask(task)
+	if err := t.taskStorage.Push(ctx, &taskEventDto); err != nil {
+		err = fmt.Errorf("task manager error: %w", err)
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		slog.Warn(err.Error())
+	}
+}
+
+func (t *TaskProcessing) CheckTaskAlreadyCreated(ctx context.Context, task *domain.Task) bool {
+	ctx, span := telemetry.GlobalTracer.Start(ctx, "check-task-already-created")
+	defer span.End()
+
+	span.SetAttributes(
+		attribute.String("task-id", task.ID.String()),
+		attribute.String("bucket", task.Bucket),
+		attribute.String("message", task.StatusText),
+		attribute.Int("status", int(task.Status)),
+	)
+
+	storageTask, err := t.taskStorage.Get(ctx, task.Bucket, task.ID.String())
+	if err != nil {
+		slog.Warn("failed to get task from cache", slog.String("err", err.Error()))
+		span.AddEvent("task not found")
+		return false
+	}
+
+	if storageTask == nil {
+		return false
+	}
+
+	taskEvent := storageTask.ToDomain()
+	switch taskEvent.Status {
+	case domain.Received:
+		fallthrough
+	case domain.Pending:
+		fallthrough
+	case domain.Processing:
+		return true
+	case domain.Failed:
+		fallthrough
+	case domain.Successful:
+		return false
+	default:
+		return false
+	}
+}
+
+func (t *TaskProcessing) PublishTaskToQueue(ctx context.Context, taskEvent *domain.Task) error {
+	msg := models.MessageFromTask(taskEvent)
+	err := t.taskQueue.Publish(ctx, msg)
+	if err != nil {
+		return fmt.Errorf("task queue error: %w", err)
+	}
+	return nil
+}
+
+func (p *TaskProcessing) LaunchListener(ctx context.Context) {
 	go func() {
+		consumeCh := p.taskQueue.GetConsumerChannel()
 		for {
 			select {
-			case cMsg := <-p.consumerCh:
+			case cMsg := <-consumeCh:
 				ctx = cMsg.Ctx
 
 				sem := semaphore.NewWeighted(SemaphoreSize)
@@ -59,7 +162,9 @@ func (p *PipelineUseCase) LaunchListener(ctx context.Context) {
 
 					taskEvent := cMsg.Body.ToDomain()
 					p.handleTask(ctx, taskEvent)
-					p.taskMangerUC.UpdateTaskStatus(ctx, taskEvent)
+					p.UpdateTaskStatus(ctx, taskEvent)
+
+					ctx.Done()
 				}()
 
 			case <-ctx.Done():
@@ -70,10 +175,10 @@ func (p *PipelineUseCase) LaunchListener(ctx context.Context) {
 	}()
 }
 
-func (p *PipelineUseCase) CreateTask(ctx context.Context, form models.UploadFileParams) (*domain.TaskEvent, error) {
-	task := domain.CreateNewTaskEvent(form.Bucket, form.FilePath, int64(form.FileData.Len()))
+func (p *TaskProcessing) CreateTask(ctx context.Context, form models.UploadFileParams) (*domain.Task, error) {
+	taskEvent := domain.CreateNewTaskEvent(form.Bucket, form.FilePath, int64(form.FileData.Len()))
 
-	taskID := task.ID.String()
+	taskID := taskEvent.ID.String()
 	slog.Info("creating new task",
 		slog.String("task-id", taskID),
 		slog.String("bucket", form.Bucket),
@@ -85,10 +190,10 @@ func (p *PipelineUseCase) CreateTask(ctx context.Context, form models.UploadFile
 
 	span.SetAttributes(
 		attribute.String("task-id", taskID),
-		attribute.String("bucket", task.Bucket),
-		attribute.String("file-path", task.FilePath),
-		attribute.Int("task-status", int(task.Status)),
-		attribute.Int64("time", task.CreatedAt.Unix()),
+		attribute.String("bucket", taskEvent.Bucket),
+		attribute.String("file-path", taskEvent.FilePath),
+		attribute.Int("task-status", int(taskEvent.Status)),
+		attribute.Int64("time", taskEvent.CreatedAt.Unix()),
 	)
 
 	if err := p.storageUC.UploadObject(ctx, form); err != nil {
@@ -98,14 +203,14 @@ func (p *PipelineUseCase) CreateTask(ctx context.Context, form models.UploadFile
 		return nil, err
 	}
 
-	if err := p.taskMangerUC.PublishTaskToQueue(ctx, task); err != nil {
+	if err := p.PublishTaskToQueue(ctx, taskEvent); err != nil {
 		err = fmt.Errorf("pipeline error: %w", err)
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
 		return nil, err
 	}
 
-	p.taskMangerUC.UpdateTaskStatus(ctx, task)
+	p.UpdateTaskStatus(ctx, taskEvent)
 	// TODO: Disabled for TechDebt
 	// _ = p.taskMangerUC.CheckTaskAlreadyCreated(ctx, &task)
 	// if p.isTaskAlreadyProcessed(ctx, &taskEvent) {
@@ -113,10 +218,10 @@ func (p *PipelineUseCase) CreateTask(ctx context.Context, form models.UploadFile
 	//	 continue
 	// }
 
-	return task, nil
+	return taskEvent, nil
 }
 
-func (p *PipelineUseCase) handleTask(ctx context.Context, taskEvent *domain.TaskEvent) {
+func (p *TaskProcessing) handleTask(ctx context.Context, taskEvent *domain.Task) {
 	slog.Info("processing task event", slog.String("task-id", taskEvent.ID.String()))
 
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "handle-task-from-queue")
@@ -129,7 +234,7 @@ func (p *PipelineUseCase) handleTask(ctx context.Context, taskEvent *domain.Task
 	)
 
 	taskEvent.SetStatusAndText(domain.Processing, domain.ProcessingStatusText)
-	p.taskMangerUC.UpdateTaskStatus(ctx, taskEvent)
+	p.UpdateTaskStatus(ctx, taskEvent)
 
 	err := p.processTask(ctx, taskEvent)
 	if err != nil {
@@ -145,7 +250,7 @@ func (p *PipelineUseCase) handleTask(ctx context.Context, taskEvent *domain.Task
 	slog.Info(msg, slog.String("task-id", taskEvent.ID.String()))
 }
 
-func (p *PipelineUseCase) processTask(ctx context.Context, taskEvent *domain.TaskEvent) error {
+func (p *TaskProcessing) processTask(ctx context.Context, taskEvent *domain.Task) error {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "task-processing")
 	defer span.End()
 
@@ -185,7 +290,7 @@ func (p *PipelineUseCase) processTask(ctx context.Context, taskEvent *domain.Tas
 	return nil
 }
 
-func (p *PipelineUseCase) loadObject(ctx context.Context, taskEvent *domain.TaskEvent) (bytes.Buffer, error) {
+func (p *TaskProcessing) loadObject(ctx context.Context, taskEvent *domain.Task) (bytes.Buffer, error) {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "load-object-from-storage")
 	defer span.End()
 
@@ -207,9 +312,9 @@ func (p *PipelineUseCase) loadObject(ctx context.Context, taskEvent *domain.Task
 	return fileData, nil
 }
 
-func (p *PipelineUseCase) recognizeObject(
+func (p *TaskProcessing) recognizeObject(
 	ctx context.Context,
-	taskEvent *domain.TaskEvent,
+	taskEvent *domain.Task,
 	fileData bytes.Buffer,
 ) (*models.Recognized, error) {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "recognize-object-data")

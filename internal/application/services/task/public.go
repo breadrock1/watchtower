@@ -26,7 +26,7 @@ type IConsumer interface {
 }
 
 type ITaskManager interface {
-	Push(ctx context.Context, task *models.TaskEvent) error
-	GetAll(ctx context.Context, bucket string) ([]*models.TaskEvent, error)
-	Get(ctx context.Context, bucket, file string) (*models.TaskEvent, error)
+	Push(ctx context.Context, task *models.Task) error
+	GetAll(ctx context.Context, bucket string) ([]*models.Task, error)
+	Get(ctx context.Context, bucket, file string) (*models.Task, error)
 }

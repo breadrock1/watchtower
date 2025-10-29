@@ -28,28 +28,27 @@ func main() {
 	taskStorage := redis.New(&servConfig.Task.TaskStorage.Redis)
 	taskQueue, err := rmq.New(&servConfig.Task.TaskQueue.Rmq)
 	if err != nil {
-		log.Fatalf("rmq connection failed: %v", err)
+		log.Fatalf("task queue connection failed: %v", err)
 	}
 	launchTasksConsumer(ctx, taskQueue)
 
 	docStorage := docstorage.New(&servConfig.Storage.DocumentStorage.DocSearcher)
 	objStorage, err := s3.New(&servConfig.Storage.ObjectStorage.S3)
 	if err != nil {
-		log.Fatalf("s3 connection failed: %v", err)
+		log.Fatalf("object storage connection failed: %v", err)
 	}
 
 	cCtx, cancel := context.WithCancel(ctx)
-	taskMangerUC := usecase.NewTaskUseCase(taskStorage, taskQueue)
-	storageUC := usecase.NewStorageUseCase(docStorage, objStorage)
-	processorUC := usecase.NewPipelineUseCase(storageUC, taskMangerUC, recognizer)
-	processorUC.LaunchListener(cCtx)
+	objectStorage := usecase.NewObjectStorage(docStorage, objStorage)
+	taskProcessor := usecase.NewTaskProcessing(objectStorage, taskStorage, taskQueue, recognizer)
+	taskProcessor.LaunchListener(cCtx)
 
 	traceProvider, err := telemetry.InitTracer(servConfig.Server.Tracer)
 	if err != nil {
 		slog.Warn("failed to init tracer", slog.String("err", err.Error()))
 	}
 
-	httpServer := httpserver.New(&servConfig.Server, traceProvider, processorUC, storageUC, taskMangerUC)
+	httpServer := httpserver.New(&servConfig.Server, traceProvider, taskProcessor, objectStorage)
 	go func() {
 		if err := httpServer.Start(cCtx); err != nil {
 			log.Fatalf("http server start failed: %v", err)

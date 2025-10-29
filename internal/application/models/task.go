@@ -1,13 +1,14 @@
 package models
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 	"watchtower/internal/domain/core/structures"
 )
 
-type TaskEvent struct {
+type Task struct {
 	ID         uuid.UUID
 	Bucket     string
 	FilePath   string
@@ -18,8 +19,8 @@ type TaskEvent struct {
 	StatusText string
 }
 
-func (te *TaskEvent) ToDomain() *domain.TaskEvent {
-	return &domain.TaskEvent{
+func (te *Task) ToDomain() *domain.Task {
+	return &domain.Task{
 		ID:         te.ID,
 		Bucket:     te.Bucket,
 		FilePath:   te.FilePath,
@@ -31,8 +32,8 @@ func (te *TaskEvent) ToDomain() *domain.TaskEvent {
 	}
 }
 
-func FromDomain(taskEvent *domain.TaskEvent) TaskEvent {
-	return TaskEvent{
+func FromDomainTask(taskEvent *domain.Task) Task {
+	return Task{
 		taskEvent.ID,
 		taskEvent.Bucket,
 		taskEvent.FilePath,
@@ -41,5 +42,22 @@ func FromDomain(taskEvent *domain.TaskEvent) TaskEvent {
 		taskEvent.ModifiedAt,
 		int(taskEvent.Status),
 		taskEvent.StatusText,
+	}
+}
+
+func TaskStatusFromString(enumVal string) (domain.TaskStatus, error) {
+	switch enumVal {
+	case "received":
+		return domain.Received, nil
+	case "pending":
+		return domain.Pending, nil
+	case "processing":
+		return domain.Processing, nil
+	case "successful":
+		return domain.Successful, nil
+	case "failed":
+		return domain.Failed, nil
+	default:
+		return domain.Pending, fmt.Errorf("unknown task status: %s", enumVal)
 	}
 }

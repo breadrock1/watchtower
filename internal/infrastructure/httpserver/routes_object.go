@@ -36,7 +36,7 @@ func (s *Server) CreateStorageObjectsGroup() error {
 // @Tags files
 // @Accept  json
 // @Produce json
-// @Param bucket path string true "Bucket name of src file"
+// @Param bucket path string true "Name name of src file"
 // @Param jsonQuery body CopyFileForm true "Params to copy file"
 // @Success 200 {object} ResponseForm "Ok"
 // @Failure	400 {object} BadRequestForm "Bad Request message"
@@ -53,7 +53,7 @@ func (s *Server) CopyFile(eCtx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	err = s.storage.CopyObject(ctx, bucket, jsonForm.SrcPath, jsonForm.DstPath)
+	err = s.objectStorage.CopyObject(ctx, bucket, jsonForm.SrcPath, jsonForm.DstPath)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
@@ -68,7 +68,7 @@ func (s *Server) CopyFile(eCtx echo.Context) error {
 // @Tags files
 // @Accept  json
 // @Produce json
-// @Param bucket path string true "Bucket name of src file"
+// @Param bucket path string true "Name name of src file"
 // @Param jsonQuery body CopyFileForm true "Params to move file"
 // @Success 200 {object} ResponseForm "Ok"
 // @Failure	400 {object} BadRequestForm "Bad Request message"
@@ -85,7 +85,7 @@ func (s *Server) MoveFile(eCtx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	err = s.storage.MoveObject(ctx, bucket, jsonForm.SrcPath, jsonForm.DstPath)
+	err = s.objectStorage.MoveObject(ctx, bucket, jsonForm.SrcPath, jsonForm.DstPath)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
@@ -100,7 +100,7 @@ func (s *Server) MoveFile(eCtx echo.Context) error {
 // @Tags files
 // @Accept  multipart/form
 // @Produce  json
-// @Param bucket path string true "Bucket name to upload files"
+// @Param bucket path string true "Name name to upload files"
 // @Param files formData file true "Files multipart form"
 // @Param expired query string false "File datetime expired like 2025-01-01T12:01:01Z"
 // @Success 200 {object} ResponseForm "Ok"
@@ -118,7 +118,7 @@ func (s *Server) UploadFile(eCtx echo.Context) error {
 	}
 
 	bucket := eCtx.Param("bucket")
-	exist, err := s.storage.IsBucketExists(eCtx.Request().Context(), bucket)
+	exist, err := s.objectStorage.IsBucketExists(eCtx.Request().Context(), bucket)
 	if err != nil || !exist {
 		retErr := fmt.Errorf("specified bucket %s does not exist", bucket)
 		return echo.NewHTTPError(http.StatusBadRequest, retErr.Error())
@@ -137,7 +137,7 @@ func (s *Server) UploadFile(eCtx echo.Context) error {
 		)
 	}
 
-	uploadedFiles := make([]*models.TaskEvent, len(multipartForm.File["files"]))
+	uploadedFiles := make([]*models.Task, len(multipartForm.File["files"]))
 	for index, fileForm := range multipartForm.File["files"] {
 		fileName := fileForm.Filename
 		fileHandler, err := fileForm.Open()
@@ -172,7 +172,7 @@ func (s *Server) UploadFile(eCtx echo.Context) error {
 			Expired:  &timeVal,
 		}
 
-		task, err := s.processor.CreateTask(ctx, uploadItem)
+		task, err := s.taskProcessor.CreateTask(ctx, uploadItem)
 		if err != nil {
 			slog.Error("failed to upload file to cloud",
 				slog.String("file", fileName),
@@ -181,7 +181,7 @@ func (s *Server) UploadFile(eCtx echo.Context) error {
 			continue
 		}
 
-		modelTask := models.FromDomain(task)
+		modelTask := models.FromDomainTask(task)
 		uploadedFiles[index] = &modelTask
 	}
 
@@ -195,7 +195,7 @@ func (s *Server) UploadFile(eCtx echo.Context) error {
 // @Tags files
 // @Accept  json
 // @Produce json
-// @Param bucket path string true "Bucket name to download file"
+// @Param bucket path string true "Name name to download file"
 // @Param jsonQuery body DownloadFileForm true "Parameters to download file"
 // @Success 200 {file} io.Writer "Ok"
 // @Failure	400 {object} BadRequestForm "Bad Request message"
@@ -211,7 +211,7 @@ func (s *Server) DownloadFile(eCtx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	fileData, err := s.storage.DownloadObject(ctx, bucket, jsonForm.FileName)
+	fileData, err := s.objectStorage.DownloadObject(ctx, bucket, jsonForm.FileName)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
@@ -226,7 +226,7 @@ func (s *Server) DownloadFile(eCtx echo.Context) error {
 // @ID remove-file
 // @Tags files
 // @Produce  json
-// @Param bucket path string true "Bucket name to remove file"
+// @Param bucket path string true "Name name to remove file"
 // @Param jsonQuery body RemoveFileForm true "Parameters to remove file"
 // @Success 200 {object} ResponseForm "Ok"
 // @Failure	400 {object} BadRequestForm "Bad Request message"
@@ -242,7 +242,7 @@ func (s *Server) RemoveFile(eCtx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	if err := s.storage.DeleteObject(ctx, bucket, jsonForm.FileName); err != nil {
+	if err := s.objectStorage.DeleteObject(ctx, bucket, jsonForm.FileName); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
@@ -255,7 +255,7 @@ func (s *Server) RemoveFile(eCtx echo.Context) error {
 // @ID remove-file-2
 // @Tags files
 // @Produce  json
-// @Param bucket path string true "Bucket name to remove file"
+// @Param bucket path string true "Name name to remove file"
 // @Param file_name query string true "Parameters to remove file"
 // @Success 200 {object} ResponseForm "Ok"
 // @Failure	400 {object} BadRequestForm "Bad Request message"
@@ -265,7 +265,7 @@ func (s *Server) RemoveFile2(eCtx echo.Context) error {
 	ctx := eCtx.Request().Context()
 	bucket := eCtx.Param("bucket")
 	fileName := eCtx.QueryParam("file_name")
-	if err := s.storage.DeleteObject(ctx, bucket, fileName); err != nil {
+	if err := s.objectStorage.DeleteObject(ctx, bucket, fileName); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
@@ -279,7 +279,7 @@ func (s *Server) RemoveFile2(eCtx echo.Context) error {
 // @Tags files
 // @Accept  json
 // @Produce json
-// @Param bucket path string true "Bucket name to get list files"
+// @Param bucket path string true "Name name to get list files"
 // @Param jsonQuery body GetFilesForm true "Parameters to get list files"
 // @Success 200 {object} ResponseForm "Ok"
 // @Failure	400 {object} BadRequestForm "Bad Request message"
@@ -296,7 +296,7 @@ func (s *Server) GetFiles(eCtx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	listObjects, err := s.storage.GetBucketObjects(ctx, bucket, jsonForm.DirectoryName)
+	listObjects, err := s.objectStorage.GetBucketObjects(ctx, bucket, jsonForm.DirectoryName)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
@@ -311,7 +311,7 @@ func (s *Server) GetFiles(eCtx echo.Context) error {
 // @Tags files
 // @Accept  json
 // @Produce json
-// @Param bucket path string true "Bucket name to get list files"
+// @Param bucket path string true "Name name to get list files"
 // @Param jsonQuery body GetFileAttributesForm true "Parameters to get list files"
 // @Success 200 {object} ResponseForm "Ok"
 // @Failure	400 {object} BadRequestForm "Bad Request message"
@@ -328,7 +328,7 @@ func (s *Server) GetFileAttributes(eCtx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	listObjects, err := s.storage.GetFileMetadata(ctx, bucket, jsonForm.FilePath)
+	listObjects, err := s.objectStorage.GetFileMetadata(ctx, bucket, jsonForm.FilePath)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
@@ -343,7 +343,7 @@ func (s *Server) GetFileAttributes(eCtx echo.Context) error {
 // @Tags share
 // @Accept  json
 // @Produce json
-// @Param bucket path string true "Bucket name to share file"
+// @Param bucket path string true "Name name to share file"
 // @Param jsonQuery body ShareFileForm true "Parameters to share file"
 // @Success 200 {object} ResponseForm "Ok"
 // @Failure	400 {object} BadRequestForm "Bad Request message"
@@ -362,7 +362,7 @@ func (s *Server) ShareFile(eCtx echo.Context) error {
 
 	expired := time.Second * time.Duration(form.ExpiredSecs)
 	params := models.ShareObjectParams{Bucket: bucket, FilePath: form.FilePath, Expired: &expired}
-	url, err := s.storage.ShareObject(ctx, params)
+	url, err := s.objectStorage.ShareObject(ctx, params)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}

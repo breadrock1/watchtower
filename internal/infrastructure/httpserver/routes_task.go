@@ -5,7 +5,6 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"golang.org/x/exp/slices"
-	"watchtower/internal/application/mapping"
 	"watchtower/internal/application/models"
 )
 
@@ -25,9 +24,9 @@ func (s *Server) CreateTasksGroup() error {
 // @Tags tasks
 // @Accept  json
 // @Produce json
-// @Param bucket path string true "Bucket id of uploaded files"
+// @Param bucket path string true "Name id of uploaded files"
 // @Param status query string false "Status tasks to filter target result"
-// @Success 200 {object} []dto.TaskEvent "Ok"
+// @Success 200 {object} []dto.Task "Ok"
 // @Failure	400 {object} BadRequestForm "Bad Request message"
 // @Failure	503 {object} ServerErrorForm "Server does not available"
 // @Router /tasks/{bucket} [get]
@@ -38,7 +37,7 @@ func (s *Server) LoadTasks(eCtx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "bucket is required")
 	}
 
-	tasks, err := s.taskManager.GetAllTasks(ctx, bucket)
+	tasks, err := s.taskProcessor.GetAllTasks(ctx, bucket)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
@@ -48,12 +47,12 @@ func (s *Server) LoadTasks(eCtx echo.Context) error {
 		return eCtx.JSON(200, tasks)
 	}
 
-	inputTaskStatus, err := mapping.TaskStatusFromString(status)
+	inputTaskStatus, err := models.TaskStatusFromString(status)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, "unknown status")
 	}
 
-	foundedTasks := slices.DeleteFunc(tasks, func(event *models.TaskEvent) bool {
+	foundedTasks := slices.DeleteFunc(tasks, func(event *models.Task) bool {
 		return event.Status != int(inputTaskStatus)
 	})
 
@@ -67,9 +66,9 @@ func (s *Server) LoadTasks(eCtx echo.Context) error {
 // @Tags tasks
 // @Accept  json
 // @Produce json
-// @Param bucket path string true "Bucket id of processing task"
+// @Param bucket path string true "Name id of processing task"
 // @Param task_id path string true "Task ID"
-// @Success 200 {object} dto.TaskEvent "Ok"
+// @Success 200 {object} dto.Task "Ok"
 // @Failure	400 {object} BadRequestForm "Bad Request message"
 // @Failure	503 {object} ServerErrorForm "Server does not available"
 // @Router /tasks/{bucket}/{task_id} [get]
@@ -85,7 +84,7 @@ func (s *Server) LoadTaskByID(eCtx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "task_id is required")
 	}
 
-	task, err := s.taskManager.GetTaskByID(ctx, bucket, taskID)
+	task, err := s.taskProcessor.GetTaskByID(ctx, bucket, taskID)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}

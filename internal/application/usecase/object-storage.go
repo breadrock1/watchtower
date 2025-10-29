@@ -14,21 +14,21 @@ import (
 	"watchtower/internal/domain/core/structures"
 )
 
-type StorageUseCase struct {
+type ObjectStorage struct {
 	docStorage storage.IDocumentStorage
 	objStorage storage.IObjectStorage
 }
 
-func NewStorageUseCase(
+func NewObjectStorage(
 	docStorage storage.IDocumentStorage,
 	objStorage storage.IObjectStorage,
-) *StorageUseCase {
-	return &StorageUseCase{docStorage, objStorage}
+) *ObjectStorage {
+	return &ObjectStorage{docStorage, objStorage}
 }
 
-func (s *StorageUseCase) StoreDocument(
+func (s *ObjectStorage) StoreDocument(
 	ctx context.Context,
-	taskEvent *domain.TaskEvent,
+	taskEvent *domain.Task,
 	fileData bytes.Buffer,
 	recData *models.Recognized,
 ) (string, error) {
@@ -41,11 +41,11 @@ func (s *StorageUseCase) StoreDocument(
 		attribute.String("file-path", taskEvent.FilePath),
 	)
 
-	doc := &domain.Document{
+	doc := &models.Document{
 		Index:      taskEvent.Bucket,
-		FileName:   path.Base(taskEvent.FilePath),
-		FilePath:   taskEvent.FilePath,
-		FileSize:   fileData.Len(),
+		Name:       path.Base(taskEvent.FilePath),
+		Path:       taskEvent.FilePath,
+		Size:       fileData.Len(),
 		Content:    recData.Text,
 		CreatedAt:  taskEvent.CreatedAt,
 		ModifiedAt: taskEvent.ModifiedAt,
@@ -62,7 +62,7 @@ func (s *StorageUseCase) StoreDocument(
 	return docID, nil
 }
 
-func (s *StorageUseCase) GetBuckets(ctx context.Context) ([]models.Bucket, error) {
+func (s *ObjectStorage) GetBuckets(ctx context.Context) ([]models.Bucket, error) {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "get-buckets")
 	defer span.End()
 
@@ -77,7 +77,7 @@ func (s *StorageUseCase) GetBuckets(ctx context.Context) ([]models.Bucket, error
 	return buckets, err
 }
 
-func (s *StorageUseCase) CreateBucket(ctx context.Context, bucket string) error {
+func (s *ObjectStorage) CreateBucket(ctx context.Context, bucket string) error {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "create-bucket")
 	defer span.End()
 
@@ -94,7 +94,7 @@ func (s *StorageUseCase) CreateBucket(ctx context.Context, bucket string) error 
 	return nil
 }
 
-func (s *StorageUseCase) RemoveBucket(ctx context.Context, bucket string) error {
+func (s *ObjectStorage) RemoveBucket(ctx context.Context, bucket string) error {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "remove-bucket")
 	defer span.End()
 
@@ -110,7 +110,7 @@ func (s *StorageUseCase) RemoveBucket(ctx context.Context, bucket string) error 
 	return nil
 }
 
-func (s *StorageUseCase) IsBucketExists(ctx context.Context, bucket string) (bool, error) {
+func (s *ObjectStorage) IsBucketExists(ctx context.Context, bucket string) (bool, error) {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "is-bucket-exists")
 	defer span.End()
 
@@ -127,7 +127,7 @@ func (s *StorageUseCase) IsBucketExists(ctx context.Context, bucket string) (boo
 	return status, nil
 }
 
-func (s *StorageUseCase) GetFileMetadata(ctx context.Context, bucket, filePath string) (*models.FileAttributes, error) {
+func (s *ObjectStorage) GetFileMetadata(ctx context.Context, bucket, filePath string) (*models.Object, error) {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "get-file-metadata")
 	defer span.End()
 
@@ -146,7 +146,7 @@ func (s *StorageUseCase) GetFileMetadata(ctx context.Context, bucket, filePath s
 	return attrs, nil
 }
 
-func (s *StorageUseCase) GetBucketObjects(ctx context.Context, bucket, folder string) ([]models.FileObject, error) {
+func (s *ObjectStorage) GetBucketObjects(ctx context.Context, bucket, folder string) ([]models.Object, error) {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "get-bucket-objects")
 	defer span.End()
 
@@ -166,7 +166,7 @@ func (s *StorageUseCase) GetBucketObjects(ctx context.Context, bucket, folder st
 	return objects, err
 }
 
-func (s *StorageUseCase) CopyObject(ctx context.Context, bucket, srcPath, dstPath string) error {
+func (s *ObjectStorage) CopyObject(ctx context.Context, bucket, srcPath, dstPath string) error {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "copy-object")
 	defer span.End()
 
@@ -186,7 +186,7 @@ func (s *StorageUseCase) CopyObject(ctx context.Context, bucket, srcPath, dstPat
 	return nil
 }
 
-func (s *StorageUseCase) DeleteObject(ctx context.Context, bucket, filePath string) error {
+func (s *ObjectStorage) DeleteObject(ctx context.Context, bucket, filePath string) error {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "copy-object")
 	defer span.End()
 
@@ -205,7 +205,7 @@ func (s *StorageUseCase) DeleteObject(ctx context.Context, bucket, filePath stri
 	return nil
 }
 
-func (s *StorageUseCase) MoveObject(ctx context.Context, bucket, srcPath, dstPath string) error {
+func (s *ObjectStorage) MoveObject(ctx context.Context, bucket, srcPath, dstPath string) error {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "move-file")
 	defer span.End()
 
@@ -234,7 +234,7 @@ func (s *StorageUseCase) MoveObject(ctx context.Context, bucket, srcPath, dstPat
 	return nil
 }
 
-func (s *StorageUseCase) UploadObject(ctx context.Context, fileForm models.UploadFileParams) error {
+func (s *ObjectStorage) UploadObject(ctx context.Context, fileForm models.UploadFileParams) error {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "upload-object")
 	defer span.End()
 
@@ -256,7 +256,7 @@ func (s *StorageUseCase) UploadObject(ctx context.Context, fileForm models.Uploa
 	return nil
 }
 
-func (s *StorageUseCase) ShareObject(ctx context.Context, params models.ShareObjectParams) (string, error) {
+func (s *ObjectStorage) ShareObject(ctx context.Context, params models.ShareObjectParams) (string, error) {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "share-object")
 	defer span.End()
 
@@ -276,7 +276,7 @@ func (s *StorageUseCase) ShareObject(ctx context.Context, params models.ShareObj
 	return sharedURL, nil
 }
 
-func (s *StorageUseCase) DownloadObject(ctx context.Context, bucket, filePath string) (bytes.Buffer, error) {
+func (s *ObjectStorage) DownloadObject(ctx context.Context, bucket, filePath string) (bytes.Buffer, error) {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "download-object")
 	defer span.End()
 
@@ -295,7 +295,7 @@ func (s *StorageUseCase) DownloadObject(ctx context.Context, bucket, filePath st
 	return fileData, nil
 }
 
-func (s *StorageUseCase) DownloadObjectByTask(ctx context.Context, task *domain.TaskEvent) (bytes.Buffer, error) {
+func (s *ObjectStorage) DownloadObjectByTask(ctx context.Context, task *domain.Task) (bytes.Buffer, error) {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "download-object-by-task")
 	defer span.End()
 

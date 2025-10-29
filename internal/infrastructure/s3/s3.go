@@ -46,7 +46,7 @@ func (s *S3Client) GetBuckets(ctx context.Context) ([]models.Bucket, error) {
 	for index, bucketInfo := range buckets {
 		bucketNames[index] = models.Bucket{
 			CreatedAt: bucketInfo.CreationDate,
-			Bucket:    bucketInfo.Name,
+			Name:      bucketInfo.Name,
 			Path:      "",
 		}
 	}
@@ -80,7 +80,7 @@ func (s *S3Client) IsBucketExist(ctx context.Context, bucket string) (bool, erro
 	return result, nil
 }
 
-func (s *S3Client) GetObjectMetadata(ctx context.Context, bucket, filePath string) (*models.FileAttributes, error) {
+func (s *S3Client) GetObjectMetadata(ctx context.Context, bucket, filePath string) (*models.Object, error) {
 	opts := minio.StatObjectOptions{}
 	filePath = path.Clean(filePath)
 	stats, err := s.mc.StatObject(ctx, bucket, filePath, opts)
@@ -89,18 +89,21 @@ func (s *S3Client) GetObjectMetadata(ctx context.Context, bucket, filePath strin
 		return nil, err
 	}
 
-	itemAttributes := &models.FileAttributes{
-		SHA256:       stats.ChecksumSHA256,
+	itemAttributes := &models.Object{
+		Name:         path.Base(filePath),
+		Path:         path.Clean(filePath),
+		Checksum:     stats.ChecksumSHA256,
 		ContentType:  stats.ContentType,
+		Expired:      stats.Expires,
 		LastModified: stats.LastModified,
 		Size:         stats.Size,
-		Expires:      stats.Expires,
+		IsDirectory:  len(stats.ETag) == 0,
 	}
 
 	return itemAttributes, nil
 }
 
-func (s *S3Client) GetBucketObjects(ctx context.Context, bucket, folder string) ([]models.FileObject, error) {
+func (s *S3Client) GetBucketObjects(ctx context.Context, bucket, folder string) ([]models.Object, error) {
 	opts := minio.ListObjectsOptions{
 		UseV1:     true,
 		Prefix:    folder,
@@ -112,7 +115,7 @@ func (s *S3Client) GetBucketObjects(ctx context.Context, bucket, folder string) 
 		return nil, err
 	}
 
-	dirObjects := make([]models.FileObject, 0)
+	dirObjects := make([]models.Object, 0)
 	for obj := range s.mc.ListObjects(ctx, bucket, opts) {
 		if obj.Err != nil {
 			slog.Warn("s3: failed to get object",
@@ -122,10 +125,15 @@ func (s *S3Client) GetBucketObjects(ctx context.Context, bucket, folder string) 
 			continue
 		}
 
-		dirObjects = append(dirObjects, models.FileObject{
-			FileName:      obj.Key,
-			DirectoryName: folder,
-			IsDirectory:   len(obj.ETag) == 0,
+		dirObjects = append(dirObjects, models.Object{
+			Name:         obj.Key,
+			Path:         folder,
+			Checksum:     obj.ChecksumSHA256,
+			ContentType:  obj.ContentType,
+			LastModified: obj.LastModified,
+			Expired:      obj.Expiration,
+			Size:         obj.Size,
+			IsDirectory:  len(obj.ETag) == 0,
 		})
 	}
 

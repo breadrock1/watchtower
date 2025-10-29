@@ -25,7 +25,7 @@ func New(config *Config) *RedisClient {
 	}
 }
 
-func (rs *RedisClient) GetAll(ctx context.Context, bucket string) ([]*models.TaskEvent, error) {
+func (rs *RedisClient) GetAll(ctx context.Context, bucket string) ([]*models.Task, error) {
 	key := rs.generateUniqID(bucket, "*")
 	status := rs.rsConn.Scan(ctx, 0, key, -1)
 	if status.Err() != nil {
@@ -33,7 +33,7 @@ func (rs *RedisClient) GetAll(ctx context.Context, bucket string) ([]*models.Tas
 	}
 
 	rKeys, _ := status.Val()
-	tasks := make([]*models.TaskEvent, len(rKeys))
+	tasks := make([]*models.Task, len(rKeys))
 	for index, rKey := range rKeys {
 		cmd := rs.rsConn.Get(ctx, rKey)
 		data, err := cmd.Bytes()
@@ -60,7 +60,7 @@ func (rs *RedisClient) GetAll(ctx context.Context, bucket string) ([]*models.Tas
 	return tasks, nil
 }
 
-func (rs *RedisClient) Get(ctx context.Context, bucket, taskID string) (*models.TaskEvent, error) {
+func (rs *RedisClient) Get(ctx context.Context, bucket, taskID string) (*models.Task, error) {
 	key := rs.generateUniqID(bucket, taskID)
 	cmd := rs.rsConn.Get(ctx, key)
 	if cmd.Err() != nil {
@@ -85,7 +85,7 @@ func (rs *RedisClient) Get(ctx context.Context, bucket, taskID string) (*models.
 	return taskEvent, nil
 }
 
-func (rs *RedisClient) Push(ctx context.Context, task *models.TaskEvent) error {
+func (rs *RedisClient) Push(ctx context.Context, task *models.Task) error {
 	key := rs.generateUniqID(task.Bucket, task.ID.String())
 
 	value := ConvertFromTaskEvent(task)

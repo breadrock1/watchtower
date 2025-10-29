@@ -49,25 +49,22 @@ type Server struct {
 	server *echo.Echo
 	tracer trace.Tracer
 
-	processor   *usecase.PipelineUseCase
-	storage     *usecase.StorageUseCase
-	taskManager *usecase.TaskUseCase
+	taskProcessor *usecase.TaskProcessing
+	objectStorage *usecase.ObjectStorage
 }
 
 func New(
 	config *config.ServerConfig,
 	tracer trace.Tracer,
-	processor *usecase.PipelineUseCase,
-	storage *usecase.StorageUseCase,
-	taskManager *usecase.TaskUseCase,
+	taskProcessor *usecase.TaskProcessing,
+	objectStorage *usecase.ObjectStorage,
 ) *Server {
 	return &Server{
 		config: config,
 		tracer: tracer,
 
-		processor:   processor,
-		storage:     storage,
-		taskManager: taskManager,
+		taskProcessor: taskProcessor,
+		objectStorage: objectStorage,
 	}
 }
 

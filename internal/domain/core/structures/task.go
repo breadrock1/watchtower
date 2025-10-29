@@ -21,7 +21,7 @@ const (
 const PublishedStatusText = "publisher"
 const ProcessingStatusText = "processing"
 
-type TaskEvent struct {
+type Task struct {
 	ID         uuid.UUID
 	Bucket     string
 	FilePath   string
@@ -42,13 +42,13 @@ func GenerateUniqID(bucket, suffix string) string {
 	return suffix
 }
 
-func CreateNewTaskEvent(bucket, filePath string, fileSize int64) *TaskEvent {
+func CreateNewTaskEvent(bucket, filePath string, fileSize int64) *Task {
 	// TODO: Disabled for TechDebt
-	// taskID := GenerateUniqID(form.Bucket, form.FilePath)
+	// taskID := GenerateUniqID(form.Name, form.FilePath)
 	taskID := GenerateTaskID()
 
 	currTime := time.Now()
-	task := &TaskEvent{
+	task := &Task{
 		ID:         taskID,
 		Bucket:     bucket,
 		FilePath:   filePath,
@@ -62,7 +62,7 @@ func CreateNewTaskEvent(bucket, filePath string, fileSize int64) *TaskEvent {
 	return task
 }
 
-func (t *TaskEvent) SetStatusAndText(status TaskStatus, msg string) {
+func (t *Task) SetStatusAndText(status TaskStatus, msg string) {
 	t.Status = status
 	t.StatusText = msg
 }

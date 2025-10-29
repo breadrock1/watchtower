@@ -28,7 +28,7 @@ func (s *Server) CreateStorageBucketsGroup() error {
 // @Router /cloud/buckets [get]
 func (s *Server) GetBuckets(eCtx echo.Context) error {
 	ctx := eCtx.Request().Context()
-	watcherDirs, err := s.storage.GetBuckets(ctx)
+	watcherDirs, err := s.objectStorage.GetBuckets(ctx)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
@@ -43,7 +43,7 @@ func (s *Server) GetBuckets(eCtx echo.Context) error {
 // @Tags buckets
 // @Accept  json
 // @Produce json
-// @Param jsonQuery body CreateBucketForm true "Bucket name to create"
+// @Param jsonQuery body CreateBucketForm true "Name name to create"
 // @Success 200 {object} ResponseForm "Ok"
 // @Failure	400 {object} BadRequestForm "Bad Request message"
 // @Failure	503 {object} ServerErrorForm "Server does not available"
@@ -58,7 +58,7 @@ func (s *Server) CreateBucket(eCtx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	err = s.storage.CreateBucket(ctx, jsonForm.BucketName)
+	err = s.objectStorage.CreateBucket(ctx, jsonForm.BucketName)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
@@ -72,7 +72,7 @@ func (s *Server) CreateBucket(eCtx echo.Context) error {
 // @ID remove-bucket
 // @Tags buckets
 // @Produce  json
-// @Param bucket path string true "Bucket name to remove"
+// @Param bucket path string true "Name name to remove"
 // @Success 200 {object} ResponseForm "Ok"
 // @Failure	400 {object} BadRequestForm "Bad Request message"
 // @Failure	503 {object} ServerErrorForm "Server does not available"
@@ -81,7 +81,7 @@ func (s *Server) RemoveBucket(eCtx echo.Context) error {
 	ctx := eCtx.Request().Context()
 
 	bucket := eCtx.Param("bucket")
-	err := s.storage.RemoveBucket(ctx, bucket)
+	err := s.objectStorage.RemoveBucket(ctx, bucket)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}

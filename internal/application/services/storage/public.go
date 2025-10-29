@@ -5,7 +5,6 @@ import (
 	"context"
 
 	"watchtower/internal/application/models"
-	"watchtower/internal/domain/core/structures"
 )
 
 type IObjectStorage interface {
@@ -29,8 +28,8 @@ type IBucketManager interface {
 type IFileManager interface {
 	DeleteObject(ctx context.Context, bucket, filePath string) error
 	CopyObject(ctx context.Context, bucket, srcPath, dstPath string) error
-	GetBucketObjects(ctx context.Context, bucket, filePath string) ([]models.FileObject, error)
-	GetObjectMetadata(ctx context.Context, bucket, filePath string) (*models.FileAttributes, error)
+	GetBucketObjects(ctx context.Context, bucket, filePath string) ([]models.Object, error)
+	GetObjectMetadata(ctx context.Context, bucket, filePath string) (*models.Object, error)
 }
 
 type IShareManager interface {
@@ -43,5 +42,5 @@ type IFileLoader interface {
 }
 
 type IDocumentManager interface {
-	StoreDocument(ctx context.Context, document *domain.Document) (string, error)
+	StoreDocument(ctx context.Context, document *models.Document) (string, error)
 }

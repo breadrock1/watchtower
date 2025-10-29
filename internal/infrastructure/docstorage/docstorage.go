@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"watchtower/internal/application/models"
 	"watchtower/internal/application/utils"
-	"watchtower/internal/domain/core/structures"
 )
 
 const DocumentJsonMime = "application/json"
@@ -25,12 +25,12 @@ func New(config *Config) *DocSearchClient {
 	}
 }
 
-func (d *DocSearchClient) StoreDocument(ctx context.Context, doc *domain.Document) (string, error) {
+func (d *DocSearchClient) StoreDocument(ctx context.Context, doc *models.Document) (string, error) {
 	index := doc.Index
 	storeDoc := StoreDocumentForm{
-		FileName:   doc.FileName,
-		FilePath:   doc.FilePath,
-		FileSize:   doc.FileSize,
+		FileName:   doc.Name,
+		FilePath:   doc.Path,
+		FileSize:   doc.Size,
 		Content:    doc.Content,
 		CreatedAt:  doc.CreatedAt.UnixMilli(),
 		ModifiedAt: doc.ModifiedAt.UnixMilli(),
@@ -49,7 +49,7 @@ func (d *DocSearchClient) StoreDocument(ctx context.Context, doc *domain.Documen
 
 	slog.Debug("storing document to index",
 		slog.String("index", index),
-		slog.String("file-path", doc.FilePath),
+		slog.String("file-path", doc.Path),
 	)
 
 	reqBody := bytes.NewBuffer(jsonData)

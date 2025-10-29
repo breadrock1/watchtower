@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"time"
+
 	"watchtower/internal/application/models"
 	"watchtower/internal/application/usecase"
 	"watchtower/internal/application/utils/telemetry"
@@ -26,9 +27,8 @@ type TestEnvironment struct {
 	TaskQueue   *rmq.RabbitMQClient
 	TaskManager *redis.RedisClient
 
-	PipelineUC    *usecase.PipelineUseCase
-	StorageUC     *usecase.StorageUseCase
-	TaskManagerUC *usecase.TaskUseCase
+	TaskProcessing *usecase.TaskProcessing
+	ObjectStorage  *usecase.ObjectStorage
 }
 
 func InitTestEnvironment(configFilePath string) (*TestEnvironment, error) {
@@ -59,19 +59,17 @@ func InitTestEnvironment(configFilePath string) (*TestEnvironment, error) {
 		return nil, fmt.Errorf("failed to launch task queue consumer: %w", err)
 	}
 
-	taskMangerUC := usecase.NewTaskUseCase(taskStorage, taskQueue)
-	storageUC := usecase.NewStorageUseCase(docStorage, objStorage)
-	pipelineUC := usecase.NewPipelineUseCase(storageUC, taskMangerUC, recognizer)
+	objectStorage := usecase.NewObjectStorage(docStorage, objStorage)
+	taskProcessing := usecase.NewTaskProcessing(objectStorage, taskStorage, taskQueue, recognizer)
 
 	testEnvironment := &TestEnvironment{
-		Recognizer:    recognizer,
-		DocStorage:    docStorage,
-		ObjStorage:    objStorage,
-		TaskQueue:     taskQueue,
-		TaskManager:   taskStorage,
-		PipelineUC:    pipelineUC,
-		StorageUC:     storageUC,
-		TaskManagerUC: taskMangerUC,
+		Recognizer:     recognizer,
+		DocStorage:     docStorage,
+		ObjStorage:     objStorage,
+		TaskQueue:      taskQueue,
+		TaskManager:    taskStorage,
+		TaskProcessing: taskProcessing,
+		ObjectStorage:  objectStorage,
 	}
 
 	return testEnvironment, nil

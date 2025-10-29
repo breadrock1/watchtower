@@ -20,7 +20,7 @@ type RedisValue struct {
 	EventType  int    `json:"event_type"`
 }
 
-func (rv *RedisValue) ConvertToTaskEvent() (*models.TaskEvent, error) {
+func (rv *RedisValue) ConvertToTaskEvent() (*models.Task, error) {
 	modDt := time.Unix(rv.ModifiedAt, 0)
 	createDt := time.Unix(rv.CreatedAt, 0)
 	taskID, err := uuid.Parse(rv.ID)
@@ -28,7 +28,7 @@ func (rv *RedisValue) ConvertToTaskEvent() (*models.TaskEvent, error) {
 		return nil, fmt.Errorf("invalid task id: %w", err)
 	}
 
-	event := &models.TaskEvent{
+	event := &models.Task{
 		ID:         taskID,
 		Bucket:     rv.Bucket,
 		FilePath:   rv.FilePath,
@@ -42,7 +42,7 @@ func (rv *RedisValue) ConvertToTaskEvent() (*models.TaskEvent, error) {
 	return event, nil
 }
 
-func ConvertFromTaskEvent(taskEvent *models.TaskEvent) *RedisValue {
+func ConvertFromTaskEvent(taskEvent *models.Task) *RedisValue {
 	return &RedisValue{
 		ID:         taskEvent.ID.String(),
 		Bucket:     taskEvent.Bucket,

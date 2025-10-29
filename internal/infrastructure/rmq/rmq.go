@@ -20,11 +20,12 @@ import (
 const ConsumerName = "watchtower-consumer"
 
 type RabbitMQClient struct {
-	conn     *amqp.Connection
-	channel  *amqp.Channel
-	config   *Config
 	redirect chan models.Message
 	done     chan error
+	config   *Config
+
+	conn    *amqp.Connection
+	channel *amqp.Channel
 }
 
 func New(config *Config) (*RabbitMQClient, error) {
@@ -45,11 +46,11 @@ func New(config *Config) (*RabbitMQClient, error) {
 	}
 
 	client := &RabbitMQClient{
-		conn,
-		rmqCh,
-		config,
 		make(chan models.Message),
 		make(chan error),
+		config,
+		conn,
+		rmqCh,
 	}
 
 	return client, nil
@@ -74,7 +75,7 @@ func (r *RabbitMQClient) Publish(ctx context.Context, msg models.Message) error 
 	err = r.channel.Publish(
 		r.config.Exchange,
 		r.config.RoutingKey,
-		false,
+		true,
 		false,
 		amqp.Publishing{
 			ContentType: "application/json",
@@ -148,8 +149,8 @@ func (r *RabbitMQClient) handleMessage(deliveries <-chan amqp.Delivery, done cha
 		ctx := extractSpanContextFromHeaders(delMsg.Headers)
 		span := trace.SpanFromContext(ctx)
 
-		msg := &models.Message{}
-		err := json.Unmarshal(delMsg.Body, msg)
+		consumeMsg := &Message{}
+		err := json.Unmarshal(delMsg.Body, consumeMsg)
 		if err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
@@ -158,9 +159,11 @@ func (r *RabbitMQClient) handleMessage(deliveries <-chan amqp.Delivery, done cha
 		}
 
 		span.SetName("rmq-consume")
-		span.SetAttributes(attribute.String("task-id", msg.EventId.String()))
+		span.SetAttributes(attribute.String("task-id", consumeMsg.EventId.String()))
 
-		msg.Ctx = ctx
+		consumeMsg.Ctx = ctx
+		msg := consumeMsg.ToMessage()
+
 		r.redirect <- *msg
 		span.End()
 	}
