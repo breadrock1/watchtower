@@ -47,7 +47,7 @@ func (s *S3Client) GetAllBuckets(ctx context.Context) ([]cloud.Bucket, error) {
 	for index, bucketInfo := range buckets {
 		bucketNames[index] = cloud.Bucket{
 			CreatedAt: bucketInfo.CreationDate,
-			Name:      bucketInfo.Name,
+			ID:        bucketInfo.Name,
 			Path:      "",
 		}
 	}

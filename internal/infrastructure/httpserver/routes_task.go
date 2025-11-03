@@ -26,9 +26,9 @@ func (s *Server) CreateTasksGroup() error {
 // @Tags tasks
 // @Accept  json
 // @Produce json
-// @Param bucket path string true "Name id of uploaded files"
+// @Param bucket path string true "TaskSchema id of uploaded files"
 // @Param status query string false "Status tasks to filter target result"
-// @Success 200 {object} []dto.Task "Ok"
+// @Success 200 {object} []TaskSchema "Ok"
 // @Failure	400 {object} BadRequestForm "Bad Request message"
 // @Failure	503 {object} ServerErrorForm "Server does not available"
 // @Router /tasks/{bucket} [get]
@@ -59,7 +59,12 @@ func (s *Server) LoadTasks(eCtx echo.Context) error {
 		return task.Status != taskStatus
 	})
 
-	return eCtx.JSON(200, foundedTasks)
+	foundedTasksDto := make([]TaskSchema, len(foundedTasks))
+	for index, task := range foundedTasks {
+		foundedTasksDto[index] = TaskFromDomain(*task)
+	}
+
+	return eCtx.JSON(200, foundedTasksDto)
 }
 
 // LoadTaskByID
@@ -69,9 +74,9 @@ func (s *Server) LoadTasks(eCtx echo.Context) error {
 // @Tags tasks
 // @Accept  json
 // @Produce json
-// @Param bucket path string true "Name id of processing task"
-// @Param task_id path string true "Task ID"
-// @Success 200 {object} dto.Task "Ok"
+// @Param bucket path string true "TaskSchema id of processing task"
+// @Param task_id path string true "TaskSchema ID"
+// @Success 200 {object} TaskSchema "Ok"
 // @Failure	400 {object} BadRequestForm "Bad Request message"
 // @Failure	503 {object} ServerErrorForm "Server does not available"
 // @Router /tasks/{bucket}/{task_id} [get]
@@ -97,5 +102,5 @@ func (s *Server) LoadTaskByID(eCtx echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	return eCtx.JSON(200, task)
+	return eCtx.JSON(200, TaskFromDomain(*task))
 }

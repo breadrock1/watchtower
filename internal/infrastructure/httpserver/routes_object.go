@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
-	"watchtower/internal/domain/core/process"
 
 	"github.com/labstack/echo/v4"
 	"watchtower/internal/domain/core/cloud"
@@ -37,7 +36,7 @@ func (s *Server) CreateStorageObjectsGroup() error {
 // @Tags files
 // @Accept  json
 // @Produce json
-// @Param bucket path string true "Name name of src file"
+// @Param bucket path string true "BucketSchema id of src file"
 // @Param jsonQuery body CopyFileForm true "Params to copy file"
 // @Success 200 {object} ResponseForm "Ok"
 // @Failure	400 {object} BadRequestForm "Bad Request message"
@@ -74,7 +73,7 @@ func (s *Server) CopyFile(eCtx echo.Context) error {
 // @Tags files
 // @Accept  json
 // @Produce json
-// @Param bucket path string true "Name name of src file"
+// @Param bucket path string true "BucketSchema id of src file"
 // @Param jsonQuery body CopyFileForm true "Params to move file"
 // @Success 200 {object} ResponseForm "Ok"
 // @Failure	400 {object} BadRequestForm "Bad Request message"
@@ -111,10 +110,10 @@ func (s *Server) MoveFile(eCtx echo.Context) error {
 // @Tags files
 // @Accept  multipart/form
 // @Produce  json
-// @Param bucket path string true "Name name to upload files"
+// @Param bucket path string true "BucketSchema id to upload files"
 // @Param files formData file true "Files multipart form"
 // @Param expired query string false "File datetime expired like 2025-01-01T12:01:01Z"
-// @Success 200 {object} ResponseForm "Ok"
+// @Success 200 {object} []TaskSchema "Ok"
 // @Failure	400 {object} BadRequestForm "Bad Request message"
 // @Failure	503 {object} ServerErrorForm "Server does not available"
 // @Router /cloud/{bucket}/file/upload [put]
@@ -148,7 +147,7 @@ func (s *Server) UploadFile(eCtx echo.Context) error {
 		)
 	}
 
-	uploadedFiles := make([]*process.Task, len(multipartForm.File["files"]))
+	uploadedFiles := make([]TaskSchema, len(multipartForm.File["files"]))
 	for index, fileForm := range multipartForm.File["files"] {
 		fileName := fileForm.Filename
 		fileHandler, err := fileForm.Open()
@@ -191,7 +190,7 @@ func (s *Server) UploadFile(eCtx echo.Context) error {
 			continue
 		}
 
-		uploadedFiles[index] = task
+		uploadedFiles[index] = TaskFromDomain(*task)
 	}
 
 	return eCtx.JSON(200, uploadedFiles)
@@ -204,7 +203,7 @@ func (s *Server) UploadFile(eCtx echo.Context) error {
 // @Tags files
 // @Accept  json
 // @Produce json
-// @Param bucket path string true "Name name to download file"
+// @Param bucket path string true "BucketSchema id to download file"
 // @Param jsonQuery body DownloadFileForm true "Parameters to download file"
 // @Success 200 {file} io.Writer "Ok"
 // @Failure	400 {object} BadRequestForm "Bad Request message"
@@ -235,7 +234,7 @@ func (s *Server) DownloadFile(eCtx echo.Context) error {
 // @ID remove-file
 // @Tags files
 // @Produce  json
-// @Param bucket path string true "Name name to remove file"
+// @Param bucket path string true "BucketSchema id to remove file"
 // @Param jsonQuery body RemoveFileForm true "Parameters to remove file"
 // @Success 200 {object} ResponseForm "Ok"
 // @Failure	400 {object} BadRequestForm "Bad Request message"
@@ -264,7 +263,7 @@ func (s *Server) RemoveFile(eCtx echo.Context) error {
 // @ID remove-file-2
 // @Tags files
 // @Produce  json
-// @Param bucket path string true "Name name to remove file"
+// @Param bucket path string true "BucketSchema id to remove file"
 // @Param file_name query string true "Parameters to remove file"
 // @Success 200 {object} ResponseForm "Ok"
 // @Failure	400 {object} BadRequestForm "Bad Request message"
@@ -288,9 +287,9 @@ func (s *Server) RemoveFile2(eCtx echo.Context) error {
 // @Tags files
 // @Accept  json
 // @Produce json
-// @Param bucket path string true "Name name to get list files"
+// @Param bucket path string true "BucketSchema id to get list files"
 // @Param jsonQuery body GetFilesForm true "Parameters to get list files"
-// @Success 200 {object} ResponseForm "Ok"
+// @Success 200 {object} []ObjectSchema "Ok"
 // @Failure	400 {object} BadRequestForm "Bad Request message"
 // @Failure	503 {object} ServerErrorForm "Server does not available"
 // @Router /cloud/{bucket}/files [post]
@@ -314,7 +313,12 @@ func (s *Server) GetFiles(eCtx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	return eCtx.JSON(200, listObjects)
+	objectsDto := make([]ObjectSchema, len(listObjects))
+	for index, object := range listObjects {
+		objectsDto[index] = ObjectFromDomain(object)
+	}
+
+	return eCtx.JSON(200, objectsDto)
 }
 
 // GetFileInfo
@@ -324,7 +328,7 @@ func (s *Server) GetFiles(eCtx echo.Context) error {
 // @Tags files
 // @Accept  json
 // @Produce json
-// @Param bucket path string true "Name name to get list files"
+// @Param bucket path string true "BucketSchema id to get list files"
 // @Param jsonQuery body GetFileAttributesForm true "Parameters to get list files"
 // @Success 200 {object} ResponseForm "Ok"
 // @Failure	400 {object} BadRequestForm "Bad Request message"
@@ -341,12 +345,12 @@ func (s *Server) GetFileInfo(eCtx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	listObjects, err := s.state.GetObjectStorage().GetObjectInfo(ctx, bucket, jsonForm.FilePath)
+	object, err := s.state.GetObjectStorage().GetObjectInfo(ctx, bucket, jsonForm.FilePath)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	return eCtx.JSON(200, listObjects)
+	return eCtx.JSON(200, ObjectFromDomain(*object))
 }
 
 // ShareFile
@@ -356,7 +360,7 @@ func (s *Server) GetFileInfo(eCtx echo.Context) error {
 // @Tags share
 // @Accept  json
 // @Produce json
-// @Param bucket path string true "Name name to share file"
+// @Param bucket path string true "BucketSchema id to share file"
 // @Param jsonQuery body ShareFileForm true "Parameters to share file"
 // @Success 200 {object} ResponseForm "Ok"
 // @Failure	400 {object} BadRequestForm "Bad Request message"

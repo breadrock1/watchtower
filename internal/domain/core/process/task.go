@@ -39,7 +39,7 @@ type Task struct {
 
 func CreateNewTask(bucketID cloud.BucketID, objectID cloud.ObjectID) *Task {
 	// TODO: Disabled for TechDebt
-	// taskID := GenerateUniqID(form.Name, form.FilePath)
+	// taskID := GenerateUniqID(form.ID, form.FilePath)
 	taskID := GenerateTaskID()
 
 	currTime := time.Now()
