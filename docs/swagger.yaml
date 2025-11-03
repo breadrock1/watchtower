@@ -1,38 +1,4 @@
-basePath: /api/v1
 definitions:
-  dto.TaskEvent:
-    properties:
-      bucket:
-        type: string
-      created_at:
-        type: string
-      file_path:
-        type: string
-      file_size:
-        type: integer
-      id:
-        type: string
-      modified_at:
-        type: string
-      status:
-        $ref: '#/definitions/dto.TaskStatus'
-      status_text:
-        type: string
-    type: object
-  dto.TaskStatus:
-    enum:
-    - -1
-    - 0
-    - 1
-    - 2
-    - 3
-    type: integer
-    x-enum-varnames:
-    - Failed
-    - Received
-    - Pending
-    - Processing
-    - Successful
   httpserver.BadRequestForm:
     properties:
       message:
@@ -75,6 +41,25 @@ definitions:
         example: test-folder/
         type: string
     type: object
+  httpserver.ObjectSchema:
+    properties:
+      checksum:
+        type: string
+      content_type:
+        type: string
+      expired:
+        type: string
+      is_directory:
+        type: boolean
+      last_modified:
+        type: string
+      name:
+        type: string
+      path:
+        type: string
+      size:
+        type: integer
+    type: object
   httpserver.RemoveFileForm:
     properties:
       file_name:
@@ -108,20 +93,34 @@ definitions:
         example: test-file.docx
         type: string
     type: object
-host: localhost:2893
+  httpserver.TaskSchema:
+    properties:
+      bucket_id:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      modified_at:
+        type: string
+      object_data_size:
+        type: integer
+      object_id:
+        type: string
+      status:
+        type: integer
+      status_text:
+        type: string
+    type: object
 info:
   contact: {}
-  description: Watchtower is a project designed to provide processing files created
-    into cloud by events.
-  title: Watchtower service
-  version: 0.0.1
 paths:
   /cloud/{bucket}:
     delete:
       description: Remove bucket from cloud
       operationId: remove-bucket
       parameters:
-      - description: Bucket name to remove
+      - description: BucketSchema id to remove
         in: path
         name: bucket
         required: true
@@ -149,7 +148,7 @@ paths:
       description: Remove file from cloud
       operationId: remove-file-2
       parameters:
-      - description: Bucket name to remove file
+      - description: BucketSchema id to remove file
         in: path
         name: bucket
         required: true
@@ -184,7 +183,7 @@ paths:
       description: Get file attributes
       operationId: get-file-attrs
       parameters:
-      - description: Bucket name to get list files
+      - description: BucketSchema id to get list files
         in: path
         name: bucket
         required: true
@@ -220,7 +219,7 @@ paths:
       description: Copy file to another location into bucket
       operationId: copy-file
       parameters:
-      - description: Bucket name of src file
+      - description: BucketSchema id of src file
         in: path
         name: bucket
         required: true
@@ -256,7 +255,7 @@ paths:
       description: Download file from cloud
       operationId: download-file
       parameters:
-      - description: Bucket name to download file
+      - description: BucketSchema id to download file
         in: path
         name: bucket
         required: true
@@ -292,7 +291,7 @@ paths:
       description: Move file to another location into bucket
       operationId: move-file
       parameters:
-      - description: Bucket name of src file
+      - description: BucketSchema id of src file
         in: path
         name: bucket
         required: true
@@ -326,7 +325,7 @@ paths:
       description: Remove file from cloud
       operationId: remove-file
       parameters:
-      - description: Bucket name to remove file
+      - description: BucketSchema id to remove file
         in: path
         name: bucket
         required: true
@@ -362,7 +361,7 @@ paths:
       description: Get share URL for file
       operationId: share-file
       parameters:
-      - description: Bucket name to share file
+      - description: BucketSchema id to share file
         in: path
         name: bucket
         required: true
@@ -398,7 +397,7 @@ paths:
       description: Upload files to cloud
       operationId: upload-files
       parameters:
-      - description: Bucket name to upload files
+      - description: BucketSchema id to upload files
         in: path
         name: bucket
         required: true
@@ -418,7 +417,9 @@ paths:
         "200":
           description: Ok
           schema:
-            $ref: '#/definitions/httpserver.ResponseForm'
+            items:
+              $ref: '#/definitions/httpserver.TaskSchema'
+            type: array
         "400":
           description: Bad Request message
           schema:
@@ -437,7 +438,7 @@ paths:
       description: Get files list into bucket
       operationId: get-list-files
       parameters:
-      - description: Bucket name to get list files
+      - description: BucketSchema id to get list files
         in: path
         name: bucket
         required: true
@@ -454,7 +455,9 @@ paths:
         "200":
           description: Ok
           schema:
-            $ref: '#/definitions/httpserver.ResponseForm'
+            items:
+              $ref: '#/definitions/httpserver.ObjectSchema'
+            type: array
         "400":
           description: Bad Request message
           schema:
@@ -473,7 +476,7 @@ paths:
       description: Create new bucket into cloud
       operationId: create-bucket
       parameters:
-      - description: Bucket name to create
+      - description: BucketSchema id to create
         in: body
         name: jsonQuery
         required: true
@@ -524,7 +527,7 @@ paths:
       description: Load tasks (processing/unrecognized/done) of uploaded files
       operationId: load-tasks
       parameters:
-      - description: Bucket id of uploaded files
+      - description: TaskSchema id of uploaded files
         in: path
         name: bucket
         required: true
@@ -540,7 +543,7 @@ paths:
           description: Ok
           schema:
             items:
-              $ref: '#/definitions/dto.TaskEvent'
+              $ref: '#/definitions/httpserver.TaskSchema'
             type: array
         "400":
           description: Bad Request message
@@ -560,12 +563,12 @@ paths:
       description: Load processing/unrecognized/done task by id of uploaded file
       operationId: load-task-by-id
       parameters:
-      - description: Bucket id of processing task
+      - description: TaskSchema id of processing task
         in: path
         name: bucket
         required: true
         type: string
-      - description: Task ID
+      - description: TaskSchema ID
         in: path
         name: task_id
         required: true
@@ -576,7 +579,7 @@ paths:
         "200":
           description: Ok
           schema:
-            $ref: '#/definitions/dto.TaskEvent'
+            $ref: '#/definitions/httpserver.TaskSchema'
         "400":
           description: Bad Request message
           schema:
@@ -589,12 +592,3 @@ paths:
       tags:
       - tasks
 swagger: "2.0"
-tags:
-- description: 'APIs to get status tasks. When TaskStatus may be:'
-  name: tasks
-- description: CRUD APIs to manage cloud buckets
-  name: buckets
-- description: CRUD APIs to manage files into bucket
-  name: files
-- description: Share files by URL API
-  name: share

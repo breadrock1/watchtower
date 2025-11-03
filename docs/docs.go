@@ -31,7 +31,7 @@ const docTemplate = `{
                 "operationId": "create-bucket",
                 "parameters": [
                     {
-                        "description": "ID name to create",
+                        "description": "BucketSchema id to create",
                         "name": "jsonQuery",
                         "in": "body",
                         "required": true,
@@ -106,7 +106,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "ID name to remove",
+                        "description": "BucketSchema id to remove",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -148,7 +148,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "ID name to remove file",
+                        "description": "BucketSchema id to remove file",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -200,7 +200,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "ID name to get list files",
+                        "description": "BucketSchema id to get list files",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -254,7 +254,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "ID name of src file",
+                        "description": "BucketSchema id of src file",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -308,7 +308,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "ID name to download file",
+                        "description": "BucketSchema id to download file",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -362,7 +362,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "ID name of src file",
+                        "description": "BucketSchema id of src file",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -413,7 +413,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "ID name to remove file",
+                        "description": "BucketSchema id to remove file",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -467,7 +467,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "ID name to share file",
+                        "description": "BucketSchema id to share file",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -521,7 +521,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "ID name to upload files",
+                        "description": "BucketSchema id to upload files",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -544,7 +544,10 @@ const docTemplate = `{
                     "200": {
                         "description": "Ok",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ResponseForm"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/httpserver.TaskSchema"
+                            }
                         }
                     },
                     "400": {
@@ -579,7 +582,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "ID name to get list files",
+                        "description": "BucketSchema id to get list files",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -598,7 +601,10 @@ const docTemplate = `{
                     "200": {
                         "description": "Ok",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ResponseForm"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/httpserver.ObjectSchema"
+                            }
                         }
                     },
                     "400": {
@@ -633,7 +639,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "ID id of uploaded files",
+                        "description": "TaskSchema id of uploaded files",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -651,7 +657,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/dto.TaskEvent"
+                                "$ref": "#/definitions/httpserver.TaskSchema"
                             }
                         }
                     },
@@ -687,14 +693,14 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "ID id of processing task",
+                        "description": "TaskSchema id of processing task",
                         "name": "bucket",
                         "in": "path",
                         "required": true
                     },
                     {
                         "type": "string",
-                        "description": "Task ID",
+                        "description": "TaskSchema ID",
                         "name": "task_id",
                         "in": "path",
                         "required": true
@@ -704,7 +710,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Ok",
                         "schema": {
-                            "$ref": "#/definitions/dto.TaskEvent"
+                            "$ref": "#/definitions/httpserver.TaskSchema"
                         }
                     },
                     "400": {
@@ -724,52 +730,6 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "dto.TaskEvent": {
-            "type": "object",
-            "properties": {
-                "bucket": {
-                    "type": "string"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "file_path": {
-                    "type": "string"
-                },
-                "file_size": {
-                    "type": "integer"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "modified_at": {
-                    "type": "string"
-                },
-                "status": {
-                    "$ref": "#/definitions/dto.TaskStatus"
-                },
-                "status_text": {
-                    "type": "string"
-                }
-            }
-        },
-        "dto.TaskStatus": {
-            "type": "integer",
-            "enum": [
-                -1,
-                0,
-                1,
-                2,
-                3
-            ],
-            "x-enum-varnames": [
-                "Failed",
-                "Received",
-                "Pending",
-                "Processing",
-                "Successful"
-            ]
-        },
         "httpserver.BadRequestForm": {
             "type": "object",
             "properties": {
@@ -832,6 +792,35 @@ const docTemplate = `{
                 }
             }
         },
+        "httpserver.ObjectSchema": {
+            "type": "object",
+            "properties": {
+                "checksum": {
+                    "type": "string"
+                },
+                "content_type": {
+                    "type": "string"
+                },
+                "expired": {
+                    "type": "string"
+                },
+                "is_directory": {
+                    "type": "boolean"
+                },
+                "last_modified": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "path": {
+                    "type": "string"
+                },
+                "size": {
+                    "type": "integer"
+                }
+            }
+        },
         "httpserver.RemoveFileForm": {
             "type": "object",
             "properties": {
@@ -879,36 +868,47 @@ const docTemplate = `{
                     "example": "test-file.docx"
                 }
             }
+        },
+        "httpserver.TaskSchema": {
+            "type": "object",
+            "properties": {
+                "bucket_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "modified_at": {
+                    "type": "string"
+                },
+                "object_data_size": {
+                    "type": "integer"
+                },
+                "object_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "status_text": {
+                    "type": "string"
+                }
+            }
         }
-    },
-    "tags": [
-        {
-            "description": "APIs to get status tasks. When TaskStatus may be:",
-            "name": "tasks"
-        },
-        {
-            "description": "CRUD APIs to manage cloud buckets",
-            "name": "buckets"
-        },
-        {
-            "description": "CRUD APIs to manage files into bucket",
-            "name": "files"
-        },
-        {
-            "description": "Share files by URL API",
-            "name": "share"
-        }
-    ]
+    }
 }`
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "0.0.1",
-	Host:             "localhost:2893",
-	BasePath:         "/api/v1",
+	Version:          "",
+	Host:             "",
+	BasePath:         "",
 	Schemes:          []string{},
-	Title:            "Watchtower service",
-	Description:      "Watchtower is a project designed to provide processing files created into cloud by events.",
+	Title:            "",
+	Description:      "",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

@@ -1,13 +1,8 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "Watchtower is a project designed to provide processing files created into cloud by events.",
-        "title": "Watchtower service",
-        "contact": {},
-        "version": "0.0.1"
+        "contact": {}
     },
-    "host": "localhost:2893",
-    "basePath": "/api/v1",
     "paths": {
         "/cloud/bucket": {
             "put": {
@@ -25,7 +20,7 @@
                 "operationId": "create-bucket",
                 "parameters": [
                     {
-                        "description": "Bucket name to create",
+                        "description": "BucketSchema id to create",
                         "name": "jsonQuery",
                         "in": "body",
                         "required": true,
@@ -100,7 +95,7 @@
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Bucket name to remove",
+                        "description": "BucketSchema id to remove",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -142,7 +137,7 @@
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Bucket name to remove file",
+                        "description": "BucketSchema id to remove file",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -194,7 +189,7 @@
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Bucket name to get list files",
+                        "description": "BucketSchema id to get list files",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -248,7 +243,7 @@
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Bucket name of src file",
+                        "description": "BucketSchema id of src file",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -302,7 +297,7 @@
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Bucket name to download file",
+                        "description": "BucketSchema id to download file",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -356,7 +351,7 @@
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Bucket name of src file",
+                        "description": "BucketSchema id of src file",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -407,7 +402,7 @@
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Bucket name to remove file",
+                        "description": "BucketSchema id to remove file",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -461,7 +456,7 @@
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Bucket name to share file",
+                        "description": "BucketSchema id to share file",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -515,7 +510,7 @@
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Bucket name to upload files",
+                        "description": "BucketSchema id to upload files",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -538,7 +533,10 @@
                     "200": {
                         "description": "Ok",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ResponseForm"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/httpserver.TaskSchema"
+                            }
                         }
                     },
                     "400": {
@@ -573,7 +571,7 @@
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Bucket name to get list files",
+                        "description": "BucketSchema id to get list files",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -592,7 +590,10 @@
                     "200": {
                         "description": "Ok",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ResponseForm"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/httpserver.ObjectSchema"
+                            }
                         }
                     },
                     "400": {
@@ -627,7 +628,7 @@
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Bucket id of uploaded files",
+                        "description": "TaskSchema id of uploaded files",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -645,7 +646,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/dto.TaskEvent"
+                                "$ref": "#/definitions/httpserver.TaskSchema"
                             }
                         }
                     },
@@ -681,14 +682,14 @@
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Bucket id of processing task",
+                        "description": "TaskSchema id of processing task",
                         "name": "bucket",
                         "in": "path",
                         "required": true
                     },
                     {
                         "type": "string",
-                        "description": "Task ID",
+                        "description": "TaskSchema ID",
                         "name": "task_id",
                         "in": "path",
                         "required": true
@@ -698,7 +699,7 @@
                     "200": {
                         "description": "Ok",
                         "schema": {
-                            "$ref": "#/definitions/dto.TaskEvent"
+                            "$ref": "#/definitions/httpserver.TaskSchema"
                         }
                     },
                     "400": {
@@ -718,52 +719,6 @@
         }
     },
     "definitions": {
-        "dto.TaskEvent": {
-            "type": "object",
-            "properties": {
-                "bucket": {
-                    "type": "string"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "file_path": {
-                    "type": "string"
-                },
-                "file_size": {
-                    "type": "integer"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "modified_at": {
-                    "type": "string"
-                },
-                "status": {
-                    "$ref": "#/definitions/dto.TaskStatus"
-                },
-                "status_text": {
-                    "type": "string"
-                }
-            }
-        },
-        "dto.TaskStatus": {
-            "type": "integer",
-            "enum": [
-                -1,
-                0,
-                1,
-                2,
-                3
-            ],
-            "x-enum-varnames": [
-                "Failed",
-                "Received",
-                "Pending",
-                "Processing",
-                "Successful"
-            ]
-        },
         "httpserver.BadRequestForm": {
             "type": "object",
             "properties": {
@@ -826,6 +781,35 @@
                 }
             }
         },
+        "httpserver.ObjectSchema": {
+            "type": "object",
+            "properties": {
+                "checksum": {
+                    "type": "string"
+                },
+                "content_type": {
+                    "type": "string"
+                },
+                "expired": {
+                    "type": "string"
+                },
+                "is_directory": {
+                    "type": "boolean"
+                },
+                "last_modified": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "path": {
+                    "type": "string"
+                },
+                "size": {
+                    "type": "integer"
+                }
+            }
+        },
         "httpserver.RemoveFileForm": {
             "type": "object",
             "properties": {
@@ -873,24 +857,35 @@
                     "example": "test-file.docx"
                 }
             }
+        },
+        "httpserver.TaskSchema": {
+            "type": "object",
+            "properties": {
+                "bucket_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "modified_at": {
+                    "type": "string"
+                },
+                "object_data_size": {
+                    "type": "integer"
+                },
+                "object_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "status_text": {
+                    "type": "string"
+                }
+            }
         }
-    },
-    "tags": [
-        {
-            "description": "APIs to get status tasks. When TaskStatus may be:",
-            "name": "tasks"
-        },
-        {
-            "description": "CRUD APIs to manage cloud buckets",
-            "name": "buckets"
-        },
-        {
-            "description": "CRUD APIs to manage files into bucket",
-            "name": "files"
-        },
-        {
-            "description": "Share files by URL API",
-            "name": "share"
-        }
-    ]
+    }
 }
