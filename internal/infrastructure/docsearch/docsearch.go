@@ -1,4 +1,4 @@
-package docstorage
+package docsearch
 
 import (
 	"bytes"
@@ -9,23 +9,23 @@ import (
 	"strings"
 	"time"
 
-	"watchtower/internal/application/models"
 	"watchtower/internal/application/utils"
+	"watchtower/internal/domain/support/docstorage"
 )
 
 const DocumentJsonMime = "application/json"
 
-type DocSearchClient struct {
+type DocSearch struct {
 	config *Config
 }
 
-func New(config *Config) *DocSearchClient {
-	return &DocSearchClient{
+func New(config *Config) *DocSearch {
+	return &DocSearch{
 		config: config,
 	}
 }
 
-func (d *DocSearchClient) StoreDocument(ctx context.Context, doc *models.Document) (string, error) {
+func (ds *DocSearch) StoreDocument(ctx context.Context, doc docstorage.Document) (docstorage.DocumentID, error) {
 	index := doc.Index
 	storeDoc := StoreDocumentForm{
 		FileName:   doc.Name,
@@ -43,7 +43,7 @@ func (d *DocSearchClient) StoreDocument(ctx context.Context, doc *models.Documen
 	}
 
 	buildURL := strings.Builder{}
-	buildURL.WriteString(d.config.Address)
+	buildURL.WriteString(ds.config.Address)
 	buildURL.WriteString(fmt.Sprintf("/storage/%s/create?force=true", index))
 	targetURL := buildURL.String()
 
@@ -53,7 +53,7 @@ func (d *DocSearchClient) StoreDocument(ctx context.Context, doc *models.Documen
 	)
 
 	reqBody := bytes.NewBuffer(jsonData)
-	timeoutReq := d.config.Timeout * time.Second
+	timeoutReq := ds.config.Timeout * time.Second
 	respData, err := utils.PUT(ctx, reqBody, targetURL, DocumentJsonMime, timeoutReq)
 	if err != nil {
 		err = fmt.Errorf("http-request error: %w", err)

@@ -1,10 +1,4 @@
-package docstorage
-
-type CreateIndexForm struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-	Path string `json:"path"`
-}
+package docsearch
 
 type StoreDocumentForm struct {
 	FileName   string `json:"file_name"`

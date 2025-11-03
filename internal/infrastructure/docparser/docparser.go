@@ -8,37 +8,38 @@ import (
 	"mime/multipart"
 	"time"
 
-	"watchtower/internal/application/models"
 	"watchtower/internal/application/utils"
+	"watchtower/internal/domain/support/recognizer"
 )
 
 const RecognitionURL = "/parser/parse/text"
 
-type DocParserClient struct {
+type DocParser struct {
 	config *Config
 }
 
-func New(config *Config) *DocParserClient {
-	return &DocParserClient{config}
+func New(config *Config) *DocParser {
+	return &DocParser{config}
 }
 
-func (dc *DocParserClient) Recognize(ctx context.Context, inputFile models.InputFile) (*models.Recognized, error) {
+func (dc *DocParser) Recognize(ctx context.Context, params recognizer.RecognizeParams) (recognizer.Recognized, error) {
 	var buf bytes.Buffer
+	var recData recognizer.Recognized
 
 	mpw := multipart.NewWriter(&buf)
-	fileForm, err := mpw.CreateFormFile("file", inputFile.Name)
+	fileForm, err := mpw.CreateFormFile("file", params.FileName)
 	if err != nil {
 		err = fmt.Errorf("docparser: create file form error: %w", err)
-		return nil, err
+		return recData, err
 	}
 
-	if _, err = fileForm.Write(inputFile.Data.Bytes()); err != nil {
+	if _, err = fileForm.Write(params.FileData.Bytes()); err != nil {
 		err = fmt.Errorf("docparser: write file form error: %w", err)
-		return nil, err
+		return recData, err
 	}
 
 	if err = mpw.Close(); err != nil {
-		return nil, err
+		return recData, err
 	}
 
 	mimeType := mpw.FormDataContentType()
@@ -47,16 +48,16 @@ func (dc *DocParserClient) Recognize(ctx context.Context, inputFile models.Input
 
 	respData, err := utils.POST(ctx, &buf, targetURL, mimeType, timeoutReq)
 	if err != nil {
-		return nil, err
+		return recData, err
 	}
 
-	var recData Recognized
-	_ = json.Unmarshal(respData, &recData)
-	if len(recData.Text) == 0 {
+	var responseData ParsedContent
+	_ = json.Unmarshal(respData, &responseData)
+	if len(responseData.Text) == 0 {
 		err = fmt.Errorf("docparser: returned empty content data")
-		return nil, err
+		return recData, err
 	}
 
-	recognized := models.Recognized{Text: recData.Text}
-	return &recognized, nil
+	recData = responseData.ToRecognized()
+	return recData, nil
 }

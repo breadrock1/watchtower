@@ -1,6 +1,8 @@
-package models
+package docstorage
 
 import "time"
+
+type DocumentID = string
 
 type Document struct {
 	Index      string

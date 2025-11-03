@@ -11,8 +11,8 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
-	"watchtower/internal/application/models"
 	"watchtower/internal/application/utils/telemetry"
+	"watchtower/internal/domain/core/process"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -20,7 +20,7 @@ import (
 const ConsumerName = "watchtower-consumer"
 
 type RabbitMQClient struct {
-	redirect chan models.Message
+	redirect chan process.Message
 	done     chan error
 	config   *Config
 
@@ -46,7 +46,7 @@ func New(config *Config) (*RabbitMQClient, error) {
 	}
 
 	client := &RabbitMQClient{
-		make(chan models.Message),
+		make(chan process.Message),
 		make(chan error),
 		config,
 		conn,
@@ -56,11 +56,11 @@ func New(config *Config) (*RabbitMQClient, error) {
 	return client, nil
 }
 
-func (r *RabbitMQClient) GetConsumerChannel() chan models.Message {
+func (r *RabbitMQClient) GetConsumerChannel() chan process.Message {
 	return r.redirect
 }
 
-func (r *RabbitMQClient) Publish(ctx context.Context, msg models.Message) error {
+func (r *RabbitMQClient) Publish(ctx context.Context, msg process.Message) error {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "rmq-publish")
 	defer span.End()
 
@@ -102,7 +102,7 @@ func (r *RabbitMQClient) Publish(ctx context.Context, msg models.Message) error 
 	return nil
 }
 
-func (r *RabbitMQClient) Consume(_ context.Context) error {
+func (r *RabbitMQClient) StartConsuming(_ context.Context) error {
 	go r.handleReconnect()
 
 	deliveries, err := r.channel.Consume(

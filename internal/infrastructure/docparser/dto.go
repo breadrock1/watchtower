@@ -1,13 +1,13 @@
 package docparser
 
-import "watchtower/internal/application/models"
+import "watchtower/internal/domain/support/recognizer"
 
-type Recognized struct {
+type ParsedContent struct {
 	Text string `json:"parsed_text"`
 }
 
-func (rec *Recognized) ToRecognized() models.Recognized {
-	return models.Recognized{
-		Text: rec.Text,
+func (pc *ParsedContent) ToRecognized() recognizer.Recognized {
+	return recognizer.Recognized{
+		Text: pc.Text,
 	}
 }

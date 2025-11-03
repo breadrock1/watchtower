@@ -4,17 +4,17 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"watchtower/internal/application/models"
+	"watchtower/internal/domain/core/process"
 )
 
 type Message struct {
 	Ctx     context.Context
-	EventId uuid.UUID   `json:"event_id"`
-	Body    models.Task `json:"body"`
+	EventId uuid.UUID    `json:"event_id"`
+	Body    process.Task `json:"body"`
 }
 
-func (m *Message) ToMessage() *models.Message {
-	return &models.Message{
+func (m *Message) ToMessage() *process.Message {
+	return &process.Message{
 		Ctx:     m.Ctx,
 		EventId: m.EventId,
 		Body:    m.Body,

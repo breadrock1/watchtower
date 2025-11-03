@@ -2,10 +2,12 @@ package httpserver
 
 import (
 	"net/http"
+	"strconv"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"golang.org/x/exp/slices"
-	"watchtower/internal/application/models"
+	"watchtower/internal/domain/core/process"
 )
 
 func (s *Server) CreateTasksGroup() error {
@@ -37,7 +39,7 @@ func (s *Server) LoadTasks(eCtx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "bucket is required")
 	}
 
-	tasks, err := s.taskProcessor.GetAllTasks(ctx, bucket)
+	tasks, err := s.state.GetTaskProcessor().GetBucketTasks(ctx, bucket)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
@@ -47,13 +49,14 @@ func (s *Server) LoadTasks(eCtx echo.Context) error {
 		return eCtx.JSON(200, tasks)
 	}
 
-	inputTaskStatus, err := models.TaskStatusFromString(status)
+	inputTaskStatus, err := strconv.Atoi(status)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, "unknown status")
 	}
 
-	foundedTasks := slices.DeleteFunc(tasks, func(event *models.Task) bool {
-		return event.Status != int(inputTaskStatus)
+	taskStatus := process.TaskStatus(inputTaskStatus)
+	foundedTasks := slices.DeleteFunc(tasks, func(task *process.Task) bool {
+		return task.Status != taskStatus
 	})
 
 	return eCtx.JSON(200, foundedTasks)
@@ -79,12 +82,17 @@ func (s *Server) LoadTaskByID(eCtx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "bucket is required")
 	}
 
-	taskID := eCtx.Param("task_id")
-	if taskID == "" {
+	taskIDParam := eCtx.Param("task_id")
+	if taskIDParam == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, "task_id is required")
 	}
 
-	task, err := s.taskProcessor.GetTaskByID(ctx, bucket, taskID)
+	taskID, err := uuid.Parse(taskIDParam)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	task, err := s.state.GetTaskProcessor().GetTask(ctx, bucket, taskID)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}

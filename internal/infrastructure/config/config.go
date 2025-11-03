@@ -3,12 +3,12 @@ package config
 import (
 	"fmt"
 	"strings"
+	"watchtower/internal/infrastructure/docsearch"
 
 	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 	"watchtower/internal/application/utils/telemetry"
 	"watchtower/internal/infrastructure/docparser"
-	"watchtower/internal/infrastructure/docstorage"
 	"watchtower/internal/infrastructure/redis"
 	"watchtower/internal/infrastructure/rmq"
 	"watchtower/internal/infrastructure/s3"
@@ -63,7 +63,7 @@ type ObjectStorageConfig struct {
 }
 
 type DocumentStorageConfig struct {
-	DocSearcher docstorage.Config `mapstructure:"docsearcher"`
+	DocSearcher docsearch.Config `mapstructure:"docsearcher"`
 }
 
 func FromFile(filePath string) (*Config, error) {

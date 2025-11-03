@@ -3,9 +3,9 @@ package redis
 import (
 	"fmt"
 	"time"
+	"watchtower/internal/domain/core/process"
 
 	"github.com/google/uuid"
-	"watchtower/internal/application/models"
 )
 
 type RedisValue struct {
@@ -20,37 +20,36 @@ type RedisValue struct {
 	EventType  int    `json:"event_type"`
 }
 
-func (rv *RedisValue) ConvertToTaskEvent() (*models.Task, error) {
-	modDt := time.Unix(rv.ModifiedAt, 0)
-	createDt := time.Unix(rv.CreatedAt, 0)
+func (rv *RedisValue) ConvertToTask() (*process.Task, error) {
 	taskID, err := uuid.Parse(rv.ID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid task id: %w", err)
 	}
 
-	event := &models.Task{
+	modifiedAt := time.Unix(rv.ModifiedAt, 0)
+	createdAt := time.Unix(rv.CreatedAt, 0)
+
+	event := &process.Task{
 		ID:         taskID,
-		Bucket:     rv.Bucket,
-		FilePath:   rv.FilePath,
-		FileSize:   rv.FileSize,
-		CreatedAt:  createDt,
-		ModifiedAt: modDt,
-		Status:     rv.Status,
+		CreatedAt:  createdAt,
+		ModifiedAt: modifiedAt,
+		BucketID:   rv.Bucket,
+		ObjectID:   rv.FilePath,
 		StatusText: rv.StatusText,
+		Status:     process.TaskStatus(rv.Status),
 	}
 
 	return event, nil
 }
 
-func ConvertFromTaskEvent(taskEvent *models.Task) *RedisValue {
+func ConvertFromTaskEvent(task *process.Task) *RedisValue {
 	return &RedisValue{
-		ID:         taskEvent.ID.String(),
-		Bucket:     taskEvent.Bucket,
-		FilePath:   taskEvent.FilePath,
-		FileSize:   taskEvent.FileSize,
-		CreatedAt:  taskEvent.CreatedAt.Unix(),
-		ModifiedAt: taskEvent.ModifiedAt.Unix(),
-		Status:     taskEvent.Status,
-		StatusText: taskEvent.StatusText,
+		ID:         task.ID.String(),
+		Bucket:     task.BucketID,
+		FilePath:   task.ObjectID,
+		CreatedAt:  task.CreatedAt.Unix(),
+		ModifiedAt: task.ModifiedAt.Unix(),
+		StatusText: task.StatusText,
+		Status:     int(task.Status),
 	}
 }

@@ -10,13 +10,12 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/trace"
-	"watchtower/internal/application/services/server"
 
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 )
 
-const AppName = server.AppName
+const AppName = "watchtower"
 
 var (
 	GlobalTracer    trace.Tracer

@@ -7,9 +7,9 @@ import (
 	"os"
 	"time"
 
-	"watchtower/internal/application/models"
 	"watchtower/internal/application/usecase"
 	"watchtower/internal/application/utils/telemetry"
+	"watchtower/internal/domain/core/cloud"
 	"watchtower/internal/infrastructure/config"
 	"watchtower/internal/infrastructure/redis"
 	"watchtower/internal/infrastructure/rmq"
@@ -27,8 +27,8 @@ type TestEnvironment struct {
 	TaskQueue   *rmq.RabbitMQClient
 	TaskManager *redis.RedisClient
 
-	TaskProcessing *usecase.TaskProcessing
-	ObjectStorage  *usecase.ObjectStorage
+	TaskProcessing *usecase.ProcessUseCase
+	ObjectStorage  *usecase.StorageUseCase
 }
 
 func InitTestEnvironment(configFilePath string) (*TestEnvironment, error) {
@@ -54,13 +54,13 @@ func InitTestEnvironment(configFilePath string) (*TestEnvironment, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to init task queue: %w", err)
 	}
-	err = taskQueue.Consume(ctx)
+	err = taskQueue.StartConsuming(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to launch task queue consumer: %w", err)
 	}
 
-	objectStorage := usecase.NewObjectStorage(docStorage, objStorage)
-	taskProcessing := usecase.NewTaskProcessing(objectStorage, taskStorage, taskQueue, recognizer)
+	storageUseCase := usecase.NewStorageUseCase(objStorage)
+	processingUseCase := usecase.NewProcessingUseCase(objStorage, taskStorage, taskQueue, recognizer, docStorage)
 
 	testEnvironment := &TestEnvironment{
 		Recognizer:     recognizer,
@@ -68,14 +68,14 @@ func InitTestEnvironment(configFilePath string) (*TestEnvironment, error) {
 		ObjStorage:     objStorage,
 		TaskQueue:      taskQueue,
 		TaskManager:    taskStorage,
-		TaskProcessing: taskProcessing,
-		ObjectStorage:  objectStorage,
+		TaskProcessing: processingUseCase,
+		ObjectStorage:  storageUseCase,
 	}
 
 	return testEnvironment, nil
 }
 
-func CreateUploadFileParams(filePath string) (*models.UploadFileParams, error) {
+func CreateUploadFileParams(filePath string) (*cloud.UploadObjectParams, error) {
 	fileData, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file %s: %w", filePath, err)
@@ -85,8 +85,7 @@ func CreateUploadFileParams(filePath string) (*models.UploadFileParams, error) {
 	expired := time.Now()
 	_ = expired.Add(10 * time.Second)
 
-	form := &models.UploadFileParams{
-		Bucket:   TestBucketName,
+	form := &cloud.UploadObjectParams{
 		FilePath: filePath,
 		FileData: data,
 		Expired:  &expired,

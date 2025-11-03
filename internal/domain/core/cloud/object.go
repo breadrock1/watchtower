@@ -1,6 +1,12 @@
-package domain
+package cloud
 
-import "time"
+import (
+	"bytes"
+	"time"
+)
+
+type ObjectID = string
+type ObjectData = bytes.Buffer
 
 type Object struct {
 	Name         string

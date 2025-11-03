@@ -4,14 +4,14 @@ import (
 	"context"
 
 	"github.com/stretchr/testify/mock"
-	"watchtower/internal/application/models"
+	"watchtower/internal/domain/support/docstorage"
 )
 
 type MockDocStorage struct {
 	mock.Mock
 }
 
-func (m *MockDocStorage) StoreDocument(_ context.Context, doc *models.Document) (string, error) {
+func (m *MockDocStorage) StoreDocument(_ context.Context, doc docstorage.Document) (docstorage.DocumentID, error) {
 	args := m.Called(doc)
 	return args.Get(0).(string), args.Error(1)
 }

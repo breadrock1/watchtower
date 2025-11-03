@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 
+	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/labstack/echo-contrib/echoprometheus"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
-	"go.opentelemetry.io/otel/trace"
-	"watchtower/internal/application/services/server"
-	"watchtower/internal/application/usecase"
+	"watchtower/internal/application/service/server"
 	"watchtower/internal/application/utils/telemetry"
 	"watchtower/internal/infrastructure/config"
 	"watchtower/internal/infrastructure/httpserver/mw"
@@ -45,26 +45,22 @@ import (
 // @tag.name share
 // @tag.description Share files by URL API
 type Server struct {
-	config *config.ServerConfig
-	server *echo.Echo
 	tracer trace.Tracer
 
-	taskProcessor *usecase.TaskProcessing
-	objectStorage *usecase.ObjectStorage
+	config *config.ServerConfig
+	state  *server.ServerState
+	server *echo.Echo
 }
 
 func New(
 	config *config.ServerConfig,
+	state *server.ServerState,
 	tracer trace.Tracer,
-	taskProcessor *usecase.TaskProcessing,
-	objectStorage *usecase.ObjectStorage,
 ) *Server {
 	return &Server{
 		config: config,
 		tracer: tracer,
-
-		taskProcessor: taskProcessor,
-		objectStorage: objectStorage,
+		state:  state,
 	}
 }
 
@@ -99,7 +95,7 @@ func (s *Server) Shutdown(ctx context.Context) error {
 }
 
 func (s *Server) initMeterMW() {
-	s.server.Use(echoprometheus.NewMiddleware(server.AppName))
+	s.server.Use(echoprometheus.NewMiddleware(telemetry.AppName))
 	s.server.GET("/metrics", echoprometheus.NewHandler())
 }
 
@@ -114,7 +110,7 @@ func (s *Server) initLoggerMW() {
 
 func (s *Server) initTracerMW() {
 	s.server.Use(otelecho.Middleware(
-		server.AppName,
+		telemetry.AppName,
 		otelecho.WithPropagators(telemetry.TracePropagator),
 		otelecho.WithSkipper(mw.TracerSkipper),
 	))

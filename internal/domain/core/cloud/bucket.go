@@ -1,6 +1,8 @@
-package domain
+package cloud
 
 import "time"
+
+type BucketID = string
 
 type Bucket struct {
 	Name      string

@@ -1,4 +1,4 @@
-package docstorage
+package docsearch
 
 import "time"
 

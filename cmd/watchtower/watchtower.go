@@ -9,10 +9,11 @@ import (
 	"syscall"
 
 	"watchtower/cmd"
+	"watchtower/internal/application/service/server"
 	"watchtower/internal/application/usecase"
 	"watchtower/internal/application/utils/telemetry"
 	"watchtower/internal/infrastructure/docparser"
-	"watchtower/internal/infrastructure/docstorage"
+	"watchtower/internal/infrastructure/docsearch"
 	"watchtower/internal/infrastructure/httpserver"
 	"watchtower/internal/infrastructure/redis"
 	"watchtower/internal/infrastructure/rmq"
@@ -32,23 +33,24 @@ func main() {
 	}
 	launchTasksConsumer(ctx, taskQueue)
 
-	docStorage := docstorage.New(&servConfig.Storage.DocumentStorage.DocSearcher)
+	docStorage := docsearch.New(&servConfig.Storage.DocumentStorage.DocSearcher)
 	objStorage, err := s3.New(&servConfig.Storage.ObjectStorage.S3)
 	if err != nil {
 		log.Fatalf("object storage connection failed: %v", err)
 	}
 
 	cCtx, cancel := context.WithCancel(ctx)
-	objectStorage := usecase.NewObjectStorage(docStorage, objStorage)
-	taskProcessor := usecase.NewTaskProcessing(objectStorage, taskStorage, taskQueue, recognizer)
-	taskProcessor.LaunchListener(cCtx)
+	storageUseCase := usecase.NewStorageUseCase(objStorage)
+	processingUseCase := usecase.NewProcessingUseCase(objStorage, taskStorage, taskQueue, recognizer, docStorage)
+	processingUseCase.LaunchListener(cCtx)
 
 	traceProvider, err := telemetry.InitTracer(servConfig.Server.Tracer)
 	if err != nil {
 		slog.Warn("failed to init tracer", slog.String("err", err.Error()))
 	}
 
-	httpServer := httpserver.New(&servConfig.Server, traceProvider, taskProcessor, objectStorage)
+	serverState := server.New(storageUseCase, processingUseCase)
+	httpServer := httpserver.New(&servConfig.Server, serverState, traceProvider)
 	go func() {
 		if err := httpServer.Start(cCtx); err != nil {
 			log.Fatalf("http server start failed: %v", err)
@@ -62,7 +64,7 @@ func main() {
 }
 
 func launchTasksConsumer(ctx context.Context, rmqServ *rmq.RabbitMQClient) {
-	if err := rmqServ.Consume(ctx); err != nil {
+	if err := rmqServ.StartConsuming(ctx); err != nil {
 		log.Fatalf("failed to launch task queue consumer: %v", err)
 	}
 }
