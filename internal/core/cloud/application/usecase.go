@@ -1,7 +1,6 @@
 package application
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 
@@ -111,7 +110,7 @@ func (s *StorageUseCase) GetObjectInfo(
 	return &objectInfo, nil
 }
 
-func (s *StorageUseCase) CopyObject(ctx Ctx, bucketID domain.BucketID, params domain.CopyObjectParams) error {
+func (s *StorageUseCase) CopyObject(ctx Ctx, bucketID domain.BucketID, params *domain.CopyObjectParams) error {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "copy-object")
 	defer span.End()
 
@@ -150,7 +149,7 @@ func (s *StorageUseCase) DeleteObject(ctx Ctx, bucketID domain.BucketID, objID d
 	return nil
 }
 
-func (s *StorageUseCase) MoveObject(ctx Ctx, bucketID domain.BucketID, params domain.CopyObjectParams) error {
+func (s *StorageUseCase) MoveObject(ctx Ctx, bucketID domain.BucketID, params *domain.CopyObjectParams) error {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "move-file")
 	defer span.End()
 
@@ -182,7 +181,7 @@ func (s *StorageUseCase) MoveObject(ctx Ctx, bucketID domain.BucketID, params do
 func (s *StorageUseCase) GetBucketObjects(
 	ctx Ctx,
 	bucketID domain.BucketID,
-	params domain.GetObjectsParams,
+	params *domain.GetObjectsParams,
 ) ([]domain.Object, error) {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "get-bucket-objects")
 	defer span.End()
@@ -206,7 +205,7 @@ func (s *StorageUseCase) GetBucketObjects(
 func (s *StorageUseCase) StoreObject(
 	ctx Ctx,
 	bucketID domain.BucketID,
-	params domain.UploadObjectParams,
+	params *domain.UploadObjectParams,
 ) (domain.ObjectID, error) {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "upload-object")
 	defer span.End()
@@ -232,7 +231,7 @@ func (s *StorageUseCase) StoreObject(
 func (s *StorageUseCase) GenShareURL(
 	ctx Ctx,
 	bucketID domain.BucketID,
-	params domain.ShareObjectParams,
+	params *domain.ShareObjectParams,
 ) (string, error) {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "share-object")
 	defer span.End()
@@ -271,7 +270,7 @@ func (s *StorageUseCase) GetObjectData(
 		err = fmt.Errorf("failed to download file %s: %w", objID, err)
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
-		return bytes.Buffer{}, err
+		return nil, err
 	}
 	return fileData, nil
 }

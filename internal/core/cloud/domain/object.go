@@ -6,7 +6,7 @@ import (
 )
 
 type ObjectID = string
-type ObjectData = bytes.Buffer
+type ObjectData = *bytes.Buffer
 
 type Object struct {
 	Name         string

@@ -7,18 +7,19 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/redis/go-redis/v9"
 	"watchtower/internal/shared/kernel"
 	"watchtower/internal/shared/telemetry"
 	"watchtower/internal/support/task/domain"
+
+	"github.com/redis/go-redis/v9"
 )
 
 type RedisClient struct {
-	config *Config
+	config Config
 	rsConn *redis.Client
 }
 
-func New(config *Config) *RedisClient {
+func New(config Config) domain.ITaskStorage {
 	redisOpts := &redis.Options{Addr: config.Address}
 	conn := redis.NewClient(redisOpts)
 	return &RedisClient{

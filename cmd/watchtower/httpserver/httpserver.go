@@ -15,8 +15,9 @@ import (
 	"watchtower/internal/process"
 	"watchtower/internal/shared/telemetry"
 
-	echoSwagger "github.com/swaggo/echo-swagger"
 	_ "watchtower/docs"
+
+	echoSwagger "github.com/swaggo/echo-swagger"
 )
 
 // Server
@@ -52,7 +53,7 @@ type Server struct {
 }
 
 func SetupServer(
-	config *telemetry.OtlpConfig,
+	config telemetry.OtlpConfig,
 	state *process.Orchestrator,
 	tracer trace.Tracer,
 ) *Server {
@@ -79,7 +80,7 @@ func SetupServer(
 	return serverApp
 }
 
-func (s *Server) Start(_ context.Context, config *Config) error {
+func (s *Server) Start(_ context.Context, config Config) error {
 	if err := s.server.Start(config.Address); err != nil {
 		return fmt.Errorf("failed to start server: %w", err)
 	}

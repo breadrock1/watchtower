@@ -1,7 +1,6 @@
 package domain
 
 import (
-	"bytes"
 	"context"
 	"net/url"
 )
@@ -22,16 +21,16 @@ type IBucketManager interface {
 
 type IObjectManager interface {
 	GetObjectInfo(ctx context.Context, bucketID BucketID, objID ObjectID) (Object, error)
-	GetObjectData(ctx context.Context, bucketID BucketID, objID ObjectID) (bytes.Buffer, error)
-	StoreObject(ctx context.Context, bucketID BucketID, params UploadObjectParams) (ObjectID, error)
-	CopyObject(ctx context.Context, bucketID BucketID, params CopyObjectParams) error
+	GetObjectData(ctx context.Context, bucketID BucketID, objID ObjectID) (ObjectData, error)
+	StoreObject(ctx context.Context, bucketID BucketID, params *UploadObjectParams) (ObjectID, error)
+	CopyObject(ctx context.Context, bucketID BucketID, params *CopyObjectParams) error
 	DeleteObject(ctx context.Context, bucketID BucketID, objID ObjectID) error
 }
 
 type IObjectWalker interface {
-	GetBucketObjects(ctx context.Context, bucketID BucketID, params GetObjectsParams) ([]Object, error)
+	GetBucketObjects(ctx context.Context, bucketID BucketID, params *GetObjectsParams) ([]Object, error)
 }
 
 type IShareManager interface {
-	GenShareURL(ctx context.Context, bucketID BucketID, params ShareObjectParams) (*url.URL, error)
+	GenShareURL(ctx context.Context, bucketID BucketID, params *ShareObjectParams) (*url.URL, error)
 }

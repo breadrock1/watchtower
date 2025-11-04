@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
+
 	"watchtower/internal/shared/telemetry"
 	"watchtower/internal/support/task/domain"
 
@@ -22,13 +23,14 @@ const ConsumerName = "watchtower-consumer"
 type RabbitMQClient struct {
 	redirect chan domain.Message
 	done     chan error
-	config   *Config
+	config   Config
 
 	conn    *amqp.Connection
 	channel *amqp.Channel
 }
 
-func New(config *Config) (*RabbitMQClient, error) {
+func New(config Config) (domain.ITaskQueue, error) {
+	var rmqClient RabbitMQClient
 	rmqConfig := amqp.Config{
 		Properties: amqp.NewConnectionProperties(),
 		Heartbeat:  10 * time.Second,
@@ -45,7 +47,7 @@ func New(config *Config) (*RabbitMQClient, error) {
 		return nil, fmt.Errorf("failed to create rmq channel: %w", err)
 	}
 
-	client := &RabbitMQClient{
+	rmqClient = RabbitMQClient{
 		make(chan domain.Message),
 		make(chan error),
 		config,
@@ -53,7 +55,7 @@ func New(config *Config) (*RabbitMQClient, error) {
 		rmqCh,
 	}
 
-	return client, nil
+	return &rmqClient, nil
 }
 
 func (r *RabbitMQClient) GetConsumerChannel() chan domain.Message {

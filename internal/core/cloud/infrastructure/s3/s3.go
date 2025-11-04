@@ -10,6 +10,7 @@ import (
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+
 	"watchtower/internal/core/cloud/domain"
 )
 
@@ -17,7 +18,7 @@ type S3Client struct {
 	mc *minio.Client
 }
 
-func New(config *Config) (*S3Client, error) {
+func New(config Config) (domain.ICloudStorage, error) {
 	creds := credentials.NewStaticV4(config.AccessID, config.SecretKey, config.Token)
 	opts := &minio.Options{
 		Creds:  creds,
@@ -113,30 +114,29 @@ func (s *S3Client) GetObjectData(
 	ctx context.Context,
 	bucketID domain.BucketID,
 	objID domain.ObjectID,
-) (bytes.Buffer, error) {
-	var objBody bytes.Buffer
-
+) (domain.ObjectData, error) {
 	opts := minio.GetObjectOptions{}
 	filePath := path.Clean(objID)
 	obj, err := s.mc.GetObject(ctx, bucketID, filePath, opts)
 	if err != nil {
 		err = fmt.Errorf("s3 error: %w", err)
-		return objBody, err
+		return nil, err
 	}
 
+	objBody := bytes.Buffer{}
 	_, err = objBody.ReadFrom(obj)
 	if err != nil {
 		err = fmt.Errorf("failed while read bytes: %w", err)
-		return objBody, err
+		return nil, err
 	}
 
-	return objBody, nil
+	return &objBody, nil
 }
 
 func (s *S3Client) StoreObject(
 	ctx context.Context,
 	bucketID domain.BucketID,
-	params domain.UploadObjectParams,
+	params *domain.UploadObjectParams,
 ) (domain.ObjectID, error) {
 	opts := minio.PutObjectOptions{}
 	if params.Expired != nil {
@@ -153,7 +153,7 @@ func (s *S3Client) StoreObject(
 	return filePath, nil
 }
 
-func (s *S3Client) CopyObject(ctx context.Context, bucketID domain.BucketID, params domain.CopyObjectParams) error {
+func (s *S3Client) CopyObject(ctx context.Context, bucketID domain.BucketID, params *domain.CopyObjectParams) error {
 	srcPath := path.Clean(params.SourcePath)
 	dstPath := path.Clean(params.DestinationPath)
 
@@ -181,7 +181,7 @@ func (s *S3Client) DeleteObject(ctx context.Context, bucketID domain.BucketID, o
 func (s *S3Client) GetBucketObjects(
 	ctx context.Context,
 	bucketID domain.BucketID,
-	params domain.GetObjectsParams,
+	params *domain.GetObjectsParams,
 ) ([]domain.Object, error) {
 	opts := minio.ListObjectsOptions{
 		Prefix:    params.PrefixPath,
@@ -222,7 +222,7 @@ func (s *S3Client) GetBucketObjects(
 func (s *S3Client) GenShareURL(
 	ctx context.Context,
 	bucketID domain.BucketID,
-	params domain.ShareObjectParams,
+	params *domain.ShareObjectParams,
 ) (*url.URL, error) {
 	filePath := path.Clean(params.FilePath)
 	urlPath, err := s.mc.PresignedGetObject(ctx, bucketID, filePath, params.Expired, map[string][]string{})

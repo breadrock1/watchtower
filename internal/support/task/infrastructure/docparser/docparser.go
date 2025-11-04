@@ -12,34 +12,35 @@ import (
 	"watchtower/internal/support/task/application/service/recognizer"
 )
 
+type Ctx = context.Context
+
 const RecognitionURL = "/parser/parse/text"
 
 type DocParser struct {
-	config *Config
+	config Config
 }
 
-func New(config *Config) *DocParser {
+func New(config Config) recognizer.IRecognizer {
 	return &DocParser{config}
 }
 
-func (dc *DocParser) Recognize(ctx context.Context, params recognizer.RecognizeParams) (recognizer.Recognized, error) {
+func (dc *DocParser) Recognize(ctx Ctx, params *recognizer.RecognizeParams) (*recognizer.Recognized, error) {
 	var buf bytes.Buffer
-	var recData recognizer.Recognized
 
 	mpw := multipart.NewWriter(&buf)
 	fileForm, err := mpw.CreateFormFile("file", params.FileName)
 	if err != nil {
 		err = fmt.Errorf("docparser: create file form error: %w", err)
-		return recData, err
+		return nil, err
 	}
 
 	if _, err = fileForm.Write(params.FileData.Bytes()); err != nil {
 		err = fmt.Errorf("docparser: write file form error: %w", err)
-		return recData, err
+		return nil, err
 	}
 
 	if err = mpw.Close(); err != nil {
-		return recData, err
+		return nil, err
 	}
 
 	mimeType := mpw.FormDataContentType()
@@ -48,16 +49,16 @@ func (dc *DocParser) Recognize(ctx context.Context, params recognizer.RecognizeP
 
 	respData, err := utils.POST(ctx, &buf, targetURL, mimeType, timeoutReq)
 	if err != nil {
-		return recData, err
+		return nil, err
 	}
 
 	var responseData ParsedContent
 	_ = json.Unmarshal(respData, &responseData)
 	if len(responseData.Text) == 0 {
 		err = fmt.Errorf("docparser: returned empty content data")
-		return recData, err
+		return nil, err
 	}
 
-	recData = responseData.ToRecognized()
-	return recData, nil
+	recData := responseData.ToRecognized()
+	return &recData, nil
 }

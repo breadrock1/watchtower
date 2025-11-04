@@ -16,16 +16,16 @@ import (
 const DocumentJsonMime = "application/json"
 
 type DocSearch struct {
-	config *Config
+	config Config
 }
 
-func New(config *Config) *DocSearch {
+func New(config Config) docstorage.IDocumentStorage {
 	return &DocSearch{
 		config: config,
 	}
 }
 
-func (ds *DocSearch) StoreDocument(ctx context.Context, doc docstorage.Document) (docstorage.DocumentID, error) {
+func (ds *DocSearch) StoreDocument(ctx context.Context, doc *docstorage.Document) (docstorage.DocumentID, error) {
 	index := doc.Index
 	storeDoc := StoreDocumentForm{
 		FileName:   doc.Name,

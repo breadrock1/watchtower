@@ -17,7 +17,9 @@ import (
 	"watchtower/tests/common/mocks"
 
 	cloudApp "watchtower/internal/core/cloud/application"
+	cloudDomain "watchtower/internal/core/cloud/domain"
 	taskApp "watchtower/internal/support/task/application"
+	taskDomain "watchtower/internal/support/task/domain"
 )
 
 const TestBucketName = "watchtower-test-bucket"
@@ -26,13 +28,11 @@ type TestEnvironment struct {
 	Recognizer *mocks.MockRecognizer
 	DocStorage *mocks.MockDocStorage
 
-	ObjStorage  *s3.S3Client
-	TaskQueue   *rmq.RabbitMQClient
-	TaskManager *redis.RedisClient
+	ObjStorage  cloudDomain.ICloudStorage
+	TaskQueue   taskDomain.ITaskQueue
+	TaskManager taskDomain.ITaskStorage
 
-	TaskUseCase    *taskApp.TaskUseCase
-	StorageUseCase *cloudApp.StorageUseCase
-	Orchestrator   *process.Orchestrator
+	Orchestrator *process.Orchestrator
 }
 
 func InitTestEnvironment(configFilePath string) (*TestEnvironment, error) {
@@ -47,14 +47,14 @@ func InitTestEnvironment(configFilePath string) (*TestEnvironment, error) {
 
 	docParser := new(mocks.MockRecognizer)
 	docStorage := new(mocks.MockDocStorage)
-	objStorage, err := s3.New(&servConfig.Storage.S3)
+	objStorage, err := s3.New(servConfig.Storage.S3)
 	if err != nil {
 		return nil, fmt.Errorf("failed to init object storage: %w", err)
 	}
 	_ = objStorage.CreateBucket(ctx, TestBucketName)
 
-	taskStorage := redis.New(&servConfig.Task.TaskStorage.Redis)
-	taskQueue, err := rmq.New(&servConfig.Task.TaskQueue.Rmq)
+	taskStorage := redis.New(servConfig.Task.TaskStorage.Redis)
+	taskQueue, err := rmq.New(servConfig.Task.TaskQueue.Rmq)
 	if err != nil {
 		return nil, fmt.Errorf("failed to init task queue: %w", err)
 	}
@@ -65,17 +65,15 @@ func InitTestEnvironment(configFilePath string) (*TestEnvironment, error) {
 
 	storageUseCase := cloudApp.NewStorageUseCase(objStorage)
 	taskUseCase := taskApp.NewTaskUseCase(taskStorage, taskQueue, docParser, docStorage)
-	orchestrator := process.NewOrchestrator(&servConfig.Orchestrator, storageUseCase, taskUseCase)
+	orchestrator := process.NewOrchestrator(servConfig.Orchestrator, storageUseCase, taskUseCase)
 
 	testEnvironment := &TestEnvironment{
-		Recognizer:     docParser,
-		DocStorage:     docStorage,
-		ObjStorage:     objStorage,
-		TaskQueue:      taskQueue,
-		TaskManager:    taskStorage,
-		TaskUseCase:    taskUseCase,
-		StorageUseCase: storageUseCase,
-		Orchestrator:   orchestrator,
+		Recognizer:   docParser,
+		DocStorage:   docStorage,
+		ObjStorage:   objStorage,
+		TaskQueue:    taskQueue,
+		TaskManager:  taskStorage,
+		Orchestrator: orchestrator,
 	}
 
 	return testEnvironment, nil
@@ -91,11 +89,11 @@ func CreateUploadFileParams(filePath string) (*domain.UploadObjectParams, error)
 	expired := time.Now()
 	_ = expired.Add(10 * time.Second)
 
-	form := &domain.UploadObjectParams{
+	uploadParams := &domain.UploadObjectParams{
 		FilePath: filePath,
 		FileData: data,
 		Expired:  &expired,
 	}
 
-	return form, nil
+	return uploadParams, nil
 }

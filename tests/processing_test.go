@@ -21,7 +21,7 @@ import (
 
 const (
 	TestBucketName     = "watchtower-test-bucket"
-	TestInputFilePath  = "./resources/input-file.txt"
+	TestInputFilePath  = "resources/input-file.txt"
 	TestConfigFilePath = "../configs/testing.toml"
 )
 
@@ -36,24 +36,31 @@ func TestProcessing(t *testing.T) {
 		cCtx, cancel := context.WithCancel(ctx)
 		testEnv.Orchestrator.LaunchListener(cCtx)
 
-		fileForm, err := common.CreateUploadFileParams(TestInputFilePath)
+		uploadParams, err := common.CreateUploadFileParams(TestInputFilePath)
 		if err != nil {
 			t.Fatalf("failed to create upload params: %v", err)
 		}
 
+		recData := &recognizer.Recognized{Text: uploadParams.FileData.String()}
+		recParams := &recognizer.RecognizeParams{FileName: uploadParams.FilePath, FileData: uploadParams.FileData}
+		matchedRecognize := mock.MatchedBy(func(params *recognizer.RecognizeParams) bool {
+			fileNameFlag := params.FileName == recParams.FileName
+			fileDataFlag := params.FileData.String() == recData.Text
+			return fileNameFlag && fileDataFlag
+		})
+		testEnv.Recognizer.On("Recognize", matchedRecognize).Return(recData, nil).Once()
+
 		docID := uuid.New().String()
-		recData := recognizer.Recognized{Text: fileForm.FileData.String()}
-		recParams := recognizer.RecognizeParams{FileName: fileForm.FilePath, FileData: fileForm.FileData}
 		docObject := docstorage.Document{
 			Index:      TestBucketName,
-			Name:       path.Base(fileForm.FilePath),
-			Path:       fileForm.FilePath,
-			Size:       fileForm.FileData.Len(),
-			Content:    fileForm.FileData.String(),
+			Name:       path.Base(uploadParams.FilePath),
+			Path:       uploadParams.FilePath,
+			Size:       uploadParams.FileData.Len(),
+			Content:    uploadParams.FileData.String(),
 			CreatedAt:  time.Now(),
 			ModifiedAt: time.Now(),
 		}
-		matchedStoreDocument := mock.MatchedBy(func(doc docstorage.Document) bool {
+		matchedStoreDocument := mock.MatchedBy(func(doc *docstorage.Document) bool {
 			indexFlag := doc.Index == TestBucketName
 			fileNameFlag := doc.Name == docObject.Name
 			filePathFlag := doc.Path == docObject.Path
@@ -61,10 +68,9 @@ func TestProcessing(t *testing.T) {
 			contentFlag := doc.Content == docObject.Content
 			return indexFlag && fileNameFlag && filePathFlag && fileSizeFlag && contentFlag
 		})
-		testEnv.Recognizer.On("Recognize", recParams).Return(recData, nil).Once()
 		testEnv.DocStorage.On("StoreDocument", matchedStoreDocument).Return(docID, nil).Once()
 
-		task, err := testEnv.Orchestrator.CreateTask(ctx, docObject.Index, fileForm.FilePath)
+		task, err := testEnv.Orchestrator.UploadFile(ctx, docObject.Index, uploadParams)
 		assert.NoError(t, err, "failed to upload test input file to s3")
 
 		timeoutCh := time.After(7 * time.Second)
@@ -113,17 +119,23 @@ func TestProcessing(t *testing.T) {
 		cCtx, cancel := context.WithCancel(ctx)
 		testEnv.Orchestrator.LaunchListener(cCtx)
 
-		fileForm, err := common.CreateUploadFileParams(TestInputFilePath)
+		uploadParams, err := common.CreateUploadFileParams(TestInputFilePath)
 		if err != nil {
 			t.Fatalf("failed to create upload params: %v", err)
 		}
 
-		recData := recognizer.Recognized{Text: fileForm.FileData.String()}
-		recParams := recognizer.RecognizeParams{FileName: fileForm.FilePath, FileData: fileForm.FileData}
 		recErr := fmt.Errorf("service unavailable")
-		testEnv.Recognizer.On("Recognize", recParams).Return(recData, recErr).Once()
+		recData := &recognizer.Recognized{Text: uploadParams.FileData.String()}
+		recParams := &recognizer.RecognizeParams{FileName: uploadParams.FilePath, FileData: uploadParams.FileData}
+		matchedRecognize := mock.MatchedBy(func(params *recognizer.RecognizeParams) bool {
+			t.Helper()
+			fileNameFlag := params.FileName == recParams.FileName
+			fileDataFlag := params.FileData.String() == recData.Text
+			return fileNameFlag && fileDataFlag
+		})
+		testEnv.Recognizer.On("Recognize", matchedRecognize).Return(recData, recErr).Once()
 
-		task, err := testEnv.Orchestrator.CreateTask(ctx, TestBucketName, fileForm.FilePath)
+		task, err := testEnv.Orchestrator.UploadFile(ctx, TestBucketName, uploadParams)
 		assert.NoError(t, err, "failed to upload test input file to s3")
 
 		timeoutCh := time.After(7 * time.Second)
@@ -146,23 +158,32 @@ func TestProcessing(t *testing.T) {
 		cCtx, cancel := context.WithCancel(ctx)
 		testEnv.Orchestrator.LaunchListener(cCtx)
 
-		fileForm, err := common.CreateUploadFileParams(TestInputFilePath)
+		uploadParams, err := common.CreateUploadFileParams(TestInputFilePath)
 		if err != nil {
 			t.Fatalf("failed to create upload params: %v", err)
 		}
 
-		recData := recognizer.Recognized{Text: fileForm.FileData.String()}
-		recParams := recognizer.RecognizeParams{FileName: fileForm.FilePath, FileData: fileForm.FileData}
+		recData := &recognizer.Recognized{Text: uploadParams.FileData.String()}
+		recParams := &recognizer.RecognizeParams{FileName: uploadParams.FilePath, FileData: uploadParams.FileData}
+		matchedRecognize := mock.MatchedBy(func(params *recognizer.RecognizeParams) bool {
+			t.Helper()
+			fileNameFlag := params.FileName == recParams.FileName
+			fileDataFlag := params.FileData.String() == recData.Text
+			return fileNameFlag && fileDataFlag
+		})
+		testEnv.Recognizer.On("Recognize", matchedRecognize).Return(recData, nil).Once()
+
+		docErr := fmt.Errorf("service unavailable")
 		docObject := docstorage.Document{
 			Index:      TestBucketName,
-			Name:       path.Base(fileForm.FilePath),
-			Path:       fileForm.FilePath,
-			Size:       fileForm.FileData.Len(),
-			Content:    fileForm.FileData.String(),
+			Name:       path.Base(uploadParams.FilePath),
+			Path:       uploadParams.FilePath,
+			Size:       uploadParams.FileData.Len(),
+			Content:    uploadParams.FileData.String(),
 			CreatedAt:  time.Now(),
 			ModifiedAt: time.Now(),
 		}
-		matchedStoreDocument := mock.MatchedBy(func(doc docstorage.Document) bool {
+		matchedStoreDocument := mock.MatchedBy(func(doc *docstorage.Document) bool {
 			indexFlag := doc.Index == TestBucketName
 			fileNameFlag := doc.Name == docObject.Name
 			filePathFlag := doc.Path == docObject.Path
@@ -170,11 +191,9 @@ func TestProcessing(t *testing.T) {
 			contentFlag := doc.Content == docObject.Content
 			return indexFlag && fileNameFlag && filePathFlag && fileSizeFlag && contentFlag
 		})
-		docErr := fmt.Errorf("service unavailable")
-		testEnv.Recognizer.On("Recognize", recParams).Return(recData, nil).Once()
 		testEnv.DocStorage.On("StoreDocument", matchedStoreDocument).Return("", docErr).Once()
 
-		task, err := testEnv.Orchestrator.CreateTask(ctx, TestBucketName, fileForm.FilePath)
+		task, err := testEnv.Orchestrator.UploadFile(ctx, TestBucketName, uploadParams)
 		assert.NoError(t, err, "failed to upload test input file to s3")
 
 		timeoutCh := time.After(7 * time.Second)

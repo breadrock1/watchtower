@@ -31,16 +31,19 @@ func main() {
 		slog.Warn("failed to init tracer", slog.String("err", err.Error()))
 	}
 
-	taskStorage := redis.New(&servConfig.Task.TaskStorage.Redis)
-	taskQueue, err := rmq.New(&servConfig.Task.TaskQueue.Rmq)
+	taskStorage := redis.New(servConfig.Task.TaskStorage.Redis)
+	taskQueue, err := rmq.New(servConfig.Task.TaskQueue.Rmq)
 	if err != nil {
 		log.Fatalf("task queue connection failed: %v", err)
 	}
-	launchTasksConsumer(ctx, taskQueue)
+	err = taskQueue.StartConsuming(ctx)
+	if err != nil {
+		log.Fatalf("failed to launch task queue consumer: %v", err)
+	}
 
-	docParser := docparser.New(&servConfig.Task.Processor.DocParser)
-	docStorage := docsearch.New(&servConfig.Task.Processor.DocStorage)
-	objStorage, err := s3.New(&servConfig.Storage.S3)
+	docParser := docparser.New(servConfig.Task.Processor.DocParser)
+	docStorage := docsearch.New(servConfig.Task.Processor.DocStorage)
+	objStorage, err := s3.New(servConfig.Storage.S3)
 	if err != nil {
 		log.Fatalf("object storage connection failed: %v", err)
 	}
@@ -49,12 +52,12 @@ func main() {
 	storageUseCase := cloudApp.NewStorageUseCase(objStorage)
 	taskUseCase := taskApp.NewTaskUseCase(taskStorage, taskQueue, docParser, docStorage)
 
-	orchestrator := process.NewOrchestrator(&servConfig.Orchestrator, storageUseCase, taskUseCase)
+	orchestrator := process.NewOrchestrator(servConfig.Orchestrator, storageUseCase, taskUseCase)
 	orchestrator.LaunchListener(cCtx)
 
-	httpServer := httpserver.SetupServer(&servConfig.Otlp, orchestrator, traceProvider)
+	httpServer := httpserver.SetupServer(servConfig.Otlp, orchestrator, traceProvider)
 	go func() {
-		if err := httpServer.Start(cCtx, &servConfig.Server.Http); err != nil {
+		if err := httpServer.Start(cCtx, servConfig.Server.Http); err != nil {
 			log.Fatalf("http server start failed: %v", err)
 		}
 	}()
@@ -63,10 +66,4 @@ func main() {
 	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
 	<-ch
 	cancel()
-}
-
-func launchTasksConsumer(ctx context.Context, rmqServ *rmq.RabbitMQClient) {
-	if err := rmqServ.StartConsuming(ctx); err != nil {
-		log.Fatalf("failed to launch task queue consumer: %v", err)
-	}
 }

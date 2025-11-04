@@ -22,12 +22,12 @@ import (
 type Ctx = context.Context
 
 type Orchestrator struct {
-	config    *Config
+	config    Config
 	storageUC *cloudApp.StorageUseCase
 	taskUC    *taskUC.TaskUseCase
 }
 
-func NewOrchestrator(config *Config, storageUC *cloudApp.StorageUseCase, taskUC *taskUC.TaskUseCase) *Orchestrator {
+func NewOrchestrator(config Config, storageUC *cloudApp.StorageUseCase, taskUC *taskUC.TaskUseCase) *Orchestrator {
 	return &Orchestrator{config: config, storageUC: storageUC, taskUC: taskUC}
 }
 
@@ -39,7 +39,7 @@ func (o *Orchestrator) GetTaskProcessor() *taskUC.TaskUseCase {
 	return o.taskUC
 }
 
-func (o *Orchestrator) LaunchListener(ctx context.Context) {
+func (o *Orchestrator) LaunchListener(ctx Ctx) {
 	go func() {
 		consumeCh := o.taskUC.GetConsumerChannel()
 		for {
@@ -73,7 +73,7 @@ func (o *Orchestrator) LaunchListener(ctx context.Context) {
 func (o *Orchestrator) UploadFile(
 	ctx Ctx,
 	bucketID domain.BucketID,
-	params domain.UploadObjectParams,
+	params *domain.UploadObjectParams,
 ) (*taskDomain.Task, error) {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "upload-file")
 	defer span.End()
@@ -191,7 +191,7 @@ func (o *Orchestrator) processTask(ctx Ctx, task *taskDomain.Task) error {
 	}
 
 	task.SetObjectDataSize(fileData.Len())
-	recData, err := o.taskUC.Recognize(ctx, task, &fileData)
+	recData, err := o.taskUC.Recognize(ctx, task, fileData)
 	if err != nil {
 		task.SetStatusAndText(taskDomain.Failed, "failed to recognize object data")
 		err = fmt.Errorf("task processing failed: %w", err)

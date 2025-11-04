@@ -5,5 +5,5 @@ import (
 )
 
 type IRecognizer interface {
-	Recognize(ctx context.Context, params RecognizeParams) (Recognized, error)
+	Recognize(ctx context.Context, params *RecognizeParams) (*Recognized, error)
 }

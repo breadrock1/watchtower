@@ -149,7 +149,7 @@ func (p *TaskUseCase) Recognize(
 	ctx Ctx,
 	task *domain.Task,
 	fileData *bytes.Buffer,
-) (recognizer.Recognized, error) {
+) (*recognizer.Recognized, error) {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "recognize-object-data")
 	defer span.End()
 
@@ -159,7 +159,7 @@ func (p *TaskUseCase) Recognize(
 		attribute.String("file-path", task.ObjectID),
 	)
 
-	inputFile := recognizer.RecognizeParams{
+	inputFile := &recognizer.RecognizeParams{
 		FileName: task.ObjectID,
 		FileData: fileData,
 	}
@@ -179,7 +179,7 @@ func (p *TaskUseCase) Recognize(
 func (p *TaskUseCase) StoreDocument(
 	ctx Ctx,
 	task *domain.Task,
-	recData recognizer.Recognized,
+	recData *recognizer.Recognized,
 ) (docstorage.DocumentID, error) {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "store-document-to-index")
 	defer span.End()
@@ -190,7 +190,7 @@ func (p *TaskUseCase) StoreDocument(
 		attribute.String("file-path", task.ObjectID),
 	)
 
-	doc := docstorage.Document{
+	doc := &docstorage.Document{
 		Index:      task.BucketID,
 		Name:       path.Base(task.ObjectID),
 		Path:       task.ObjectID,

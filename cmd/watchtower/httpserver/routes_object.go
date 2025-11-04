@@ -8,9 +8,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/labstack/echo/v4"
 	"watchtower/cmd/watchtower/httpserver/form"
 	"watchtower/internal/core/cloud/domain"
+
+	"github.com/labstack/echo/v4"
 )
 
 func (s *Server) CreateStorageObjectsGroup() error {
@@ -54,7 +55,7 @@ func (s *Server) CopyFile(eCtx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	params := domain.CopyObjectParams{
+	params := &domain.CopyObjectParams{
 		SourcePath:      jsonForm.SrcPath,
 		DestinationPath: jsonForm.DstPath,
 	}
@@ -91,7 +92,7 @@ func (s *Server) MoveFile(eCtx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	params := domain.CopyObjectParams{
+	params := &domain.CopyObjectParams{
 		SourcePath:      jsonForm.SrcPath,
 		DestinationPath: jsonForm.DstPath,
 	}
@@ -176,7 +177,7 @@ func (s *Server) UploadFile(eCtx echo.Context) error {
 			continue
 		}
 
-		params := domain.UploadObjectParams{
+		params := &domain.UploadObjectParams{
 			FilePath: fileName,
 			FileData: &fileData,
 			Expired:  &timeVal,
@@ -305,7 +306,7 @@ func (s *Server) GetFiles(eCtx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	params := domain.GetObjectsParams{
+	params := &domain.GetObjectsParams{
 		PrefixPath: jsonForm.DirectoryName,
 	}
 
@@ -379,7 +380,7 @@ func (s *Server) ShareFile(eCtx echo.Context) error {
 	}
 
 	expired := time.Second * time.Duration(shareForm.ExpiredSecs)
-	params := domain.ShareObjectParams{FilePath: shareForm.FilePath, Expired: expired}
+	params := &domain.ShareObjectParams{FilePath: shareForm.FilePath, Expired: expired}
 	url, err := s.state.GetObjectStorage().GenShareURL(ctx, bucket, params)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
