@@ -6,14 +6,19 @@ import (
 	"fmt"
 	"os"
 	"time"
-	"watchtower/internal/application/models"
-	"watchtower/internal/application/usecase"
-	"watchtower/internal/application/utils/telemetry"
-	"watchtower/internal/infrastructure/config"
-	"watchtower/internal/infrastructure/redis"
-	"watchtower/internal/infrastructure/rmq"
-	"watchtower/internal/infrastructure/s3"
+
+	"watchtower/cmd/watchtower/config"
+	"watchtower/internal/core/cloud/infrastructure/s3"
+	"watchtower/internal/process"
+	"watchtower/internal/shared/telemetry"
+	"watchtower/internal/support/task/infrastructure/redis"
+	"watchtower/internal/support/task/infrastructure/rmq"
 	"watchtower/tests/common/mocks"
+
+	cloudApp "watchtower/internal/core/cloud/application"
+	cloudDomain "watchtower/internal/core/cloud/domain"
+	taskApp "watchtower/internal/support/task/application"
+	taskDomain "watchtower/internal/support/task/domain"
 )
 
 const TestBucketName = "watchtower-test-bucket"
@@ -22,13 +27,11 @@ type TestEnvironment struct {
 	Recognizer *mocks.MockRecognizer
 	DocStorage *mocks.MockDocStorage
 
-	ObjStorage  *s3.S3Client
-	TaskQueue   *rmq.RabbitMQClient
-	TaskManager *redis.RedisClient
+	ObjStorage  cloudDomain.ICloudStorage
+	TaskQueue   taskDomain.ITaskQueue
+	TaskManager taskDomain.ITaskStorage
 
-	PipelineUC    *usecase.PipelineUseCase
-	StorageUC     *usecase.StorageUseCase
-	TaskManagerUC *usecase.TaskUseCase
+	Orchestrator *process.Orchestrator
 }
 
 func InitTestEnvironment(configFilePath string) (*TestEnvironment, error) {
@@ -38,46 +41,44 @@ func InitTestEnvironment(configFilePath string) (*TestEnvironment, error) {
 		return nil, fmt.Errorf("failed to read config file %s: %w", configFilePath, err)
 	}
 
-	tracerProvider, _ := telemetry.InitTracer(servConfig.Server.Tracer)
+	tracerProvider, _ := telemetry.InitTracer(servConfig.Otlp.Tracer)
 	telemetry.GlobalTracer = tracerProvider
 
-	recognizer := new(mocks.MockRecognizer)
+	docParser := new(mocks.MockRecognizer)
 	docStorage := new(mocks.MockDocStorage)
-	objStorage, err := s3.New(&servConfig.Storage.ObjectStorage.S3)
+	objStorage, err := s3.New(servConfig.Storage.S3)
 	if err != nil {
 		return nil, fmt.Errorf("failed to init object storage: %w", err)
 	}
 	_ = objStorage.CreateBucket(ctx, TestBucketName)
 
-	taskStorage := redis.New(&servConfig.Task.TaskStorage.Redis)
-	taskQueue, err := rmq.New(&servConfig.Task.TaskQueue.Rmq)
+	taskStorage := redis.New(servConfig.Task.TaskStorage.Redis)
+	taskQueue, err := rmq.New(servConfig.Task.TaskQueue.Rmq)
 	if err != nil {
 		return nil, fmt.Errorf("failed to init task queue: %w", err)
 	}
-	err = taskQueue.Consume(ctx)
+	err = taskQueue.StartConsuming(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to launch task queue consumer: %w", err)
 	}
 
-	taskMangerUC := usecase.NewTaskUseCase(taskStorage, taskQueue)
-	storageUC := usecase.NewStorageUseCase(docStorage, objStorage)
-	pipelineUC := usecase.NewPipelineUseCase(storageUC, taskMangerUC, recognizer)
+	storageUseCase := cloudApp.NewStorageUseCase(objStorage)
+	taskUseCase := taskApp.NewTaskUseCase(taskStorage, taskQueue, docParser, docStorage)
+	orchestrator := process.NewOrchestrator(servConfig.Orchestrator, storageUseCase, taskUseCase)
 
 	testEnvironment := &TestEnvironment{
-		Recognizer:    recognizer,
-		DocStorage:    docStorage,
-		ObjStorage:    objStorage,
-		TaskQueue:     taskQueue,
-		TaskManager:   taskStorage,
-		PipelineUC:    pipelineUC,
-		StorageUC:     storageUC,
-		TaskManagerUC: taskMangerUC,
+		Recognizer:   docParser,
+		DocStorage:   docStorage,
+		ObjStorage:   objStorage,
+		TaskQueue:    taskQueue,
+		TaskManager:  taskStorage,
+		Orchestrator: orchestrator,
 	}
 
 	return testEnvironment, nil
 }
 
-func CreateUploadFileParams(filePath string) (*models.UploadFileParams, error) {
+func CreateUploadFileParams(filePath string) (*cloudDomain.UploadObjectParams, error) {
 	fileData, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file %s: %w", filePath, err)
@@ -87,12 +88,11 @@ func CreateUploadFileParams(filePath string) (*models.UploadFileParams, error) {
 	expired := time.Now()
 	_ = expired.Add(10 * time.Second)
 
-	form := &models.UploadFileParams{
-		Bucket:   TestBucketName,
+	uploadParams := &cloudDomain.UploadObjectParams{
 		FilePath: filePath,
 		FileData: data,
 		Expired:  &expired,
 	}
 
-	return form, nil
+	return uploadParams, nil
 }
