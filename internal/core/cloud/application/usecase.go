@@ -87,7 +87,11 @@ func (s *StorageUseCase) IsBucketExists(ctx Ctx, bucketID domain.BucketID) (bool
 	return status, nil
 }
 
-func (s *StorageUseCase) GetObjectInfo(ctx Ctx, bucketID domain.BucketID, objID domain.ObjectID) (*domain.Object, error) {
+func (s *StorageUseCase) GetObjectInfo(
+	ctx Ctx,
+	bucketID domain.BucketID,
+	objID domain.ObjectID,
+) (*domain.Object, error) {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "get-file-metadata")
 	defer span.End()
 
@@ -225,7 +229,11 @@ func (s *StorageUseCase) StoreObject(
 	return objID, nil
 }
 
-func (s *StorageUseCase) GenShareURL(ctx Ctx, bucketID domain.BucketID, params domain.ShareObjectParams) (string, error) {
+func (s *StorageUseCase) GenShareURL(
+	ctx Ctx,
+	bucketID domain.BucketID,
+	params domain.ShareObjectParams,
+) (string, error) {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "share-object")
 	defer span.End()
 

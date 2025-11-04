@@ -27,8 +27,8 @@ type Orchestrator struct {
 	taskUC    *taskUC.TaskUseCase
 }
 
-func NewOrchestrator(config *Config, storageUC *cloudApp.StorageUseCase, processorUC *taskUC.TaskUseCase) *Orchestrator {
-	return &Orchestrator{config: config, storageUC: storageUC, taskUC: processorUC}
+func NewOrchestrator(config *Config, storageUC *cloudApp.StorageUseCase, taskUC *taskUC.TaskUseCase) *Orchestrator {
+	return &Orchestrator{config: config, storageUC: storageUC, taskUC: taskUC}
 }
 
 func (o *Orchestrator) GetObjectStorage() *cloudApp.StorageUseCase {
@@ -70,7 +70,11 @@ func (o *Orchestrator) LaunchListener(ctx context.Context) {
 	}()
 }
 
-func (o *Orchestrator) UploadFile(ctx Ctx, bucketID domain.BucketID, params domain.UploadObjectParams) (*taskDomain.Task, error) {
+func (o *Orchestrator) UploadFile(
+	ctx Ctx,
+	bucketID domain.BucketID,
+	params domain.UploadObjectParams,
+) (*taskDomain.Task, error) {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "upload-file")
 	defer span.End()
 
