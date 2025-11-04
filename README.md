@@ -14,38 +14,89 @@ There are following domains:
 
 ```
 domain
-   |----> Task
-   |        |----> create new task
-   |        |----> publish task to queue
-   |        |----> consume task from queue
-   |        |----> get/update task status into storage
-   |
-   |----> Processing
-   |        |----> recognize file text content
-   |        |----> store recognized document to index
-   |
-   |----> Storage
+   |----> File Storage (core)
    |        |----> Bucket
-   |        |        |----> CRUD of bucket
-   |        |
+   |        |       |----> Context: bucket management into s3 object storage
+   |        |       |----> Services: IBucketManager
    |        |----> Object
-   |        |        |----> CRUD of object
-   |        |        |----> generate object share URL
+   |                |----> Context: object management into s3 object storage
+   |                |----> Services: IObjectManager
+   |
+   |----> Task Processing (support)
+   |        |----> Task
+   |        |       |----> Context: task management into storage
+   |        |       |----> Services: ITaskStorage
+   |        |----> Message
+   |                |----> Context: task queue management
+   |                |----> Services: ITaskQueue
+   |
+   |----> User Resource (generic)
+   |        |----> Resource (unimplemented yet)
+   |                |----> Context: User resource checking
+   |                |----> Services: IUserResourceManager
+   |
+ 
 ```
 
 And there are usecases:
 
 ```
 usecase
-   |----> Task Processing
-   |        |----> task management into storage and queue
-   |        |----> task processing stages like recognizing and indexing
-   |
-   |----> Object Storage
+   |----> Storage Use Case
    |        |----> CRUD of bucket and object
    |        |----> generate share URL of stored object
    |        |----> check that user has access to ressource 
    |        |----> upload file to storage and create new task processing event
+   |
+   |----> Task Use Case
+   |        |----> task management into storage and queue
+   |
+   |----> Orchestrator (process)
+   |        |----> combined both usecases to common upload and processing file pipeline
+   |        |----> task processing stages like recognizing and indexing by uploading files
+```
+
+There is context map:
+
+```
+           +----------------+
+           |  Orchesttator  |
+           +--------+-------+
+                    |
+        ┌───────────┴───────────┐
+        ▼                       ▼
++----------------+         +-------------+
+| StorageUseCase |         | TaskUseCase |
++----------------+         +-------------+
+        |                        |
+        ▼                        ▼
++----------------+         +-------------+
+| Storage Domain |         | Task Domain |
++----------------+         +-------------+
+
+
+```
+
+Context data flow:
+
+```
+HTTP Request
+     │
+     ▼
+HTTP Handler (ServerState)
+     │
+     ▼
+Orchestrator (orchestrator)
+    ├── StorageUseCase (application)
+    │       │
+    │       ▼
+    │    Storage (domain)
+    │
+    └── TaskUseCase (application)
+            │
+            ▼
+          Task (domain)
+
 ```
 
 ## Features
