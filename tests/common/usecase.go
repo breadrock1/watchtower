@@ -7,14 +7,17 @@ import (
 	"os"
 	"time"
 
-	"watchtower/internal/application/usecase"
-	"watchtower/internal/application/utils/telemetry"
-	"watchtower/internal/domain/core/cloud"
-	"watchtower/internal/infrastructure/config"
-	"watchtower/internal/infrastructure/redis"
-	"watchtower/internal/infrastructure/rmq"
-	"watchtower/internal/infrastructure/s3"
+	"watchtower/cmd/watchtower/config"
+	"watchtower/internal/core/cloud/domain"
+	"watchtower/internal/core/cloud/infrastructure/s3"
+	"watchtower/internal/process"
+	"watchtower/internal/shared/telemetry"
+	"watchtower/internal/support/task/infrastructure/redis"
+	"watchtower/internal/support/task/infrastructure/rmq"
 	"watchtower/tests/common/mocks"
+
+	cloudApp "watchtower/internal/core/cloud/application"
+	taskApp "watchtower/internal/support/task/application"
 )
 
 const TestBucketName = "watchtower-test-bucket"
@@ -27,8 +30,9 @@ type TestEnvironment struct {
 	TaskQueue   *rmq.RabbitMQClient
 	TaskManager *redis.RedisClient
 
-	TaskProcessing *usecase.ProcessUseCase
-	ObjectStorage  *usecase.StorageUseCase
+	TaskUseCase    *taskApp.TaskUseCase
+	StorageUseCase *cloudApp.StorageUseCase
+	Orchestrator   *process.Orchestrator
 }
 
 func InitTestEnvironment(configFilePath string) (*TestEnvironment, error) {
@@ -38,12 +42,12 @@ func InitTestEnvironment(configFilePath string) (*TestEnvironment, error) {
 		return nil, fmt.Errorf("failed to read config file %s: %w", configFilePath, err)
 	}
 
-	tracerProvider, _ := telemetry.InitTracer(servConfig.Server.Tracer)
+	tracerProvider, _ := telemetry.InitTracer(servConfig.Otlp.Tracer)
 	telemetry.GlobalTracer = tracerProvider
 
-	recognizer := new(mocks.MockRecognizer)
+	docParser := new(mocks.MockRecognizer)
 	docStorage := new(mocks.MockDocStorage)
-	objStorage, err := s3.New(&servConfig.Storage.ObjectStorage.S3)
+	objStorage, err := s3.New(&servConfig.Storage.S3)
 	if err != nil {
 		return nil, fmt.Errorf("failed to init object storage: %w", err)
 	}
@@ -59,23 +63,25 @@ func InitTestEnvironment(configFilePath string) (*TestEnvironment, error) {
 		return nil, fmt.Errorf("failed to launch task queue consumer: %w", err)
 	}
 
-	storageUseCase := usecase.NewStorageUseCase(objStorage)
-	processingUseCase := usecase.NewProcessingUseCase(objStorage, taskStorage, taskQueue, recognizer, docStorage)
+	storageUseCase := cloudApp.NewStorageUseCase(objStorage)
+	taskUseCase := taskApp.NewTaskUseCase(taskStorage, taskQueue, docParser, docStorage)
+	orchestrator := process.NewOrchestrator(&servConfig.Orchestrator, storageUseCase, taskUseCase)
 
 	testEnvironment := &TestEnvironment{
-		Recognizer:     recognizer,
+		Recognizer:     docParser,
 		DocStorage:     docStorage,
 		ObjStorage:     objStorage,
 		TaskQueue:      taskQueue,
 		TaskManager:    taskStorage,
-		TaskProcessing: processingUseCase,
-		ObjectStorage:  storageUseCase,
+		TaskUseCase:    taskUseCase,
+		StorageUseCase: storageUseCase,
+		Orchestrator:   orchestrator,
 	}
 
 	return testEnvironment, nil
 }
 
-func CreateUploadFileParams(filePath string) (*cloud.UploadObjectParams, error) {
+func CreateUploadFileParams(filePath string) (*domain.UploadObjectParams, error) {
 	fileData, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file %s: %w", filePath, err)
@@ -85,7 +91,7 @@ func CreateUploadFileParams(filePath string) (*cloud.UploadObjectParams, error) 
 	expired := time.Now()
 	_ = expired.Add(10 * time.Second)
 
-	form := &cloud.UploadObjectParams{
+	form := &domain.UploadObjectParams{
 		FilePath: filePath,
 		FileData: data,
 		Expired:  &expired,

@@ -1,45 +1,41 @@
-[settings]
-pipeline_semaphore_size = 10
+[orchestrator]
+semaphore_size = 10
+
+[otlp.logger]
+level = "info"
+address = "http://loki:3100"
+enable_loki = true
+
+[otlp.tracer]
+address = "jaeger:4317"
+enable_jaeger = false
 
 [server.http]
 address = "0.0.0.0:2893"
 
-[server.logger]
-level = "info"
-address = "loki:3100"
-enable_loki = true
-
-[server.tracer]
-address = "jaeger:4317"
-enable_jaeger = false
-
-[recognizer.dedoc]
-address = "http://localhost:8012/api/v1"
-timeout = 300
-
-[recognizer.docparser]
-address = "http://localhost:8012/api/v1"
-timeout = 300
-
-[storage.document.docsearcher]
-address = "http://localhost:2892/api/v1"
-timeout = 300
+[storage.s3]
+address = "s3-cloud:9000"
+access_id = "minio-root"
+secret_key = "minio-root"
+enable_ssl = false
+token = ""
 
 [task.storage.redis]
-address = "localhost:6379"
+address = "redis:6379"
 username = "redis"
 password = "redis"
 expired = 3600
 
 [task.queue.rmq]
-address = "amqp://localhost:5672"
+address = "amqp://rabbitmq:5672"
 exchange = "watchtower"
 routing_key = "task"
 queue = "watchtower-tasks"
 
-[storage.object.s3]
-address = "localhost:9000"
-access_id = "minio-root"
-secret_key = "minio-root"
-enable_ssl = false
-token = ""
+[task.processor.docparser]
+address = "http://doc-parser:8012/api/v1"
+timeout = 300
+
+[task.processor.docstorage]
+address = "http://doc-searcher:2892/api/v1"
+timeout = 300

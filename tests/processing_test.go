@@ -10,11 +10,13 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"watchtower/internal/application/mapping"
-	"watchtower/internal/domain/core/process"
-	"watchtower/internal/domain/support/docstorage"
-	"watchtower/internal/domain/support/recognizer"
+
+	"watchtower/internal/support/task/application/mapping"
+	"watchtower/internal/support/task/application/service/docstorage"
+	"watchtower/internal/support/task/application/service/recognizer"
 	"watchtower/tests/common"
+
+	taskDomain "watchtower/internal/support/task/domain"
 )
 
 const (
@@ -32,7 +34,7 @@ func TestProcessing(t *testing.T) {
 	t.Run("Positive pipeline", func(t *testing.T) {
 		ctx := context.Background()
 		cCtx, cancel := context.WithCancel(ctx)
-		testEnv.TaskProcessing.LaunchListener(cCtx)
+		testEnv.Orchestrator.LaunchListener(cCtx)
 
 		fileForm, err := common.CreateUploadFileParams(TestInputFilePath)
 		if err != nil {
@@ -62,8 +64,7 @@ func TestProcessing(t *testing.T) {
 		testEnv.Recognizer.On("Recognize", recParams).Return(recData, nil).Once()
 		testEnv.DocStorage.On("StoreDocument", matchedStoreDocument).Return(docID, nil).Once()
 
-		taskParams := &process.CreateTaskParams{BucketID: docObject.Index, ObjectID: fileForm.FilePath}
-		task, err := testEnv.TaskProcessing.CreateTask(ctx, taskParams)
+		task, err := testEnv.Orchestrator.CreateTask(ctx, docObject.Index, fileForm.FilePath)
 		assert.NoError(t, err, "failed to upload test input file to s3")
 
 		timeoutCh := time.After(7 * time.Second)
@@ -74,7 +75,7 @@ func TestProcessing(t *testing.T) {
 
 		loadTask, err := testEnv.TaskManager.GetTask(ctx, task.BucketID, task.ID)
 		assert.NoError(t, err, "failed to get task from redis")
-		assert.Equal(t, process.Successful, loadTask.Status)
+		assert.Equal(t, taskDomain.Successful, loadTask.Status)
 		assert.Equal(t, task.BucketID, loadTask.BucketID)
 		assert.Equal(t, task.ObjectID, loadTask.ObjectID)
 
@@ -84,9 +85,9 @@ func TestProcessing(t *testing.T) {
 	t.Run("Failed to load object pipeline", func(t *testing.T) {
 		ctx := context.Background()
 		cCtx, cancel := context.WithCancel(ctx)
-		testEnv.TaskProcessing.LaunchListener(cCtx)
+		testEnv.Orchestrator.LaunchListener(cCtx)
 
-		task := process.CreateNewTask(TestBucketName, path.Base(TestInputFilePath))
+		task := taskDomain.CreateNewTask(TestBucketName, path.Base(TestInputFilePath))
 
 		rmqMsg := mapping.MessageFromTask(task)
 		err := testEnv.TaskQueue.Publish(ctx, rmqMsg)
@@ -100,7 +101,7 @@ func TestProcessing(t *testing.T) {
 
 		loadTask, err := testEnv.TaskManager.GetTask(ctx, task.BucketID, task.ID)
 		assert.NoError(t, err, "failed to get task from redis")
-		assert.Equal(t, process.Failed, loadTask.Status)
+		assert.Equal(t, taskDomain.Failed, loadTask.Status)
 		assert.Equal(t, task.BucketID, loadTask.BucketID)
 		assert.Equal(t, task.ObjectID, loadTask.ObjectID)
 
@@ -110,7 +111,7 @@ func TestProcessing(t *testing.T) {
 	t.Run("Failed to recognize pipeline", func(t *testing.T) {
 		ctx := context.Background()
 		cCtx, cancel := context.WithCancel(ctx)
-		testEnv.TaskProcessing.LaunchListener(cCtx)
+		testEnv.Orchestrator.LaunchListener(cCtx)
 
 		fileForm, err := common.CreateUploadFileParams(TestInputFilePath)
 		if err != nil {
@@ -122,8 +123,7 @@ func TestProcessing(t *testing.T) {
 		recErr := fmt.Errorf("service unavailable")
 		testEnv.Recognizer.On("Recognize", recParams).Return(recData, recErr).Once()
 
-		taskParams := &process.CreateTaskParams{BucketID: TestBucketName, ObjectID: fileForm.FilePath}
-		task, err := testEnv.TaskProcessing.CreateTask(ctx, taskParams)
+		task, err := testEnv.Orchestrator.CreateTask(ctx, TestBucketName, fileForm.FilePath)
 		assert.NoError(t, err, "failed to upload test input file to s3")
 
 		timeoutCh := time.After(7 * time.Second)
@@ -134,7 +134,7 @@ func TestProcessing(t *testing.T) {
 
 		loadTask, err := testEnv.TaskManager.GetTask(ctx, task.BucketID, task.ID)
 		assert.NoError(t, err, "failed to get task from redis")
-		assert.Equal(t, process.Failed, loadTask.Status)
+		assert.Equal(t, taskDomain.Failed, loadTask.Status)
 		assert.Equal(t, task.BucketID, loadTask.BucketID)
 		assert.Equal(t, task.ObjectID, loadTask.ObjectID)
 
@@ -144,7 +144,7 @@ func TestProcessing(t *testing.T) {
 	t.Run("Failed to store document pipeline", func(t *testing.T) {
 		ctx := context.Background()
 		cCtx, cancel := context.WithCancel(ctx)
-		testEnv.TaskProcessing.LaunchListener(cCtx)
+		testEnv.Orchestrator.LaunchListener(cCtx)
 
 		fileForm, err := common.CreateUploadFileParams(TestInputFilePath)
 		if err != nil {
@@ -174,8 +174,7 @@ func TestProcessing(t *testing.T) {
 		testEnv.Recognizer.On("Recognize", recParams).Return(recData, nil).Once()
 		testEnv.DocStorage.On("StoreDocument", matchedStoreDocument).Return("", docErr).Once()
 
-		taskParams := &process.CreateTaskParams{BucketID: TestBucketName, ObjectID: fileForm.FilePath}
-		task, err := testEnv.TaskProcessing.CreateTask(ctx, taskParams)
+		task, err := testEnv.Orchestrator.CreateTask(ctx, TestBucketName, fileForm.FilePath)
 		assert.NoError(t, err, "failed to upload test input file to s3")
 
 		timeoutCh := time.After(7 * time.Second)
@@ -186,7 +185,7 @@ func TestProcessing(t *testing.T) {
 
 		loadTask, err := testEnv.TaskManager.GetTask(ctx, task.BucketID, task.ID)
 		assert.NoError(t, err, "failed to get task from redis")
-		assert.Equal(t, process.Failed, loadTask.Status)
+		assert.Equal(t, taskDomain.Failed, loadTask.Status)
 		assert.Equal(t, task.BucketID, loadTask.BucketID)
 		assert.Equal(t, task.ObjectID, loadTask.ObjectID)
 

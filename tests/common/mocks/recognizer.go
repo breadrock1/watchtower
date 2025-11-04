@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/stretchr/testify/mock"
-	"watchtower/internal/domain/support/recognizer"
+	"watchtower/internal/support/task/application/service/recognizer"
 )
 
 type MockRecognizer struct {

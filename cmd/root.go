@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"watchtower/internal/infrastructure/config"
+	"watchtower/cmd/watchtower/config"
 )
 
 var serviceConfig *config.Config

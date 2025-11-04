@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/stretchr/testify/mock"
-	"watchtower/internal/domain/support/docstorage"
+	"watchtower/internal/support/task/application/service/docstorage"
 )
 
 type MockDocStorage struct {

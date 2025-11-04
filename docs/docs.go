@@ -31,12 +31,12 @@ const docTemplate = `{
                 "operationId": "create-bucket",
                 "parameters": [
                     {
-                        "description": "BucketSchema id to create",
+                        "description": "Bucket name to create",
                         "name": "jsonQuery",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/httpserver.CreateBucketForm"
+                            "$ref": "#/definitions/form.CreateBucketForm"
                         }
                     }
                 ],
@@ -44,19 +44,19 @@ const docTemplate = `{
                     "200": {
                         "description": "Ok",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ResponseForm"
+                            "$ref": "#/definitions/form.ResponseForm"
                         }
                     },
                     "400": {
                         "description": "Bad Request message",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.BadRequestForm"
+                            "$ref": "#/definitions/form.BadRequestForm"
                         }
                     },
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ServerErrorForm"
+                            "$ref": "#/definitions/form.ServerErrorForm"
                         }
                     }
                 }
@@ -86,7 +86,7 @@ const docTemplate = `{
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ServerErrorForm"
+                            "$ref": "#/definitions/form.ServerErrorForm"
                         }
                     }
                 }
@@ -106,7 +106,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "BucketSchema id to remove",
+                        "description": "Bucket name to remove",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -116,19 +116,19 @@ const docTemplate = `{
                     "200": {
                         "description": "Ok",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ResponseForm"
+                            "$ref": "#/definitions/form.ResponseForm"
                         }
                     },
                     "400": {
                         "description": "Bad Request message",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.BadRequestForm"
+                            "$ref": "#/definitions/form.BadRequestForm"
                         }
                     },
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ServerErrorForm"
+                            "$ref": "#/definitions/form.ServerErrorForm"
                         }
                     }
                 }
@@ -148,7 +148,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "BucketSchema id to remove file",
+                        "description": "Bucket name to remove file",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -165,19 +165,19 @@ const docTemplate = `{
                     "200": {
                         "description": "Ok",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ResponseForm"
+                            "$ref": "#/definitions/form.ResponseForm"
                         }
                     },
                     "400": {
                         "description": "Bad Request message",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.BadRequestForm"
+                            "$ref": "#/definitions/form.BadRequestForm"
                         }
                     },
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ServerErrorForm"
+                            "$ref": "#/definitions/form.ServerErrorForm"
                         }
                     }
                 }
@@ -200,7 +200,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "BucketSchema id to get list files",
+                        "description": "Bucket name to get list files",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -211,7 +211,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/httpserver.GetFileAttributesForm"
+                            "$ref": "#/definitions/form.GetFileAttributesForm"
                         }
                     }
                 ],
@@ -219,19 +219,19 @@ const docTemplate = `{
                     "200": {
                         "description": "Ok",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ResponseForm"
+                            "$ref": "#/definitions/form.ResponseForm"
                         }
                     },
                     "400": {
                         "description": "Bad Request message",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.BadRequestForm"
+                            "$ref": "#/definitions/form.BadRequestForm"
                         }
                     },
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ServerErrorForm"
+                            "$ref": "#/definitions/form.ServerErrorForm"
                         }
                     }
                 }
@@ -254,7 +254,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "BucketSchema id of src file",
+                        "description": "Bucket name of src file",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -265,7 +265,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/httpserver.CopyFileForm"
+                            "$ref": "#/definitions/form.CopyFileForm"
                         }
                     }
                 ],
@@ -273,19 +273,19 @@ const docTemplate = `{
                     "200": {
                         "description": "Ok",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ResponseForm"
+                            "$ref": "#/definitions/form.ResponseForm"
                         }
                     },
                     "400": {
                         "description": "Bad Request message",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.BadRequestForm"
+                            "$ref": "#/definitions/form.BadRequestForm"
                         }
                     },
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ServerErrorForm"
+                            "$ref": "#/definitions/form.ServerErrorForm"
                         }
                     }
                 }
@@ -308,7 +308,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "BucketSchema id to download file",
+                        "description": "Bucket name to download file",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -319,7 +319,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/httpserver.DownloadFileForm"
+                            "$ref": "#/definitions/form.DownloadFileForm"
                         }
                     }
                 ],
@@ -333,13 +333,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request message",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.BadRequestForm"
+                            "$ref": "#/definitions/form.BadRequestForm"
                         }
                     },
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ServerErrorForm"
+                            "$ref": "#/definitions/form.ServerErrorForm"
                         }
                     }
                 }
@@ -362,7 +362,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "BucketSchema id of src file",
+                        "description": "Bucket name of src file",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -373,7 +373,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/httpserver.CopyFileForm"
+                            "$ref": "#/definitions/form.CopyFileForm"
                         }
                     }
                 ],
@@ -381,19 +381,19 @@ const docTemplate = `{
                     "200": {
                         "description": "Ok",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ResponseForm"
+                            "$ref": "#/definitions/form.ResponseForm"
                         }
                     },
                     "400": {
                         "description": "Bad Request message",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.BadRequestForm"
+                            "$ref": "#/definitions/form.BadRequestForm"
                         }
                     },
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ServerErrorForm"
+                            "$ref": "#/definitions/form.ServerErrorForm"
                         }
                     }
                 }
@@ -413,7 +413,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "BucketSchema id to remove file",
+                        "description": "Bucket name to remove file",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -424,7 +424,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/httpserver.RemoveFileForm"
+                            "$ref": "#/definitions/form.RemoveFileForm"
                         }
                     }
                 ],
@@ -432,19 +432,19 @@ const docTemplate = `{
                     "200": {
                         "description": "Ok",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ResponseForm"
+                            "$ref": "#/definitions/form.ResponseForm"
                         }
                     },
                     "400": {
                         "description": "Bad Request message",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.BadRequestForm"
+                            "$ref": "#/definitions/form.BadRequestForm"
                         }
                     },
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ServerErrorForm"
+                            "$ref": "#/definitions/form.ServerErrorForm"
                         }
                     }
                 }
@@ -467,7 +467,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "BucketSchema id to share file",
+                        "description": "Bucket name to share file",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -478,7 +478,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ShareFileForm"
+                            "$ref": "#/definitions/form.ShareFileForm"
                         }
                     }
                 ],
@@ -486,19 +486,19 @@ const docTemplate = `{
                     "200": {
                         "description": "Ok",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ResponseForm"
+                            "$ref": "#/definitions/form.ResponseForm"
                         }
                     },
                     "400": {
                         "description": "Bad Request message",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.BadRequestForm"
+                            "$ref": "#/definitions/form.BadRequestForm"
                         }
                     },
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ServerErrorForm"
+                            "$ref": "#/definitions/form.ServerErrorForm"
                         }
                     }
                 }
@@ -521,7 +521,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "BucketSchema id to upload files",
+                        "description": "Bucket name to upload files",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -544,22 +544,19 @@ const docTemplate = `{
                     "200": {
                         "description": "Ok",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/httpserver.TaskSchema"
-                            }
+                            "$ref": "#/definitions/form.ResponseForm"
                         }
                     },
                     "400": {
                         "description": "Bad Request message",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.BadRequestForm"
+                            "$ref": "#/definitions/form.BadRequestForm"
                         }
                     },
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ServerErrorForm"
+                            "$ref": "#/definitions/form.ServerErrorForm"
                         }
                     }
                 }
@@ -582,7 +579,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "BucketSchema id to get list files",
+                        "description": "Bucket name to get list files",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -593,7 +590,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/httpserver.GetFilesForm"
+                            "$ref": "#/definitions/form.GetFilesForm"
                         }
                     }
                 ],
@@ -601,22 +598,19 @@ const docTemplate = `{
                     "200": {
                         "description": "Ok",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/httpserver.ObjectSchema"
-                            }
+                            "$ref": "#/definitions/form.ResponseForm"
                         }
                     },
                     "400": {
                         "description": "Bad Request message",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.BadRequestForm"
+                            "$ref": "#/definitions/form.BadRequestForm"
                         }
                     },
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ServerErrorForm"
+                            "$ref": "#/definitions/form.ServerErrorForm"
                         }
                     }
                 }
@@ -639,7 +633,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "TaskSchema id of uploaded files",
+                        "description": "Bucket id of uploaded files",
                         "name": "bucket",
                         "in": "path",
                         "required": true
@@ -657,20 +651,20 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/httpserver.TaskSchema"
+                                "$ref": "#/definitions/form.TaskSchema"
                             }
                         }
                     },
                     "400": {
                         "description": "Bad Request message",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.BadRequestForm"
+                            "$ref": "#/definitions/form.BadRequestForm"
                         }
                     },
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ServerErrorForm"
+                            "$ref": "#/definitions/form.ServerErrorForm"
                         }
                     }
                 }
@@ -693,14 +687,14 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "TaskSchema id of processing task",
+                        "description": "Bucket id of processing task",
                         "name": "bucket",
                         "in": "path",
                         "required": true
                     },
                     {
                         "type": "string",
-                        "description": "TaskSchema ID",
+                        "description": "Task ID",
                         "name": "task_id",
                         "in": "path",
                         "required": true
@@ -710,19 +704,19 @@ const docTemplate = `{
                     "200": {
                         "description": "Ok",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.TaskSchema"
+                            "$ref": "#/definitions/form.TaskSchema"
                         }
                     },
                     "400": {
                         "description": "Bad Request message",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.BadRequestForm"
+                            "$ref": "#/definitions/form.BadRequestForm"
                         }
                     },
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/httpserver.ServerErrorForm"
+                            "$ref": "#/definitions/form.ServerErrorForm"
                         }
                     }
                 }
@@ -730,7 +724,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "httpserver.BadRequestForm": {
+        "form.BadRequestForm": {
             "type": "object",
             "properties": {
                 "message": {
@@ -743,7 +737,7 @@ const docTemplate = `{
                 }
             }
         },
-        "httpserver.CopyFileForm": {
+        "form.CopyFileForm": {
             "type": "object",
             "properties": {
                 "dst_path": {
@@ -756,7 +750,7 @@ const docTemplate = `{
                 }
             }
         },
-        "httpserver.CreateBucketForm": {
+        "form.CreateBucketForm": {
             "type": "object",
             "properties": {
                 "bucket_name": {
@@ -765,7 +759,7 @@ const docTemplate = `{
                 }
             }
         },
-        "httpserver.DownloadFileForm": {
+        "form.DownloadFileForm": {
             "type": "object",
             "properties": {
                 "file_name": {
@@ -774,7 +768,7 @@ const docTemplate = `{
                 }
             }
         },
-        "httpserver.GetFileAttributesForm": {
+        "form.GetFileAttributesForm": {
             "type": "object",
             "properties": {
                 "file_path": {
@@ -783,7 +777,7 @@ const docTemplate = `{
                 }
             }
         },
-        "httpserver.GetFilesForm": {
+        "form.GetFilesForm": {
             "type": "object",
             "properties": {
                 "directory": {
@@ -792,36 +786,7 @@ const docTemplate = `{
                 }
             }
         },
-        "httpserver.ObjectSchema": {
-            "type": "object",
-            "properties": {
-                "checksum": {
-                    "type": "string"
-                },
-                "content_type": {
-                    "type": "string"
-                },
-                "expired": {
-                    "type": "string"
-                },
-                "is_directory": {
-                    "type": "boolean"
-                },
-                "last_modified": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "path": {
-                    "type": "string"
-                },
-                "size": {
-                    "type": "integer"
-                }
-            }
-        },
-        "httpserver.RemoveFileForm": {
+        "form.RemoveFileForm": {
             "type": "object",
             "properties": {
                 "file_name": {
@@ -830,7 +795,7 @@ const docTemplate = `{
                 }
             }
         },
-        "httpserver.ResponseForm": {
+        "form.ResponseForm": {
             "type": "object",
             "properties": {
                 "message": {
@@ -843,7 +808,7 @@ const docTemplate = `{
                 }
             }
         },
-        "httpserver.ServerErrorForm": {
+        "form.ServerErrorForm": {
             "type": "object",
             "properties": {
                 "message": {
@@ -856,7 +821,7 @@ const docTemplate = `{
                 }
             }
         },
-        "httpserver.ShareFileForm": {
+        "form.ShareFileForm": {
             "type": "object",
             "properties": {
                 "expired_secs": {
@@ -869,7 +834,7 @@ const docTemplate = `{
                 }
             }
         },
-        "httpserver.TaskSchema": {
+        "form.TaskSchema": {
             "type": "object",
             "properties": {
                 "bucket_id": {

@@ -9,22 +9,27 @@ import (
 	"syscall"
 
 	"watchtower/cmd"
-	"watchtower/internal/application/service/server"
-	"watchtower/internal/application/usecase"
-	"watchtower/internal/application/utils/telemetry"
-	"watchtower/internal/infrastructure/docparser"
-	"watchtower/internal/infrastructure/docsearch"
-	"watchtower/internal/infrastructure/httpserver"
-	"watchtower/internal/infrastructure/redis"
-	"watchtower/internal/infrastructure/rmq"
-	"watchtower/internal/infrastructure/s3"
+	"watchtower/cmd/watchtower/httpserver"
+	"watchtower/internal/core/cloud/infrastructure/s3"
+	"watchtower/internal/process"
+	"watchtower/internal/shared/telemetry"
+	"watchtower/internal/support/task/infrastructure/docparser"
+	"watchtower/internal/support/task/infrastructure/docsearch"
+	"watchtower/internal/support/task/infrastructure/redis"
+	"watchtower/internal/support/task/infrastructure/rmq"
+
+	cloudApp "watchtower/internal/core/cloud/application"
+	taskApp "watchtower/internal/support/task/application"
 )
 
 func main() {
 	ctx := context.Background()
 	servConfig := cmd.Execute()
 
-	recognizer := docparser.New(&servConfig.Recognizer.DocParser)
+	traceProvider, err := telemetry.InitTracer(servConfig.Otlp.Tracer)
+	if err != nil {
+		slog.Warn("failed to init tracer", slog.String("err", err.Error()))
+	}
 
 	taskStorage := redis.New(&servConfig.Task.TaskStorage.Redis)
 	taskQueue, err := rmq.New(&servConfig.Task.TaskQueue.Rmq)
@@ -33,26 +38,23 @@ func main() {
 	}
 	launchTasksConsumer(ctx, taskQueue)
 
-	docStorage := docsearch.New(&servConfig.Storage.DocumentStorage.DocSearcher)
-	objStorage, err := s3.New(&servConfig.Storage.ObjectStorage.S3)
+	docParser := docparser.New(&servConfig.Task.Processor.DocParser)
+	docStorage := docsearch.New(&servConfig.Task.Processor.DocStorage)
+	objStorage, err := s3.New(&servConfig.Storage.S3)
 	if err != nil {
 		log.Fatalf("object storage connection failed: %v", err)
 	}
 
 	cCtx, cancel := context.WithCancel(ctx)
-	storageUseCase := usecase.NewStorageUseCase(objStorage)
-	processingUseCase := usecase.NewProcessingUseCase(objStorage, taskStorage, taskQueue, recognizer, docStorage)
-	processingUseCase.LaunchListener(cCtx)
+	storageUseCase := cloudApp.NewStorageUseCase(objStorage)
+	taskUseCase := taskApp.NewTaskUseCase(taskStorage, taskQueue, docParser, docStorage)
 
-	traceProvider, err := telemetry.InitTracer(servConfig.Server.Tracer)
-	if err != nil {
-		slog.Warn("failed to init tracer", slog.String("err", err.Error()))
-	}
+	orchestrator := process.NewOrchestrator(&servConfig.Orchestrator, storageUseCase, taskUseCase)
+	orchestrator.LaunchListener(cCtx)
 
-	serverState := server.New(storageUseCase, processingUseCase)
-	httpServer := httpserver.New(&servConfig.Server, serverState, traceProvider)
+	httpServer := httpserver.SetupServer(&servConfig.Otlp, orchestrator, traceProvider)
 	go func() {
-		if err := httpServer.Start(cCtx); err != nil {
+		if err := httpServer.Start(cCtx, &servConfig.Server.Http); err != nil {
 			log.Fatalf("http server start failed: %v", err)
 		}
 	}()
