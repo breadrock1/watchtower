@@ -39,15 +39,14 @@ func (o *Orchestrator) GetTaskProcessor() *taskUC.TaskUseCase {
 	return o.taskUC
 }
 
-func (o *Orchestrator) LaunchListener(ctx Ctx) {
+func (o *Orchestrator) LaunchListener(gCtx Ctx) {
 	go func() {
 		consumeCh := o.taskUC.GetConsumerChannel()
+		sem := semaphore.NewWeighted(o.config.SemaphoreSize)
 		for {
 			select {
 			case cMsg := <-consumeCh:
-				ctx = cMsg.Ctx
-
-				sem := semaphore.NewWeighted(o.config.SemaphoreSize)
+				ctx := cMsg.Ctx
 				go func() {
 					if err := sem.Acquire(ctx, 1); err != nil {
 						slog.Error("internal semaphore error", slog.String("err", err.Error()))
@@ -62,7 +61,7 @@ func (o *Orchestrator) LaunchListener(ctx Ctx) {
 					ctx.Done()
 				}()
 
-			case <-ctx.Done():
+			case <-gCtx.Done():
 				slog.Info("terminating processing")
 				return
 			}
