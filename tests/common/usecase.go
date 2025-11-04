@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"watchtower/cmd/watchtower/config"
-	"watchtower/internal/core/cloud/domain"
 	"watchtower/internal/core/cloud/infrastructure/s3"
 	"watchtower/internal/process"
 	"watchtower/internal/shared/telemetry"
@@ -79,7 +78,7 @@ func InitTestEnvironment(configFilePath string) (*TestEnvironment, error) {
 	return testEnvironment, nil
 }
 
-func CreateUploadFileParams(filePath string) (*domain.UploadObjectParams, error) {
+func CreateUploadFileParams(filePath string) (*cloudDomain.UploadObjectParams, error) {
 	fileData, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file %s: %w", filePath, err)
@@ -89,7 +88,7 @@ func CreateUploadFileParams(filePath string) (*domain.UploadObjectParams, error)
 	expired := time.Now()
 	_ = expired.Add(10 * time.Second)
 
-	uploadParams := &domain.UploadObjectParams{
+	uploadParams := &cloudDomain.UploadObjectParams{
 		FilePath: filePath,
 		FileData: data,
 		Expired:  &expired,
