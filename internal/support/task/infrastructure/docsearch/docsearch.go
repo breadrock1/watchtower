@@ -1,19 +1,16 @@
 package docsearch
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strings"
-	"time"
 
-	"watchtower/internal/shared/utils"
+	"github.com/enetx/g"
+	"github.com/enetx/surf"
+
 	"watchtower/internal/support/task/application/service/docstorage"
 )
-
-const DocumentJsonMime = "application/json"
 
 type DocSearch struct {
 	config Config
@@ -36,12 +33,6 @@ func (ds *DocSearch) StoreDocument(ctx context.Context, doc *docstorage.Document
 		ModifiedAt: doc.ModifiedAt.UnixMilli(),
 	}
 
-	jsonData, err := json.Marshal(storeDoc)
-	if err != nil {
-		err = fmt.Errorf("serialize error: %w", err)
-		return "", err
-	}
-
 	buildURL := strings.Builder{}
 	buildURL.WriteString(ds.config.Address)
 	buildURL.WriteString(fmt.Sprintf("/storage/%s/create?force=true", index))
@@ -52,20 +43,17 @@ func (ds *DocSearch) StoreDocument(ctx context.Context, doc *docstorage.Document
 		slog.String("file-path", doc.Path),
 	)
 
-	reqBody := bytes.NewBuffer(jsonData)
-	timeoutReq := ds.config.Timeout * time.Second
-	respData, err := utils.PUT(ctx, reqBody, targetURL, DocumentJsonMime, timeoutReq)
-	if err != nil {
-		err = fmt.Errorf("http-request error: %w", err)
+	resp := surf.NewClient().
+		Post(g.String(targetURL), storeDoc).
+		WithContext(ctx).
+		Do()
+
+	if resp.IsErr() {
+		err := fmt.Errorf("http-request error: %w", resp.Err())
 		return "", err
 	}
 
-	status := &StoreDocumentResult{}
-	err = json.Unmarshal(respData, status)
-	if err != nil {
-		err = fmt.Errorf("deserialize error: %w", err)
-		return "", err
-	}
-
-	return status.Message, nil
+	var storeResult StoreDocumentResult
+	resp.Ok().Body.JSON(&storeResult)
+	return storeResult.Message, nil
 }
