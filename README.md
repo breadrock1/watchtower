@@ -1,5 +1,7 @@
 # Watchtower Metaverse project
 
+[![Pull-Request](https://github.com/breadrock1/watchtower/actions/workflows/pull-request.yml/badge.svg)](https://github.com/breadrock1/watchtower/actions/workflows/pull-request.yml)
+
 ## Overview
 
 Watchtower is a project designed to monitor S3 file events for further AI processing. This service is been designed
@@ -29,12 +31,6 @@ domain
    |        |----> Message
    |                |----> Context: task queue management
    |                |----> Services: ITaskQueue
-   |
-   |----> User Resource (generic)
-   |        |----> Resource (unimplemented yet)
-   |                |----> Context: User resource checking
-   |                |----> Services: IUserResourceManager
-   |
  
 ```
 
@@ -45,7 +41,6 @@ usecase
    |----> Storage Use Case
    |        |----> CRUD of bucket and object
    |        |----> generate share URL of stored object
-   |        |----> check that user has access to ressource 
    |        |----> upload file to storage and create new task processing event
    |
    |----> Task Use Case
