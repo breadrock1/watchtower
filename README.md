@@ -29,12 +29,6 @@ domain
    |        |----> Message
    |                |----> Context: task queue management
    |                |----> Services: ITaskQueue
-   |
-   |----> User Resource (generic)
-   |        |----> Resource (unimplemented yet)
-   |                |----> Context: User resource checking
-   |                |----> Services: IUserResourceManager
-   |
  
 ```
 
@@ -45,7 +39,6 @@ usecase
    |----> Storage Use Case
    |        |----> CRUD of bucket and object
    |        |----> generate share URL of stored object
-   |        |----> check that user has access to ressource 
    |        |----> upload file to storage and create new task processing event
    |
    |----> Task Use Case
