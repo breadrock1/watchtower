@@ -18,17 +18,6 @@ import (
 	"watchtower/internal/shared/telemetry"
 )
 
-func PUT(ctx context.Context, body *bytes.Buffer, url, mime string, timeout time.Duration) ([]byte, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPut, url, body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	req.Header.Set(echo.HeaderContentType, mime)
-	client := &http.Client{Timeout: timeout}
-	return sendRequest(ctx, client, req)
-}
-
 func POST(ctx context.Context, body *bytes.Buffer, url, mime string, timeout time.Duration) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, body)
 	if err != nil {
