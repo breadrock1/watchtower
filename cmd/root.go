@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"watchtower/internal/infrastructure/config"
+	"watchtower/cmd/watchtower/config"
 )
 
 var serviceConfig *config.Config
@@ -13,9 +13,9 @@ var serviceConfig *config.Config
 // rootCmd represents the base command when called without any subcommands.
 var rootCmd = &cobra.Command{
 	Use:   "./watchtower",
-	Short: "Consume internal service to load endpoints from watcher directory",
+	Short: "StartConsuming internal service to load endpoints from watcher directory",
 	Long: `
-		Consume internal service to load endpoints from watcher directory.
+		StartConsuming internal service to load endpoints from watcher directory.
 	`,
 
 	Run: func(cmd *cobra.Command, _ []string) {

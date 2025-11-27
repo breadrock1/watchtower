@@ -3,15 +3,16 @@ package mocks
 import (
 	"context"
 
+	rec "watchtower/internal/support/task/application/service/recognizer"
+
 	"github.com/stretchr/testify/mock"
-	"watchtower/internal/application/models"
 )
 
 type MockRecognizer struct {
 	mock.Mock
 }
 
-func (m *MockRecognizer) Recognize(_ context.Context, inputFile models.InputFile) (*models.Recognized, error) {
-	args := m.Called(inputFile)
-	return args.Get(0).(*models.Recognized), args.Error(1)
+func (m *MockRecognizer) Recognize(_ context.Context, params *rec.RecognizeParams) (*rec.Recognized, error) {
+	args := m.Called(params)
+	return args.Get(0).(*rec.Recognized), args.Error(1)
 }

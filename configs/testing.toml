@@ -1,25 +1,24 @@
-[settings]
-pipeline_semaphore_size = 10
+[orchestrator]
+semaphore_size = 10
+
+[otlp.logger]
+level = "info"
+address = "http://localhost:3100"
+enable_loki = false
+
+[otlp.tracer]
+address = "localhost:4317"
+enable_jaeger = false
 
 [server.http]
 address = "0.0.0.0:2893"
 
-[server.logger]
-level = "debug"
-enable_loki = false
-address = "localhost:3100"
-
-[server.tracer]
-address = "localhost:4317"
-enable_jaeger = false
-
-[recognizer.dedoc]
-address = "http://localhost:8004/api/v1"
-timeout = 300
-
-[storage.document.docsearcher]
-address = "http://localhost:2892/api/v1"
-timeout = 300
+[storage.s3]
+address = "localhost:9000"
+access_id = "minio-root"
+secret_key = "minio-root"
+enable_ssl = false
+token = ""
 
 [task.storage.redis]
 address = "localhost:6379"
@@ -33,9 +32,10 @@ exchange = "test-watchtower"
 routing_key = "test-task"
 queue = "test-watchtower-tasks"
 
-[storage.object.s3]
-address = "localhost:9000"
-access_id = "minio-root"
-secret_key = "minio-root"
-enable_ssl = false
-token = ""
+[task.processor.docparser]
+address = "http://localhost:8012/api/v1"
+timeout = 300
+
+[task.processor.docstorage]
+address = "http://localhost:2892/api/v1"
+timeout = 300
