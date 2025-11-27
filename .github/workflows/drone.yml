@@ -5,6 +5,21 @@ name: watchtower-ci
 environment:
   GO_VERSION: 1.25
 
+services:
+  - name: redis
+    image: redis:alpine
+
+  - name: rabbitmq
+    image: rabbitmq:4-management
+
+  - name: minio
+    image: minio/minio
+    commands:
+      - minio server /data
+    environment:
+      MINIO_ROOT_USER: "minio-root"
+      MINIO_ROOT_PASSWORD: "minio-root"
+
 steps:
   - name: cache-built-go
     image: drillster/drone-volume-cache
@@ -41,9 +56,11 @@ steps:
   - name: test
     image: golang:1.25
     depends_on:
-      - lint
       - build 
     commands:
+      - sleep 15
+      - curl -v -u guest:guest -K /drone/src/tests/config/rmq/headers.conf --data-binary '@/drone/src/tests/config/rmq/definitions.json' http://rabbitmq:15672/api/definitions
+      - sleep 10
       - go test watchtower/tests
     volumes:
       - name: go-targets
