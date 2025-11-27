@@ -1,133 +1,212 @@
 package processing_test
 
 import (
-	"bytes"
 	"context"
-	"os"
+	"fmt"
 	"path"
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
-	"watchtower/internal/application/dto"
-	"watchtower/internal/application/mapping"
-	"watchtower/internal/application/usecase"
-	"watchtower/internal/application/utils"
-	"watchtower/internal/application/utils/telemetry"
-	"watchtower/internal/infrastructure/config"
-	"watchtower/internal/infrastructure/redis"
-	"watchtower/internal/infrastructure/rmq"
-	"watchtower/internal/infrastructure/s3"
-	"watchtower/tests/common/mocks"
+	"github.com/stretchr/testify/mock"
+
+	"watchtower/internal/support/task/application/mapping"
+	"watchtower/internal/support/task/application/service/docstorage"
+	"watchtower/internal/support/task/application/service/recognizer"
+	"watchtower/tests/common"
+
+	taskDomain "watchtower/internal/support/task/domain"
 )
 
 const (
 	TestBucketName     = "watchtower-test-bucket"
-	TestInputFilePath  = "./resources/input-file.txt"
+	TestInputFilePath  = "resources/input-file.txt"
 	TestConfigFilePath = "../configs/testing.toml"
 )
 
 func TestProcessing(t *testing.T) {
-	var initErr error
-
-	ctx := context.Background()
-	servConfig, initErr := config.FromFile(TestConfigFilePath)
-	assert.NoError(t, initErr, "failed to load testing config")
-
-	tracerProvider, _ := telemetry.InitTracer(servConfig.Server.Tracer)
-	telemetry.GlobalTracer = tracerProvider
-
-	dedocServ := &mocks.MockDedocClient{}
-
-	redisServ := redis.New(&servConfig.Cacher.Redis)
-	rmqServ, initErr := rmq.New(&servConfig.Queue.Rmq)
-	assert.NoError(t, initErr, "failed to init rmq client")
-	initErr = rmqServ.Consume(ctx)
-	assert.NoError(t, initErr, "failed to start consuming rmq client")
-
-	s3Serv, initErr := s3.New(&servConfig.Cloud.S3)
-	assert.NoError(t, initErr, "failed to init s3 client")
-	_ = s3Serv.CreateBucket(ctx, TestBucketName)
+	testEnv, initErr := common.InitTestEnvironment(TestConfigFilePath)
+	if initErr != nil {
+		t.Fatalf("failed to init test environment: %v", initErr)
+	}
 
 	t.Run("Positive pipeline", func(t *testing.T) {
-		searcherServ := mocks.NewMockDocSearcherClient()
-
+		ctx := context.Background()
 		cCtx, cancel := context.WithCancel(ctx)
-		taskMangerUC := usecase.NewTaskManagerUseCase(redisServ)
-		storageUC := usecase.NewStorageUseCase(searcherServ, s3Serv)
-		processorUC := usecase.NewPipelineUseCase(storageUC, taskMangerUC, rmqServ, dedocServ)
-		processorUC.LaunchWatcherListener(cCtx)
+		testEnv.Orchestrator.LaunchListener(cCtx)
 
-		fileData, err := os.ReadFile(TestInputFilePath)
-		data := bytes.NewBuffer(fileData)
-		dataStr := data.String()
-		assert.NoError(t, err, "failed to read test input file")
-		expired := time.Now()
-		_ = expired.Add(10 * time.Second)
-
-		fileForm := dto.FileToUpload{
-			Bucket:   TestBucketName,
-			FilePath: path.Base(TestInputFilePath),
-			FileData: data,
-			Expired:  &expired,
+		uploadParams, err := common.CreateUploadFileParams(TestInputFilePath)
+		if err != nil {
+			t.Fatalf("failed to create upload params: %v", err)
 		}
 
-		task, err := processorUC.CreateAndPublishTask(ctx, fileForm)
+		recData := &recognizer.Recognized{Text: uploadParams.FileData.String()}
+		recParams := &recognizer.RecognizeParams{FileName: uploadParams.FilePath, FileData: uploadParams.FileData}
+		matchedRecognize := mock.MatchedBy(func(params *recognizer.RecognizeParams) bool {
+			fileNameFlag := params.FileName == recParams.FileName
+			fileDataFlag := params.FileData.String() == recData.Text
+			return fileNameFlag && fileDataFlag
+		})
+		testEnv.Recognizer.On("Recognize", matchedRecognize).Return(recData, nil).Once()
+
+		docID := uuid.New().String()
+		docObject := docstorage.Document{
+			Index:      TestBucketName,
+			Name:       path.Base(uploadParams.FilePath),
+			Path:       uploadParams.FilePath,
+			Size:       uploadParams.FileData.Len(),
+			Content:    uploadParams.FileData.String(),
+			CreatedAt:  time.Now(),
+			ModifiedAt: time.Now(),
+		}
+		matchedStoreDocument := mock.MatchedBy(func(doc *docstorage.Document) bool {
+			indexFlag := doc.Index == TestBucketName
+			fileNameFlag := doc.Name == docObject.Name
+			filePathFlag := doc.Path == docObject.Path
+			fileSizeFlag := doc.Size == docObject.Size
+			contentFlag := doc.Content == docObject.Content
+			return indexFlag && fileNameFlag && filePathFlag && fileSizeFlag && contentFlag
+		})
+		testEnv.DocStorage.On("StoreDocument", matchedStoreDocument).Return(docID, nil).Once()
+
+		task, err := testEnv.Orchestrator.UploadFile(ctx, docObject.Index, uploadParams)
 		assert.NoError(t, err, "failed to upload test input file to s3")
 
 		timeoutCh := time.After(7 * time.Second)
 		<-timeoutCh
 
-		task, err = redisServ.Get(ctx, TestBucketName, task.ID)
-		assert.NoError(t, err, "failed to get task from redis")
-		assert.Equal(t, mapping.TaskStatusFromInt(3), task.Status)
-		assert.Equal(t, TestBucketName, task.Bucket)
-		assert.Equal(t, path.Base(TestInputFilePath), task.FilePath)
+		testEnv.Recognizer.AssertExpectations(t)
+		testEnv.DocStorage.AssertExpectations(t)
 
-		doc := searcherServ.GetDocuments()[0]
-		assert.NotEmpty(t, doc, "stored documents is empty")
-		assert.Equal(t, path.Base(TestInputFilePath), doc.FilePath)
-		assert.Equal(t, dataStr, doc.Content)
+		loadTask, err := testEnv.TaskManager.GetTask(ctx, task.BucketID, task.ID)
+		assert.NoError(t, err, "failed to get task from redis")
+		assert.Equal(t, taskDomain.Successful, loadTask.Status)
+		assert.Equal(t, task.BucketID, loadTask.BucketID)
+		assert.Equal(t, task.ObjectID, loadTask.ObjectID)
 
 		cancel()
 	})
 
-	t.Run("Negative pipeline", func(t *testing.T) {
-		searcherServ := mocks.NewMockDocSearcherClient()
-
+	t.Run("Failed to load object pipeline", func(t *testing.T) {
+		ctx := context.Background()
 		cCtx, cancel := context.WithCancel(ctx)
-		taskMangerUC := usecase.NewTaskManagerUseCase(redisServ)
-		storageUC := usecase.NewStorageUseCase(searcherServ, s3Serv)
-		processorUC := usecase.NewPipelineUseCase(storageUC, taskMangerUC, rmqServ, dedocServ)
-		processorUC.LaunchWatcherListener(cCtx)
+		testEnv.Orchestrator.LaunchListener(cCtx)
 
-		taskID := utils.GenerateUniqID(TestBucketName, TestInputFilePath)
-		taskEvent := dto.TaskEvent{
-			ID:         taskID,
-			Bucket:     TestBucketName,
-			FilePath:   TestInputFilePath,
-			FileSize:   0,
-			CreatedAt:  time.Now(),
-			ModifiedAt: time.Now(),
-			Status:     1,
-			StatusText: "",
-		}
+		task := taskDomain.CreateNewTask(TestBucketName, path.Base(TestInputFilePath))
 
-		rmqMsg := mapping.MessageFromTaskEvent(taskEvent)
-		err := rmqServ.Publish(ctx, rmqMsg)
+		rmqMsg := mapping.MessageFromTask(task)
+		err := testEnv.TaskQueue.Publish(ctx, rmqMsg)
 		assert.NoError(t, err, "failed to publish task event")
 
 		timeoutCh := time.After(7 * time.Second)
 		<-timeoutCh
 
-		task, err := redisServ.Get(ctx, TestBucketName, taskID)
-		assert.NoError(t, err, "failed to get task from redis")
-		assert.Equal(t, mapping.TaskStatusFromInt(-1), task.Status)
-		assert.Equal(t, TestBucketName, task.Bucket)
-		assert.Equal(t, TestInputFilePath, task.FilePath)
+		testEnv.Recognizer.AssertNotCalled(t, "Recognize")
+		testEnv.DocStorage.AssertNotCalled(t, "StoreDocument")
 
-		docs := searcherServ.GetDocuments()
-		assert.Empty(t, docs, "stored documents is not empty")
+		loadTask, err := testEnv.TaskManager.GetTask(ctx, task.BucketID, task.ID)
+		assert.NoError(t, err, "failed to get task from redis")
+		assert.Equal(t, taskDomain.Failed, loadTask.Status)
+		assert.Equal(t, task.BucketID, loadTask.BucketID)
+		assert.Equal(t, task.ObjectID, loadTask.ObjectID)
+
+		cancel()
+	})
+
+	t.Run("Failed to recognize pipeline", func(t *testing.T) {
+		ctx := context.Background()
+		cCtx, cancel := context.WithCancel(ctx)
+		testEnv.Orchestrator.LaunchListener(cCtx)
+
+		uploadParams, err := common.CreateUploadFileParams(TestInputFilePath)
+		if err != nil {
+			t.Fatalf("failed to create upload params: %v", err)
+		}
+
+		recErr := fmt.Errorf("service unavailable")
+		recData := &recognizer.Recognized{Text: uploadParams.FileData.String()}
+		recParams := &recognizer.RecognizeParams{FileName: uploadParams.FilePath, FileData: uploadParams.FileData}
+		matchedRecognize := mock.MatchedBy(func(params *recognizer.RecognizeParams) bool {
+			t.Helper()
+			fileNameFlag := params.FileName == recParams.FileName
+			fileDataFlag := params.FileData.String() == recData.Text
+			return fileNameFlag && fileDataFlag
+		})
+		testEnv.Recognizer.On("Recognize", matchedRecognize).Return(recData, recErr).Once()
+
+		task, err := testEnv.Orchestrator.UploadFile(ctx, TestBucketName, uploadParams)
+		assert.NoError(t, err, "failed to upload test input file to s3")
+
+		timeoutCh := time.After(7 * time.Second)
+		<-timeoutCh
+
+		testEnv.Recognizer.AssertExpectations(t)
+		testEnv.DocStorage.AssertNotCalled(t, "StoreDocument")
+
+		loadTask, err := testEnv.TaskManager.GetTask(ctx, task.BucketID, task.ID)
+		assert.NoError(t, err, "failed to get task from redis")
+		assert.Equal(t, taskDomain.Failed, loadTask.Status)
+		assert.Equal(t, task.BucketID, loadTask.BucketID)
+		assert.Equal(t, task.ObjectID, loadTask.ObjectID)
+
+		cancel()
+	})
+
+	t.Run("Failed to store document pipeline", func(t *testing.T) {
+		ctx := context.Background()
+		cCtx, cancel := context.WithCancel(ctx)
+		testEnv.Orchestrator.LaunchListener(cCtx)
+
+		uploadParams, err := common.CreateUploadFileParams(TestInputFilePath)
+		if err != nil {
+			t.Fatalf("failed to create upload params: %v", err)
+		}
+
+		recData := &recognizer.Recognized{Text: uploadParams.FileData.String()}
+		recParams := &recognizer.RecognizeParams{FileName: uploadParams.FilePath, FileData: uploadParams.FileData}
+		matchedRecognize := mock.MatchedBy(func(params *recognizer.RecognizeParams) bool {
+			t.Helper()
+			fileNameFlag := params.FileName == recParams.FileName
+			fileDataFlag := params.FileData.String() == recData.Text
+			return fileNameFlag && fileDataFlag
+		})
+		testEnv.Recognizer.On("Recognize", matchedRecognize).Return(recData, nil).Once()
+
+		docErr := fmt.Errorf("service unavailable")
+		docObject := docstorage.Document{
+			Index:      TestBucketName,
+			Name:       path.Base(uploadParams.FilePath),
+			Path:       uploadParams.FilePath,
+			Size:       uploadParams.FileData.Len(),
+			Content:    uploadParams.FileData.String(),
+			CreatedAt:  time.Now(),
+			ModifiedAt: time.Now(),
+		}
+		matchedStoreDocument := mock.MatchedBy(func(doc *docstorage.Document) bool {
+			indexFlag := doc.Index == TestBucketName
+			fileNameFlag := doc.Name == docObject.Name
+			filePathFlag := doc.Path == docObject.Path
+			fileSizeFlag := doc.Size == docObject.Size
+			contentFlag := doc.Content == docObject.Content
+			return indexFlag && fileNameFlag && filePathFlag && fileSizeFlag && contentFlag
+		})
+		testEnv.DocStorage.On("StoreDocument", matchedStoreDocument).Return("", docErr).Once()
+
+		task, err := testEnv.Orchestrator.UploadFile(ctx, TestBucketName, uploadParams)
+		assert.NoError(t, err, "failed to upload test input file to s3")
+
+		timeoutCh := time.After(7 * time.Second)
+		<-timeoutCh
+
+		testEnv.Recognizer.AssertExpectations(t)
+		testEnv.DocStorage.AssertExpectations(t)
+
+		loadTask, err := testEnv.TaskManager.GetTask(ctx, task.BucketID, task.ID)
+		assert.NoError(t, err, "failed to get task from redis")
+		assert.Equal(t, taskDomain.Failed, loadTask.Status)
+		assert.Equal(t, task.BucketID, loadTask.BucketID)
+		assert.Equal(t, task.ObjectID, loadTask.ObjectID)
 
 		cancel()
 	})

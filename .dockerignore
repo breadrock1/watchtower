@@ -15,3 +15,5 @@ LICENSE
 minio-data/
 rabbitmq-data/
 redis-data/
+
+docs/architecture.*

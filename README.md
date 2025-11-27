@@ -1,5 +1,7 @@
 # Watchtower Metaverse project
 
+[![Pull-Request](https://github.com/breadrock1/watchtower/actions/workflows/pull-request.yml/badge.svg)](https://github.com/breadrock1/watchtower/actions/workflows/pull-request.yml)
+
 ## Overview
 
 Watchtower is a project designed to monitor S3 file events for further AI processing. This service is been designed
@@ -7,6 +9,90 @@ for listening creating/uploading new files into cloud storage to download it and
 build and store knowledge graph of content entities and store to ELK system.
 
 ![architecture.png](docs/architecture.png)
+
+### Domain
+
+There are following domains:
+
+```
+domain
+   |----> File Storage (core)
+   |        |----> Bucket
+   |        |       |----> Context: bucket management into s3 object storage
+   |        |       |----> Services: IBucketManager
+   |        |----> Object
+   |                |----> Context: object management into s3 object storage
+   |                |----> Services: IObjectManager
+   |
+   |----> Task Processing (support)
+   |        |----> Task
+   |        |       |----> Context: task management into storage
+   |        |       |----> Services: ITaskStorage
+   |        |----> Message
+   |                |----> Context: task queue management
+   |                |----> Services: ITaskQueue
+ 
+```
+
+And there are usecases:
+
+```
+usecase
+   |----> Storage Use Case
+   |        |----> CRUD of bucket and object
+   |        |----> generate share URL of stored object
+   |        |----> upload file to storage and create new task processing event
+   |
+   |----> Task Use Case
+   |        |----> task management into storage and queue
+   |
+   |----> Orchestrator (process)
+   |        |----> combined both usecases to common upload and processing file pipeline
+   |        |----> task processing stages like recognizing and indexing by uploading files
+```
+
+There is context map:
+
+```
+           +----------------+
+           |  Orchesttator  |
+           +--------+-------+
+                    |
+        ┌───────────┴───────────┐
+        ▼                       ▼
++----------------+         +-------------+
+| StorageUseCase |         | TaskUseCase |
++----------------+         +-------------+
+        |                        |
+        ▼                        ▼
++----------------+         +-------------+
+| Storage Domain |         | Task Domain |
++----------------+         +-------------+
+
+
+```
+
+Context data flow:
+
+```
+HTTP Request
+     │
+     ▼
+HTTP Handler (ServerState)
+     │
+     ▼
+Orchestrator (orchestrator)
+    ├── StorageUseCase (application)
+    │       │
+    │       ▼
+    │    Storage (domain)
+    │
+    └── TaskUseCase (application)
+            │
+            ▼
+          Task (domain)
+
+```
 
 ## Features
 
