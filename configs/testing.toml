@@ -14,20 +14,20 @@ enable_jaeger = false
 address = "0.0.0.0:2893"
 
 [storage.s3]
-address = "localhost:9000"
+address = "minio:9000"
 access_id = "minio-root"
 secret_key = "minio-root"
 enable_ssl = false
 token = ""
 
 [task.storage.redis]
-address = "localhost:6379"
+address = "redis:6379"
 username = "redis"
 password = "redis"
 expired = 360
 
 [task.queue.rmq]
-address = "amqp://localhost:5672"
+address = "amqp://rabbitmq:5672"
 exchange = "test-watchtower"
 routing_key = "test-task"
 queue = "test-watchtower-tasks"
