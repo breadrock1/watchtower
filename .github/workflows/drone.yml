@@ -3,7 +3,7 @@ type: docker
 name: watchtower-ci
 
 environment:
-  GO_VERSION: 1.24
+  GO_VERSION: 1.25
 
 steps:
   - name: cache-built-go
@@ -18,7 +18,7 @@ steps:
         path: /cache
 
   - name: build
-    image: golang:1.24
+    image: golang:1.25
     depends_on:
       - cache-built-go
     commands:
@@ -28,7 +28,7 @@ steps:
         path: /cache
  
   - name: lint
-    image: golang:1.24
+    image: golang:1.25
     depends_on:
       - build
     commands:
@@ -39,7 +39,7 @@ steps:
         path: /cache
 
   - name: test
-    image: golang:1.24
+    image: golang:1.25
     depends_on:
       - lint
       - build 
@@ -57,7 +57,7 @@ steps:
         from_secret: gitea_token
       files: 
         - config
-        #- docs
+        - docs
         - "*.md"
         - "bin/*"
     when:
