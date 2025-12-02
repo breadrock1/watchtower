@@ -6,7 +6,6 @@ trigger:
   event:
     - pull_request
   actions:
-    - opened
     - synchronized
 
 environment:
@@ -92,8 +91,9 @@ name: watchtower-merged
 trigger:
   event:
     - push
-  actions:
+  branch:
     - main
+    - master
     - release/*
 
 environment:
