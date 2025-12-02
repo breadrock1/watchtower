@@ -177,8 +177,6 @@ environment:
 steps:
   - name: build-and-push-docker
     image: plugins/docker
-    depends_on:
-      - build
     settings:
       repo: 192.168.0.35:3000/sova-core/watchtower
       insecure: true
