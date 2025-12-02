@@ -222,13 +222,6 @@ steps:
 
   - name: build-and-push-docker
     image: plugins/docker
-    when:
-      event:
-        - tag
-      branch:
-        - main
-        - master
-        - release/*
     settings:
       repo: ${REGISTRY_ADDRESS}/sova-core/watchtower
       insecure: true
