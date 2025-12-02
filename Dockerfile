@@ -1,12 +1,12 @@
 FROM golang:1.25-alpine AS builder
 
-#RUN apk update && apk add --no-cache gcc libc-dev make
+RUN apk update && apk add --no-cache gcc libc-dev make
 
 WORKDIR /app
 
 COPY . .
 
-RUN go mod download && go build -o ./bin/watchtower ./cmd/watchtower
+RUN go mod download && make build
 
 
 FROM alpine:latest
