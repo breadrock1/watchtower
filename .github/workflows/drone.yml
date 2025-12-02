@@ -50,12 +50,6 @@ steps:
 
   - name: lint
     image: golang:1.25
-    when:
-      event:
-        - push
-      branch:
-        - main
-        - release/*
     depends_on:
       - build
     commands:
@@ -80,7 +74,8 @@ steps:
 
 volumes:
   - name: go-targets
-    temp: { }
+    temp: {}
+
 
 # On merged pull request to main branch or created release branch
 ---
@@ -161,7 +156,6 @@ steps:
       - name: go-targets
         path: /cache
 
-  # Build release on new tag creating event
   - name: build-and-push-docker
     image: plugins/docker
     when:
@@ -187,4 +181,61 @@ steps:
 
 volumes:
   - name: go-targets
-    temp: { }
+    temp: {}
+
+
+# Build release on new tag creating event
+---
+kind: pipeline
+type: docker
+name: watchtower-release
+
+trigger:
+  event:
+    - tag
+
+environment:
+  GO_VERSION: 1.25
+  REGISTRY_ADDRESS: ${REGISTRY_ADDRESS}
+
+steps:
+  - name: cache-built-go
+    image: drillster/drone-volume-cache
+    settings:
+      restore: true
+      mount:
+        - /usr/local/go
+        - /drone/src
+    volumes:
+      - name: go-targets
+        path: /cache
+
+  - name: build
+    image: golang:1.25
+    depends_on:
+      - cache-built-go
+    commands:
+      - go build watchtower/cmd/watchtower
+    volumes:
+      - name: go-targets
+        path: /cache
+
+  - name: build-and-push-docker
+    image: plugins/docker
+    settings:
+      repo: ${REGISTRY_ADDRESS}/sova-core/watchtower
+      insecure: true
+      dockerfile: Dockerfile
+      registry: ${REGISTRY_ADDRESS}
+      tags:
+        - ${DRONE_COMMIT_SHA:0:8}
+        - ${DRONE_TAG}
+        - latest
+      username:
+        from_secret: GITEA_USERNAME
+      password:
+        from_secret: GITEA_TOKEN
+
+volumes:
+  - name: go-targets
+    temp: {}
