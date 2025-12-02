@@ -5,10 +5,12 @@ name: watchtower-ci
 trigger:
   event:
     - pull_request
+  actions:
+    - opened
+    - synchronized
 
 environment:
   GO_VERSION: 1.25
-  REGISTRY_ADDRESS: ${REGISTRY_ADDRESS}
 
 services:
   - name: redis
@@ -28,9 +30,6 @@ services:
 steps:
   - name: cache-built-go
     image: drillster/drone-volume-cache
-    when:
-      event: pull_request
-      merge: true
     settings:
       restore: true
       mount:
@@ -42,9 +41,6 @@ steps:
 
   - name: build
     image: golang:1.25
-    when:
-      event: pull_request
-      merge: true
     depends_on:
       - cache-built-go
     commands:
@@ -55,6 +51,12 @@ steps:
 
   - name: lint
     image: golang:1.25
+    when:
+      event:
+        - push
+      branch:
+        - main
+        - release/*
     depends_on:
       - build
     commands:
@@ -77,10 +79,26 @@ steps:
       - name: go-targets
         path: /cache
 
+volumes:
+  - name: go-targets
+    temp: { }
+
+# Build release on new tag creating event
+---
+kind: pipeline
+type: docker
+name: watchtower-release
+
+trigger:
+  event:
+    - tag
+
+environment:
+  REGISTRY_ADDRESS: ${REGISTRY_ADDRESS}
+
+steps:
   - name: build-and-push-docker
     image: plugins/docker
-    when:
-      event: tag
     settings:
       repo: ${REGISTRY_ADDRESS}/sova-core/watchtower
       insecure: true
@@ -94,7 +112,3 @@ steps:
         from_secret: GITEA_USERNAME
       password:
         from_secret: GITEA_TOKEN
-
-volumes:
-  - name: go-targets
-    temp: { }
