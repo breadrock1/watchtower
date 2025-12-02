@@ -156,29 +156,6 @@ steps:
       - name: go-targets
         path: /cache
 
-  - name: build-and-push-docker
-    image: plugins/docker
-    when:
-      event:
-        - tag
-      branch:
-        - main
-        - master
-        - release/*
-    settings:
-      repo: ${REGISTRY_ADDRESS}/sova-core/watchtower
-      insecure: true
-      dockerfile: Dockerfile
-      registry: ${REGISTRY_ADDRESS}
-      tags:
-        - ${DRONE_COMMIT_SHA:0:8}
-        - ${DRONE_TAG}
-        - latest
-      username:
-        from_secret: GITEA_USERNAME
-      password:
-        from_secret: GITEA_TOKEN
-
 volumes:
   - name: go-targets
     temp: {}
@@ -222,11 +199,13 @@ steps:
 
   - name: build-and-push-docker
     image: plugins/docker
+    depends_on:
+      - build
     settings:
-      repo: ${REGISTRY_ADDRESS}/sova-core/watchtower
+      repo: 192.168.0.35:3000 /sova-core/watchtower
       insecure: true
       dockerfile: Dockerfile
-      registry: ${REGISTRY_ADDRESS}
+      registry: 192.168.0.35:3000
       tags:
         - ${DRONE_COMMIT_SHA:0:8}
         - ${DRONE_TAG}
