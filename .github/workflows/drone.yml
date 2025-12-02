@@ -171,7 +171,6 @@ trigger:
     - tag
 
 environment:
-  GO_VERSION: 1.25
   REGISTRY_ADDRESS: ${REGISTRY_ADDRESS}
 
 steps:
