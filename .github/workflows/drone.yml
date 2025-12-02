@@ -6,7 +6,6 @@ trigger:
   event:
     - pull_request
   actions:
-    - opened
     - synchronized
 
 environment:
@@ -98,6 +97,7 @@ trigger:
 
 environment:
   GO_VERSION: 1.25
+  REGISTRY_ADDRESS: ${REGISTRY_ADDRESS}
 
 services:
   - name: redis
@@ -160,26 +160,16 @@ steps:
       - name: go-targets
         path: /cache
 
-volumes:
-  - name: go-targets
-    temp: { }
-
-# Build release on new tag creating event
----
-kind: pipeline
-type: docker
-name: watchtower-release
-
-trigger:
-  event:
-    - tag
-
-environment:
-  REGISTRY_ADDRESS: ${REGISTRY_ADDRESS}
-
-steps:
+  # Build release on new tag creating event
   - name: build-and-push-docker
     image: plugins/docker
+    when:
+      event:
+        - tag
+      branch:
+        - main
+        - master
+        - release/*
     settings:
       repo: ${REGISTRY_ADDRESS}/sova-core/watchtower
       insecure: true
@@ -193,3 +183,7 @@ steps:
         from_secret: GITEA_USERNAME
       password:
         from_secret: GITEA_TOKEN
+
+volumes:
+  - name: go-targets
+    temp: { }
