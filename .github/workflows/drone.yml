@@ -41,7 +41,7 @@ steps:
     volumes:
       - name: go-targets
         path: /cache
- 
+
   - name: lint
     image: golang:1.25
     depends_on:
@@ -56,7 +56,7 @@ steps:
   - name: test
     image: golang:1.25
     depends_on:
-      - build 
+      - build
     commands:
       - sleep 15
       - curl -v -u guest:guest -K /drone/src/tests/config/rmq/headers.conf --data-binary '@/drone/src/tests/config/rmq/definitions.json' http://rabbitmq:15672/api/definitions
@@ -66,20 +66,24 @@ steps:
       - name: go-targets
         path: /cache
 
-  - name: notify-gitea
-    image: plugins/gitea-release
-    settings:
-      base_url: ${GITEA_SERVER}
-      api_key:
-        from_secret: gitea_token
-      files: 
-        - config
-        - docs
-        - "*.md"
-        - "bin/*"
+  - name: build-and-push-docker
+    image: plugins/docker
     when:
       event: tag
+    settings:
+      repo: 192.168.0.35:3000/sova-core/watchtower
+      insecure: true
+      dockerfile: Dockerfile
+      registry: 192.168.0.35:3000
+      tags:
+        - ${DRONE_COMMIT_SHA:0:8}
+        - ${DRONE_TAG}
+        - latest
+      username:
+        from_secret: GITEA_USERNAME
+      password:
+        from_secret: GITEA_TOKEN
 
 volumes:
   - name: go-targets
-    temp: {}
+    temp: { }
