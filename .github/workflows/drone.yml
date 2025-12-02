@@ -2,8 +2,13 @@ kind: pipeline
 type: docker
 name: watchtower-ci
 
+trigger:
+  event:
+    - pull_request
+
 environment:
   GO_VERSION: 1.25
+  REGISTRY_ADDRESS: ${REGISTRY_ADDRESS}
 
 services:
   - name: redis
@@ -23,6 +28,9 @@ services:
 steps:
   - name: cache-built-go
     image: drillster/drone-volume-cache
+    when:
+      event: pull_request
+      merge: true
     settings:
       restore: true
       mount:
@@ -34,6 +42,9 @@ steps:
 
   - name: build
     image: golang:1.25
+    when:
+      event: pull_request
+      merge: true
     depends_on:
       - cache-built-go
     commands:
@@ -71,10 +82,10 @@ steps:
     when:
       event: tag
     settings:
-      repo: 192.168.0.35:3000/sova-core/watchtower
+      repo: ${REGISTRY_ADDRESS}/sova-core/watchtower
       insecure: true
       dockerfile: Dockerfile
-      registry: 192.168.0.35:3000
+      registry: ${REGISTRY_ADDRESS}
       tags:
         - ${DRONE_COMMIT_SHA:0:8}
         - ${DRONE_TAG}
