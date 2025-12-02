@@ -93,7 +93,6 @@ trigger:
 
 environment:
   GO_VERSION: 1.25
-  REGISTRY_ADDRESS: ${REGISTRY_ADDRESS}
 
 services:
   - name: redis
@@ -176,33 +175,12 @@ environment:
   REGISTRY_ADDRESS: ${REGISTRY_ADDRESS}
 
 steps:
-  - name: cache-built-go
-    image: drillster/drone-volume-cache
-    settings:
-      restore: true
-      mount:
-        - /usr/local/go
-        - /drone/src
-    volumes:
-      - name: go-targets
-        path: /cache
-
-  - name: build
-    image: golang:1.25
-    depends_on:
-      - cache-built-go
-    commands:
-      - go build watchtower/cmd/watchtower
-    volumes:
-      - name: go-targets
-        path: /cache
-
   - name: build-and-push-docker
     image: plugins/docker
     depends_on:
       - build
     settings:
-      repo: 192.168.0.35:3000 /sova-core/watchtower
+      repo: 192.168.0.35:3000/sova-core/watchtower
       insecure: true
       dockerfile: Dockerfile
       registry: 192.168.0.35:3000
