@@ -164,6 +164,7 @@ func (p *TaskUseCase) Recognize(
 		FileData: fileData,
 	}
 
+	// TODO: impled retry pattern
 	recData, err := p.recognizer.Recognize(ctx, inputFile)
 	if err != nil {
 		task.SetStatusAndText(domain.Failed, "failed to recognize file")
