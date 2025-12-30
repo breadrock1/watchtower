@@ -15,7 +15,7 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/api/v1/cloud/bucket": {
+        "/cloud/bucket": {
             "put": {
                 "description": "Create new bucket into cloud",
                 "consumes": [
@@ -62,7 +62,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/cloud/buckets": {
+        "/cloud/buckets": {
             "get": {
                 "description": "Get watched bucket list",
                 "produces": [
@@ -92,7 +92,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/cloud/{bucket}": {
+        "/cloud/{bucket}": {
             "delete": {
                 "description": "Remove bucket from cloud",
                 "produces": [
@@ -134,7 +134,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/cloud/{bucket}/file": {
+        "/cloud/{bucket}/file": {
             "delete": {
                 "description": "Remove file from cloud",
                 "produces": [
@@ -183,7 +183,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/cloud/{bucket}/file/attributes": {
+        "/cloud/{bucket}/file/attributes": {
             "post": {
                 "description": "Get file attributes",
                 "consumes": [
@@ -237,7 +237,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/cloud/{bucket}/file/copy": {
+        "/cloud/{bucket}/file/copy": {
             "post": {
                 "description": "Copy file to another location into bucket",
                 "consumes": [
@@ -291,7 +291,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/cloud/{bucket}/file/download": {
+        "/cloud/{bucket}/file/download": {
             "post": {
                 "description": "Download file from cloud",
                 "consumes": [
@@ -345,7 +345,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/cloud/{bucket}/file/move": {
+        "/cloud/{bucket}/file/move": {
             "post": {
                 "description": "Move file to another location into bucket",
                 "consumes": [
@@ -399,7 +399,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/cloud/{bucket}/file/remove": {
+        "/cloud/{bucket}/file/remove": {
             "delete": {
                 "description": "Remove file from cloud",
                 "produces": [
@@ -450,7 +450,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/cloud/{bucket}/file/share": {
+        "/cloud/{bucket}/file/share": {
             "post": {
                 "description": "Get share URL for file",
                 "consumes": [
@@ -504,7 +504,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/cloud/{bucket}/file/upload": {
+        "/cloud/{bucket}/file/upload": {
             "put": {
                 "description": "Upload files to cloud",
                 "consumes": [
@@ -562,7 +562,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/cloud/{bucket}/files": {
+        "/cloud/{bucket}/files": {
             "post": {
                 "description": "Get files list into bucket",
                 "consumes": [
@@ -616,7 +616,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/tasks/{bucket}": {
+        "/tasks/{bucket}": {
             "get": {
                 "description": "Load tasks (processing/unrecognized/done) of uploaded files",
                 "consumes": [
@@ -670,7 +670,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/tasks/{bucket}/{task_id}": {
+        "/tasks/{bucket}/{task_id}": {
             "get": {
                 "description": "Load processing/unrecognized/done task by id of uploaded file",
                 "consumes": [
