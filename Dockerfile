@@ -16,6 +16,7 @@ WORKDIR /app
 COPY --from=builder /app/bin /app/bin
 COPY --from=builder /app/docs /app/docs
 COPY --from=builder /app/configs /app/configs
+COPY --from=builder /app/static /app/static
 
 ENTRYPOINT [ "/app/bin/watchtower" ]
 
