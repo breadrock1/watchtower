@@ -68,6 +68,7 @@ func SetupServer(
 	serverApp.initTracerMW()
 	serverApp.initLoggerMW(config.Logger)
 
+	_ = serverApp.CreateSystemGroup()
 	_ = serverApp.CreateTasksGroup()
 	_ = serverApp.CreateStorageBucketsGroup()
 	_ = serverApp.CreateStorageObjectsGroup()
