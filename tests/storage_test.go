@@ -1,4 +1,4 @@
-package storage_test
+package integration
 
 import (
 	"bytes"
@@ -12,11 +12,6 @@ import (
 
 	"watchtower/internal/core/cloud/domain"
 	"watchtower/tests/common"
-)
-
-const (
-	TestBucketName     = "watchtower-test-bucket"
-	TestConfigFilePath = "../configs/testing.toml"
 )
 
 func TestStorage(t *testing.T) {

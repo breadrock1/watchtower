@@ -1,4 +1,4 @@
-package processing_test
+package integration
 
 import (
 	"context"
