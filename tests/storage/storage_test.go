@@ -1,4 +1,4 @@
-package processing
+package storage_test
 
 import (
 	"bytes"
