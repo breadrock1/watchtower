@@ -43,7 +43,7 @@ func (s *Server) CreateStorageObjectsGroup() error {
 // @Success 200 {object} form.ResponseForm "Ok"
 // @Failure	400 {object} form.BadRequestForm "Bad Request message"
 // @Failure	503 {object} form.ServerErrorForm "Server does not available"
-// @Router /api/v1/cloud/{bucket}/file/copy [post]
+// @Router /cloud/{bucket}/file/copy [post]
 func (s *Server) CopyFile(eCtx echo.Context) error {
 	ctx := eCtx.Request().Context()
 	bucket := eCtx.Param("bucket")
@@ -80,7 +80,7 @@ func (s *Server) CopyFile(eCtx echo.Context) error {
 // @Success 200 {object} form.ResponseForm "Ok"
 // @Failure	400 {object} form.BadRequestForm "Bad Request message"
 // @Failure	503 {object} form.ServerErrorForm "Server does not available"
-// @Router /api/v1/cloud/{bucket}/file/move [post]
+// @Router /cloud/{bucket}/file/move [post]
 func (s *Server) MoveFile(eCtx echo.Context) error {
 	ctx := eCtx.Request().Context()
 	bucket := eCtx.Param("bucket")
@@ -118,7 +118,7 @@ func (s *Server) MoveFile(eCtx echo.Context) error {
 // @Success 200 {object} form.ResponseForm "Ok"
 // @Failure	400 {object} form.BadRequestForm "Bad Request message"
 // @Failure	503 {object} form.ServerErrorForm "Server does not available"
-// @Router /api/v1/cloud/{bucket}/file/upload [put]
+// @Router /cloud/{bucket}/file/upload [put]
 func (s *Server) UploadFile(eCtx echo.Context) error {
 	ctx := eCtx.Request().Context()
 
@@ -210,7 +210,7 @@ func (s *Server) UploadFile(eCtx echo.Context) error {
 // @Success 200 {file} io.Writer "Ok"
 // @Failure	400 {object} form.BadRequestForm "Bad Request message"
 // @Failure	503 {object} form.ServerErrorForm "Server does not available"
-// @Router /api/v1/cloud/{bucket}/file/download [post]
+// @Router /cloud/{bucket}/file/download [post]
 func (s *Server) DownloadFile(eCtx echo.Context) error {
 	ctx := eCtx.Request().Context()
 	bucket := eCtx.Param("bucket")
@@ -241,7 +241,7 @@ func (s *Server) DownloadFile(eCtx echo.Context) error {
 // @Success 200 {object} form.ResponseForm "Ok"
 // @Failure	400 {object} form.BadRequestForm "Bad Request message"
 // @Failure	503 {object} form.ServerErrorForm "Server does not available"
-// @Router /api/v1/cloud/{bucket}/file/remove [delete]
+// @Router /cloud/{bucket}/file/remove [delete]
 func (s *Server) RemoveFile(eCtx echo.Context) error {
 	ctx := eCtx.Request().Context()
 	bucket := eCtx.Param("bucket")
@@ -270,7 +270,7 @@ func (s *Server) RemoveFile(eCtx echo.Context) error {
 // @Success 200 {object} form.ResponseForm "Ok"
 // @Failure	400 {object} form.BadRequestForm "Bad Request message"
 // @Failure	503 {object} form.ServerErrorForm "Server does not available"
-// @Router /api/v1/cloud/{bucket}/file [delete]
+// @Router /cloud/{bucket}/file [delete]
 func (s *Server) RemoveFile2(eCtx echo.Context) error {
 	ctx := eCtx.Request().Context()
 	bucket := eCtx.Param("bucket")
@@ -294,7 +294,7 @@ func (s *Server) RemoveFile2(eCtx echo.Context) error {
 // @Success 200 {object} form.ResponseForm "Ok"
 // @Failure	400 {object} form.BadRequestForm "Bad Request message"
 // @Failure	503 {object} form.ServerErrorForm "Server does not available"
-// @Router /api/v1/cloud/{bucket}/files [post]
+// @Router /cloud/{bucket}/files [post]
 func (s *Server) GetFiles(eCtx echo.Context) error {
 	ctx := eCtx.Request().Context()
 	bucket := eCtx.Param("bucket")
@@ -335,7 +335,7 @@ func (s *Server) GetFiles(eCtx echo.Context) error {
 // @Success 200 {object} form.ResponseForm "Ok"
 // @Failure	400 {object} form.BadRequestForm "Bad Request message"
 // @Failure	503 {object} form.ServerErrorForm "Server does not available"
-// @Router /api/v1/cloud/{bucket}/file/attributes [post]
+// @Router /cloud/{bucket}/file/attributes [post]
 func (s *Server) GetFileInfo(eCtx echo.Context) error {
 	ctx := eCtx.Request().Context()
 	bucket := eCtx.Param("bucket")
@@ -367,7 +367,7 @@ func (s *Server) GetFileInfo(eCtx echo.Context) error {
 // @Success 200 {object} form.ResponseForm "Ok"
 // @Failure	400 {object} form.BadRequestForm "Bad Request message"
 // @Failure	503 {object} form.ServerErrorForm "Server does not available"
-// @Router /api/v1/cloud/{bucket}/file/share [post]
+// @Router /cloud/{bucket}/file/share [post]
 func (s *Server) ShareFile(eCtx echo.Context) error {
 	ctx := eCtx.Request().Context()
 	bucket := eCtx.Param("bucket")

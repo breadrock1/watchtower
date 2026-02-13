@@ -96,7 +96,7 @@ definitions:
 info:
   contact: {}
 paths:
-  /api/v1/cloud/{bucket}:
+  /cloud/{bucket}:
     delete:
       description: Remove bucket from cloud
       operationId: remove-bucket
@@ -124,7 +124,7 @@ paths:
       summary: Remove bucket from cloud
       tags:
       - buckets
-  /api/v1/cloud/{bucket}/file:
+  /cloud/{bucket}/file:
     delete:
       description: Remove file from cloud
       operationId: remove-file-2
@@ -157,7 +157,7 @@ paths:
       summary: Remove file from cloud
       tags:
       - files
-  /api/v1/cloud/{bucket}/file/attributes:
+  /cloud/{bucket}/file/attributes:
     post:
       consumes:
       - application/json
@@ -193,7 +193,7 @@ paths:
       summary: Get file attributes
       tags:
       - files
-  /api/v1/cloud/{bucket}/file/copy:
+  /cloud/{bucket}/file/copy:
     post:
       consumes:
       - application/json
@@ -229,7 +229,7 @@ paths:
       summary: Copy file to another location into bucket
       tags:
       - files
-  /api/v1/cloud/{bucket}/file/download:
+  /cloud/{bucket}/file/download:
     post:
       consumes:
       - application/json
@@ -265,7 +265,7 @@ paths:
       summary: Download file from cloud
       tags:
       - files
-  /api/v1/cloud/{bucket}/file/move:
+  /cloud/{bucket}/file/move:
     post:
       consumes:
       - application/json
@@ -301,7 +301,7 @@ paths:
       summary: Move file to another location into bucket
       tags:
       - files
-  /api/v1/cloud/{bucket}/file/remove:
+  /cloud/{bucket}/file/remove:
     delete:
       description: Remove file from cloud
       operationId: remove-file
@@ -335,7 +335,7 @@ paths:
       summary: Remove file from cloud
       tags:
       - files
-  /api/v1/cloud/{bucket}/file/share:
+  /cloud/{bucket}/file/share:
     post:
       consumes:
       - application/json
@@ -371,7 +371,7 @@ paths:
       summary: Get share URL for file
       tags:
       - share
-  /api/v1/cloud/{bucket}/file/upload:
+  /cloud/{bucket}/file/upload:
     put:
       consumes:
       - multipart/form
@@ -410,7 +410,7 @@ paths:
       summary: Upload files to cloud
       tags:
       - files
-  /api/v1/cloud/{bucket}/files:
+  /cloud/{bucket}/files:
     post:
       consumes:
       - application/json
@@ -446,7 +446,7 @@ paths:
       summary: Get files list into bucket
       tags:
       - files
-  /api/v1/cloud/bucket:
+  /cloud/bucket:
     put:
       consumes:
       - application/json
@@ -477,7 +477,7 @@ paths:
       summary: Create new bucket into cloud
       tags:
       - buckets
-  /api/v1/cloud/buckets:
+  /cloud/buckets:
     get:
       description: Get watched bucket list
       operationId: get-buckets
@@ -497,7 +497,7 @@ paths:
       summary: Get watched bucket list
       tags:
       - buckets
-  /api/v1/tasks/{bucket}:
+  /tasks/{bucket}:
     get:
       consumes:
       - application/json
@@ -533,7 +533,7 @@ paths:
       summary: Load processing tasks of uploaded files into bucket
       tags:
       - tasks
-  /api/v1/tasks/{bucket}/{task_id}:
+  /tasks/{bucket}/{task_id}:
     get:
       consumes:
       - application/json

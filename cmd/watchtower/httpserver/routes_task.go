@@ -34,7 +34,7 @@ func (s *Server) CreateTasksGroup() error {
 // @Success 200 {object} []form.TaskSchema "Ok"
 // @Failure	400 {object} form.BadRequestForm "Bad Request message"
 // @Failure	503 {object} form.ServerErrorForm "Server does not available"
-// @Router /api/v1/tasks/{bucket} [get]
+// @Router /tasks/{bucket} [get]
 func (s *Server) LoadTasks(eCtx echo.Context) error {
 	ctx := eCtx.Request().Context()
 	bucket := eCtx.Param("bucket")
@@ -82,7 +82,7 @@ func (s *Server) LoadTasks(eCtx echo.Context) error {
 // @Success 200 {object} form.TaskSchema "Ok"
 // @Failure	400 {object} form.BadRequestForm "Bad Request message"
 // @Failure	503 {object} form.ServerErrorForm "Server does not available"
-// @Router /api/v1/tasks/{bucket}/{task_id} [get]
+// @Router /tasks/{bucket}/{task_id} [get]
 func (s *Server) LoadTaskByID(eCtx echo.Context) error {
 	ctx := eCtx.Request().Context()
 	bucket := eCtx.Param("bucket")
