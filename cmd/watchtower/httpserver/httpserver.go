@@ -15,7 +15,7 @@ import (
 	"watchtower/internal/process"
 	"watchtower/internal/shared/telemetry"
 
-	_ "watchtower/docs"
+	docs "watchtower/docs"
 
 	echoSwagger "github.com/swaggo/echo-swagger"
 )
@@ -68,11 +68,13 @@ func SetupServer(
 	serverApp.initTracerMW()
 	serverApp.initLoggerMW(config.Logger)
 
+	_ = serverApp.CreateSystemGroup()
 	_ = serverApp.CreateTasksGroup()
 	_ = serverApp.CreateStorageBucketsGroup()
 	_ = serverApp.CreateStorageObjectsGroup()
 
-	serverApp.server.GET("/api/v1/swagger/*", echoSwagger.WrapHandler)
+	docs.SwaggerInfo.BasePath = "/api/v1"
+	serverApp.server.GET("/api/swagger/*", echoSwagger.WrapHandler)
 
 	return serverApp
 }

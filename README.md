@@ -2,11 +2,14 @@
 
 [![Pull-Request](https://github.com/breadrock1/watchtower/actions/workflows/pull-request.yml/badge.svg)](https://github.com/breadrock1/watchtower/actions/workflows/pull-request.yml)
 
+[![Target - Linux](https://img.shields.io/badge/OS-Linux-blue?logo=linux&logoColor=white)](https://www.linux.org/ "Go to Linux homepage")
+[![Target - MacOS](https://img.shields.io/badge/OS-MacOS-blue?logo=linux&logoColor=white)](https://www.apple.com/ "Go to Apple homepage")
+[![Target - Windows](https://img.shields.io/badge/OS-Windows-blue?logo=linux&logoColor=white)](https://www.microsoft.com/ "Go to Apple homepage")
+
 ## Overview
 
-Watchtower is a project designed to monitor S3 file events for further AI processing. This service is been designed
-for listening creating/uploading new files into cloud storage to download it and start processing to extract text content,
-build and store knowledge graph of content entities and store to ELK system.
+Watchtower is a project designed to monitor S3 file events for further AI processing throught [Doc-Search](https://github.com/breadrock1/doc-searcher/blob/master/README.md). This service is been designed for listening creating/uploading new files into cloud storage to download it 
+and start processing to extract text content, build and store knowledge graph of content entities and store to Doc-Search service.
 
 ![architecture.png](docs/architecture.png)
 
@@ -31,7 +34,6 @@ domain
    |        |----> Message
    |                |----> Context: task queue management
    |                |----> Services: ITaskQueue
- 
 ```
 
 And there are usecases:
@@ -68,8 +70,6 @@ There is context map:
 +----------------+         +-------------+
 | Storage Domain |         | Task Domain |
 +----------------+         +-------------+
-
-
 ```
 
 Context data flow:
@@ -91,16 +91,16 @@ Orchestrator (orchestrator)
             │
             ▼
           Task (domain)
-
 ```
 
 ## Features
 
- - S3 event monitoring - listen for file creation and copy events.
- - Text extracting - extract text from PDF, DOCX, and TXT files by OCR and LLM.
- - Embeddings computing - computing file text content embeddings by pre-trained model for semantic-search. 
- - ELK integration: Store extracted text, embeddings, and metadata into ELK based systems like elastic and opensearch.
- - Scalable architecture - stateless service that is guarantied by RabbitMQ and Redis services.
+ - Task event based                - create new event for processing by file uploading;
+ - Tasks management                - using RabbitMQ and Redis for tasks management of processing;
+ - Text extracting                 - extract text from PDF, DOCX, and TXT files by OCR and LLM;
+ - Document storing                - storing document object to Doc-Search service;
+ - Embeddings computing (removed)  - computing file text content embeddings by pre-trained model for semantic-search. 
+ - Stateless scalable architecture - stateless service that is guarantied by RabbitMQ and Redis services.
 
 ## Quick Start
 
@@ -117,7 +117,7 @@ Orchestrator (orchestrator)
    docker build -t watchtower:latest .
     ```
 
-3. Edit configs file `configs/production.toml` to launch docker compose services
+3. Edit configs file `configs/production.toml` or `.env` file to launch docker compose services
 
 4. Start the application using Docker Compose:
 
