@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"time"
+	"watchtower/internal/shared/kernel"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -62,7 +63,7 @@ func (r *RabbitMQClient) GetConsumerChannel() chan domain.Message {
 	return r.redirect
 }
 
-func (r *RabbitMQClient) Publish(ctx context.Context, msg domain.Message) error {
+func (r *RabbitMQClient) Publish(ctx kernel.Ctx, msg domain.Message) error {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "rmq-publish")
 	defer span.End()
 
@@ -104,7 +105,7 @@ func (r *RabbitMQClient) Publish(ctx context.Context, msg domain.Message) error 
 	return nil
 }
 
-func (r *RabbitMQClient) StartConsuming(_ context.Context) error {
+func (r *RabbitMQClient) StartConsuming(_ kernel.Ctx) error {
 	go r.handleReconnect()
 
 	deliveries, err := r.channel.Consume(
@@ -126,7 +127,7 @@ func (r *RabbitMQClient) StartConsuming(_ context.Context) error {
 	return nil
 }
 
-func (r *RabbitMQClient) StopConsuming(_ context.Context) error {
+func (r *RabbitMQClient) StopConsuming(_ kernel.Ctx) error {
 	if err := r.channel.Cancel(ConsumerName, true); err != nil {
 		return fmt.Errorf("rmq: consumer cancel failed: %w", err)
 	}
@@ -215,7 +216,7 @@ func (r *RabbitMQClient) handleReconnect() {
 	}
 }
 
-func injectSpanContextToHeaders(ctx context.Context) amqp.Table {
+func injectSpanContextToHeaders(ctx kernel.Ctx) amqp.Table {
 	carrier := propagation.HeaderCarrier{}
 	telemetry.TracePropagator.Inject(ctx, carrier)
 
@@ -231,7 +232,7 @@ func injectSpanContextToHeaders(ctx context.Context) amqp.Table {
 	return headers
 }
 
-func extractSpanContextFromHeaders(headers amqp.Table) context.Context {
+func extractSpanContextFromHeaders(headers amqp.Table) kernel.Ctx {
 	ctx := context.Background()
 	if headers == nil {
 		return ctx

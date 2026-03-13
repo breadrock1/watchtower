@@ -1,7 +1,6 @@
 package redis
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -28,7 +27,7 @@ func New(config Config) domain.ITaskStorage {
 	}
 }
 
-func (rs *RedisClient) GetAllBucketTasks(ctx context.Context, bucketID kernel.BucketID) ([]*domain.Task, error) {
+func (rs *RedisClient) GetAllBucketTasks(ctx kernel.Ctx, bucketID kernel.BucketID) ([]*domain.Task, error) {
 	key := rs.generateUniqID(bucketID, "*")
 	status := rs.rsConn.Scan(ctx, 0, key, -1)
 	if status.Err() != nil {
@@ -39,6 +38,7 @@ func (rs *RedisClient) GetAllBucketTasks(ctx context.Context, bucketID kernel.Bu
 	tasks := make([]*domain.Task, len(rKeys))
 	for index, rKey := range rKeys {
 		cmd := rs.rsConn.Get(ctx, rKey)
+
 		data, err := cmd.Bytes()
 		if err != nil {
 			slog.Warn("failed to get task", slog.String("err", err.Error()))
@@ -64,46 +64,41 @@ func (rs *RedisClient) GetAllBucketTasks(ctx context.Context, bucketID kernel.Bu
 }
 
 func (rs *RedisClient) GetTask(
-	ctx context.Context,
+	ctx kernel.Ctx,
 	bucketID kernel.BucketID,
-	taskID domain.TaskID,
+	taskID kernel.TaskID,
 ) (*domain.Task, error) {
 	key := rs.generateUniqID(bucketID, taskID.String())
 	cmd := rs.rsConn.Get(ctx, key)
 	if cmd.Err() != nil {
-		return nil, fmt.Errorf("redis error: %w", cmd.Err())
-	}
-
-	data, err := cmd.Bytes()
-	if err != nil {
-		return nil, fmt.Errorf("read bytes data error: %w", err)
+		return nil, fmt.Errorf("redis error: %w: %w", domain.ErrExecution, cmd.Err())
 	}
 
 	value := &RedisValue{}
-	if err = json.Unmarshal(data, &value); err != nil {
-		return nil, fmt.Errorf("deserialize error: %w", err)
+	if err := cmd.Scan(value); err != nil {
+		return nil, fmt.Errorf("deserialize error: %w: %w", domain.ErrInvalidTaskData, err)
 	}
 
 	taskEvent, err := value.ConvertToTask()
 	if err != nil {
-		return nil, fmt.Errorf("task validation error: %w", err)
+		return nil, fmt.Errorf("task validation error: %w: %w", domain.ErrInvalidTaskData, err)
 	}
 
 	return taskEvent, nil
 }
 
-func (rs *RedisClient) UpdateTask(ctx context.Context, task *domain.Task) error {
+func (rs *RedisClient) UpdateTask(ctx kernel.Ctx, task *domain.Task) error {
 	key := rs.generateUniqID(task.BucketID, task.ID.String())
 
 	value := ConvertFromTaskEvent(task)
 	jsonData, err := json.Marshal(value)
 	if err != nil {
-		return fmt.Errorf("serialize error: %w", err)
+		return fmt.Errorf("serialize error: %w: %w", domain.ErrInvalidTaskData, err)
 	}
 
 	status := rs.rsConn.Set(ctx, key, jsonData, rs.config.Expired*time.Second)
 	if status.Err() != nil {
-		return fmt.Errorf("redis error: %w", status.Err())
+		return fmt.Errorf("redis error: %w: %w", domain.ErrExecution, status.Err())
 	}
 
 	return nil

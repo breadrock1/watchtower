@@ -1,17 +1,15 @@
 package application
 
 import (
-	"context"
 	"fmt"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 
 	"watchtower/internal/core/cloud/domain"
+	"watchtower/internal/shared/kernel"
 	"watchtower/internal/shared/telemetry"
 )
-
-type Ctx context.Context
 
 type StorageUseCase struct {
 	cloudStorage domain.ICloudStorage
@@ -21,7 +19,7 @@ func NewStorageUseCase(cloudStorage domain.ICloudStorage) *StorageUseCase {
 	return &StorageUseCase{cloudStorage: cloudStorage}
 }
 
-func (s *StorageUseCase) GetAllBuckets(ctx Ctx) ([]domain.Bucket, error) {
+func (s *StorageUseCase) GetAllBuckets(ctx kernel.Ctx) ([]domain.Bucket, error) {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "get-buckets")
 	defer span.End()
 
@@ -36,7 +34,7 @@ func (s *StorageUseCase) GetAllBuckets(ctx Ctx) ([]domain.Bucket, error) {
 	return allBuckets, err
 }
 
-func (s *StorageUseCase) CreateBucket(ctx Ctx, bucketID domain.BucketID) error {
+func (s *StorageUseCase) CreateBucket(ctx kernel.Ctx, bucketID kernel.BucketID) error {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "create-bucket")
 	defer span.End()
 
@@ -53,7 +51,7 @@ func (s *StorageUseCase) CreateBucket(ctx Ctx, bucketID domain.BucketID) error {
 	return nil
 }
 
-func (s *StorageUseCase) DeleteBucket(ctx Ctx, bucketID domain.BucketID) error {
+func (s *StorageUseCase) DeleteBucket(ctx kernel.Ctx, bucketID kernel.BucketID) error {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "remove-bucket")
 	defer span.End()
 
@@ -69,7 +67,7 @@ func (s *StorageUseCase) DeleteBucket(ctx Ctx, bucketID domain.BucketID) error {
 	return nil
 }
 
-func (s *StorageUseCase) IsBucketExists(ctx Ctx, bucketID domain.BucketID) (bool, error) {
+func (s *StorageUseCase) IsBucketExists(ctx kernel.Ctx, bucketID kernel.BucketID) (bool, error) {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "is-bucket-exists")
 	defer span.End()
 
@@ -87,9 +85,9 @@ func (s *StorageUseCase) IsBucketExists(ctx Ctx, bucketID domain.BucketID) (bool
 }
 
 func (s *StorageUseCase) GetObjectInfo(
-	ctx Ctx,
-	bucketID domain.BucketID,
-	objID domain.ObjectID,
+	ctx kernel.Ctx,
+	bucketID kernel.BucketID,
+	objID kernel.ObjectID,
 ) (*domain.Object, error) {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "get-file-metadata")
 	defer span.End()
@@ -110,7 +108,7 @@ func (s *StorageUseCase) GetObjectInfo(
 	return &objectInfo, nil
 }
 
-func (s *StorageUseCase) CopyObject(ctx Ctx, bucketID domain.BucketID, params *domain.CopyObjectParams) error {
+func (s *StorageUseCase) CopyObject(ctx kernel.Ctx, bucketID kernel.BucketID, params *domain.CopyObjectParams) error {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "copy-object")
 	defer span.End()
 
@@ -130,7 +128,7 @@ func (s *StorageUseCase) CopyObject(ctx Ctx, bucketID domain.BucketID, params *d
 	return nil
 }
 
-func (s *StorageUseCase) DeleteObject(ctx Ctx, bucketID domain.BucketID, objID domain.ObjectID) error {
+func (s *StorageUseCase) DeleteObject(ctx kernel.Ctx, bucketID kernel.BucketID, objID kernel.ObjectID) error {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "copy-object")
 	defer span.End()
 
@@ -149,7 +147,7 @@ func (s *StorageUseCase) DeleteObject(ctx Ctx, bucketID domain.BucketID, objID d
 	return nil
 }
 
-func (s *StorageUseCase) MoveObject(ctx Ctx, bucketID domain.BucketID, params *domain.CopyObjectParams) error {
+func (s *StorageUseCase) MoveObject(ctx kernel.Ctx, bucketID kernel.BucketID, params *domain.CopyObjectParams) error {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "move-file")
 	defer span.End()
 
@@ -178,9 +176,9 @@ func (s *StorageUseCase) MoveObject(ctx Ctx, bucketID domain.BucketID, params *d
 	return nil
 }
 
-func (s *StorageUseCase) GetBucketObjects(
-	ctx Ctx,
-	bucketID domain.BucketID,
+func (s *StorageUseCase) LoadBucketObjects(
+	ctx kernel.Ctx,
+	bucketID kernel.BucketID,
 	params *domain.GetObjectsParams,
 ) ([]domain.Object, error) {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "get-bucket-objects")
@@ -203,10 +201,10 @@ func (s *StorageUseCase) GetBucketObjects(
 }
 
 func (s *StorageUseCase) StoreObject(
-	ctx Ctx,
-	bucketID domain.BucketID,
+	ctx kernel.Ctx,
+	bucketID kernel.BucketID,
 	params *domain.UploadObjectParams,
-) (domain.ObjectID, error) {
+) (kernel.ObjectID, error) {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "upload-object")
 	defer span.End()
 
@@ -229,8 +227,8 @@ func (s *StorageUseCase) StoreObject(
 }
 
 func (s *StorageUseCase) GenShareURL(
-	ctx Ctx,
-	bucketID domain.BucketID,
+	ctx kernel.Ctx,
+	bucketID kernel.BucketID,
 	params *domain.ShareObjectParams,
 ) (string, error) {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "share-object")
@@ -253,9 +251,9 @@ func (s *StorageUseCase) GenShareURL(
 }
 
 func (s *StorageUseCase) GetObjectData(
-	ctx Ctx,
-	bucketID domain.BucketID,
-	objID domain.ObjectID,
+	ctx kernel.Ctx,
+	bucketID kernel.BucketID,
+	objID kernel.ObjectID,
 ) (domain.ObjectData, error) {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "download-object")
 	defer span.End()
