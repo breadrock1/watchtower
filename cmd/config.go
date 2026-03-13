@@ -99,6 +99,7 @@ func setupEnv(viperInst *viper.Viper) {
 	viperInst.SetEnvPrefix(serviceEnvPrefix)
 	viperInst.SetEnvKeyReplacer(strings.NewReplacer(".", "__"))
 
+	//nolint
 	envMappings := map[string]string{
 		"orchestrator.semaphore_size":       "ORCHESTRATOR__SEMAPHORE_SIZE",
 		"otlp.logger.level":                 "OTLP__LOGGER__LEVEL",
@@ -130,7 +131,7 @@ func setupEnv(viperInst *viper.Viper) {
 	for key, value := range envMappings {
 		bindErr = viperInst.BindEnv(key, fmt.Sprintf("%s__%s", serviceEnvPrefix, value))
 		if bindErr != nil {
-			slog.Warn("failed to bind env var", bindErr)
+			slog.Warn("failed to bind env var", slog.String("err", bindErr.Error()))
 		}
 	}
 }
