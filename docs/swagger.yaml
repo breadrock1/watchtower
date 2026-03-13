@@ -1,5 +1,5 @@
 definitions:
-  form.BadRequestForm:
+  form.BadRequestError:
     properties:
       message:
         example: Bad Request message
@@ -7,6 +7,15 @@ definitions:
       status:
         example: 400
         type: integer
+    type: object
+  form.BucketSchema:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      path:
+        type: string
     type: object
   form.CopyFileForm:
     properties:
@@ -41,25 +50,34 @@ definitions:
         example: test-folder/
         type: string
     type: object
+  form.InternalServerError:
+    properties:
+      message:
+        example: Internal server error message
+        type: string
+      status:
+        example: 500
+        type: integer
+    type: object
+  form.NotFoundError:
+    properties:
+      message:
+        example: Not found
+        type: string
+      status:
+        example: 404
+        type: integer
+    type: object
   form.RemoveFileForm:
     properties:
       file_name:
         example: test-file.docx
         type: string
     type: object
-  form.ResponseForm:
+  form.ServerUnavailableError:
     properties:
       message:
-        example: Done
-        type: string
-      status:
-        example: 200
-        type: integer
-    type: object
-  form.ServerErrorForm:
-    properties:
-      message:
-        example: Server Error message
+        example: Server unavailable error message
         type: string
       status:
         example: 503
@@ -73,6 +91,15 @@ definitions:
       file_path:
         example: test-file.docx
         type: string
+    type: object
+  form.Success:
+    properties:
+      message:
+        example: Done
+        type: string
+      status:
+        example: 200
+        type: integer
     type: object
   form.TaskSchema:
     properties:
@@ -96,7 +123,7 @@ definitions:
 info:
   contact: {}
 paths:
-  /cloud/{bucket}:
+  /api/v1/cloud/{bucket}:
     delete:
       description: Remove bucket from cloud
       operationId: remove-bucket
@@ -112,19 +139,27 @@ paths:
         "200":
           description: Ok
           schema:
-            $ref: '#/definitions/form.ResponseForm'
+            $ref: '#/definitions/form.Success'
         "400":
-          description: Bad Request message
+          description: Bad Request error
           schema:
-            $ref: '#/definitions/form.BadRequestForm'
+            $ref: '#/definitions/form.BadRequestError'
+        "404":
+          description: Bucket not found
+          schema:
+            $ref: '#/definitions/form.NotFoundError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/form.InternalServerError'
         "503":
           description: Server does not available
           schema:
-            $ref: '#/definitions/form.ServerErrorForm'
+            $ref: '#/definitions/form.ServerUnavailableError'
       summary: Remove bucket from cloud
       tags:
       - buckets
-  /cloud/{bucket}/file:
+  /api/v1/cloud/{bucket}/file:
     delete:
       description: Remove file from cloud
       operationId: remove-file-2
@@ -145,19 +180,27 @@ paths:
         "200":
           description: Ok
           schema:
-            $ref: '#/definitions/form.ResponseForm'
+            $ref: '#/definitions/form.Success'
         "400":
-          description: Bad Request message
+          description: Bad Request error
           schema:
-            $ref: '#/definitions/form.BadRequestForm'
+            $ref: '#/definitions/form.BadRequestError'
+        "404":
+          description: Bucket not found
+          schema:
+            $ref: '#/definitions/form.NotFoundError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/form.InternalServerError'
         "503":
           description: Server does not available
           schema:
-            $ref: '#/definitions/form.ServerErrorForm'
+            $ref: '#/definitions/form.ServerUnavailableError'
       summary: Remove file from cloud
       tags:
       - files
-  /cloud/{bucket}/file/attributes:
+  /api/v1/cloud/{bucket}/file/attributes:
     post:
       consumes:
       - application/json
@@ -181,19 +224,27 @@ paths:
         "200":
           description: Ok
           schema:
-            $ref: '#/definitions/form.ResponseForm'
+            $ref: '#/definitions/form.Success'
         "400":
-          description: Bad Request message
+          description: Bad Request error
           schema:
-            $ref: '#/definitions/form.BadRequestForm'
+            $ref: '#/definitions/form.BadRequestError'
+        "404":
+          description: Bucket or Object not found
+          schema:
+            $ref: '#/definitions/form.NotFoundError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/form.InternalServerError'
         "503":
           description: Server does not available
           schema:
-            $ref: '#/definitions/form.ServerErrorForm'
+            $ref: '#/definitions/form.ServerUnavailableError'
       summary: Get file attributes
       tags:
       - files
-  /cloud/{bucket}/file/copy:
+  /api/v1/cloud/{bucket}/file/copy:
     post:
       consumes:
       - application/json
@@ -217,19 +268,27 @@ paths:
         "200":
           description: Ok
           schema:
-            $ref: '#/definitions/form.ResponseForm'
+            $ref: '#/definitions/form.Success'
         "400":
-          description: Bad Request message
+          description: Bad Request error
           schema:
-            $ref: '#/definitions/form.BadRequestForm'
+            $ref: '#/definitions/form.BadRequestError'
+        "404":
+          description: Bucket or file not found
+          schema:
+            $ref: '#/definitions/form.NotFoundError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/form.InternalServerError'
         "503":
           description: Server does not available
           schema:
-            $ref: '#/definitions/form.ServerErrorForm'
+            $ref: '#/definitions/form.ServerUnavailableError'
       summary: Copy file to another location into bucket
       tags:
       - files
-  /cloud/{bucket}/file/download:
+  /api/v1/cloud/{bucket}/file/download:
     post:
       consumes:
       - application/json
@@ -251,21 +310,29 @@ paths:
       - application/json
       responses:
         "200":
-          description: Ok
+          description: Returned file bytes
           schema:
             type: file
         "400":
-          description: Bad Request message
+          description: Bad Request error
           schema:
-            $ref: '#/definitions/form.BadRequestForm'
+            $ref: '#/definitions/form.BadRequestError'
+        "404":
+          description: Bucket not found
+          schema:
+            $ref: '#/definitions/form.NotFoundError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/form.InternalServerError'
         "503":
           description: Server does not available
           schema:
-            $ref: '#/definitions/form.ServerErrorForm'
+            $ref: '#/definitions/form.ServerUnavailableError'
       summary: Download file from cloud
       tags:
       - files
-  /cloud/{bucket}/file/move:
+  /api/v1/cloud/{bucket}/file/move:
     post:
       consumes:
       - application/json
@@ -289,19 +356,27 @@ paths:
         "200":
           description: Ok
           schema:
-            $ref: '#/definitions/form.ResponseForm'
+            $ref: '#/definitions/form.Success'
         "400":
-          description: Bad Request message
+          description: Bad Request error
           schema:
-            $ref: '#/definitions/form.BadRequestForm'
+            $ref: '#/definitions/form.BadRequestError'
+        "404":
+          description: Bucket or file not found
+          schema:
+            $ref: '#/definitions/form.NotFoundError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/form.InternalServerError'
         "503":
           description: Server does not available
           schema:
-            $ref: '#/definitions/form.ServerErrorForm'
+            $ref: '#/definitions/form.ServerUnavailableError'
       summary: Move file to another location into bucket
       tags:
       - files
-  /cloud/{bucket}/file/remove:
+  /api/v1/cloud/{bucket}/file/remove:
     delete:
       description: Remove file from cloud
       operationId: remove-file
@@ -323,19 +398,27 @@ paths:
         "200":
           description: Ok
           schema:
-            $ref: '#/definitions/form.ResponseForm'
+            $ref: '#/definitions/form.Success'
         "400":
-          description: Bad Request message
+          description: Bad Request error
           schema:
-            $ref: '#/definitions/form.BadRequestForm'
+            $ref: '#/definitions/form.BadRequestError'
+        "404":
+          description: Bucket not found
+          schema:
+            $ref: '#/definitions/form.NotFoundError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/form.InternalServerError'
         "503":
           description: Server does not available
           schema:
-            $ref: '#/definitions/form.ServerErrorForm'
+            $ref: '#/definitions/form.ServerUnavailableError'
       summary: Remove file from cloud
       tags:
       - files
-  /cloud/{bucket}/file/share:
+  /api/v1/cloud/{bucket}/file/share:
     post:
       consumes:
       - application/json
@@ -357,21 +440,29 @@ paths:
       - application/json
       responses:
         "200":
-          description: Ok
+          description: URL with shared file
           schema:
-            $ref: '#/definitions/form.ResponseForm'
+            $ref: '#/definitions/form.Success'
         "400":
-          description: Bad Request message
+          description: Bad Request error
           schema:
-            $ref: '#/definitions/form.BadRequestForm'
+            $ref: '#/definitions/form.BadRequestError'
+        "404":
+          description: Bucket of object not found
+          schema:
+            $ref: '#/definitions/form.NotFoundError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/form.InternalServerError'
         "503":
           description: Server does not available
           schema:
-            $ref: '#/definitions/form.ServerErrorForm'
+            $ref: '#/definitions/form.ServerUnavailableError'
       summary: Get share URL for file
       tags:
       - share
-  /cloud/{bucket}/file/upload:
+  /api/v1/cloud/{bucket}/file/upload:
     put:
       consumes:
       - multipart/form
@@ -398,19 +489,27 @@ paths:
         "200":
           description: Ok
           schema:
-            $ref: '#/definitions/form.ResponseForm'
+            $ref: '#/definitions/form.Success'
         "400":
-          description: Bad Request message
+          description: Bad Request error
           schema:
-            $ref: '#/definitions/form.BadRequestForm'
+            $ref: '#/definitions/form.BadRequestError'
+        "404":
+          description: Bucket not found
+          schema:
+            $ref: '#/definitions/form.NotFoundError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/form.InternalServerError'
         "503":
           description: Server does not available
           schema:
-            $ref: '#/definitions/form.ServerErrorForm'
+            $ref: '#/definitions/form.ServerUnavailableError'
       summary: Upload files to cloud
       tags:
       - files
-  /cloud/{bucket}/files:
+  /api/v1/cloud/{bucket}/files:
     post:
       consumes:
       - application/json
@@ -434,19 +533,27 @@ paths:
         "200":
           description: Ok
           schema:
-            $ref: '#/definitions/form.ResponseForm'
+            $ref: '#/definitions/form.Success'
         "400":
-          description: Bad Request message
+          description: Bad Request error
           schema:
-            $ref: '#/definitions/form.BadRequestForm'
+            $ref: '#/definitions/form.BadRequestError'
+        "404":
+          description: Bucket not found
+          schema:
+            $ref: '#/definitions/form.NotFoundError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/form.InternalServerError'
         "503":
           description: Server does not available
           schema:
-            $ref: '#/definitions/form.ServerErrorForm'
+            $ref: '#/definitions/form.ServerUnavailableError'
       summary: Get files list into bucket
       tags:
       - files
-  /cloud/bucket:
+  /api/v1/cloud/bucket:
     put:
       consumes:
       - application/json
@@ -465,19 +572,23 @@ paths:
         "200":
           description: Ok
           schema:
-            $ref: '#/definitions/form.ResponseForm'
+            $ref: '#/definitions/form.Success'
         "400":
-          description: Bad Request message
+          description: Bad Request error
           schema:
-            $ref: '#/definitions/form.BadRequestForm'
+            $ref: '#/definitions/form.BadRequestError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/form.InternalServerError'
         "503":
           description: Server does not available
           schema:
-            $ref: '#/definitions/form.ServerErrorForm'
+            $ref: '#/definitions/form.ServerUnavailableError'
       summary: Create new bucket into cloud
       tags:
       - buckets
-  /cloud/buckets:
+  /api/v1/cloud/buckets:
     get:
       description: Get watched bucket list
       operationId: get-buckets
@@ -485,19 +596,27 @@ paths:
       - application/json
       responses:
         "200":
-          description: Ok
+          description: Loaded buckets info
           schema:
             items:
-              type: string
+              $ref: '#/definitions/form.BucketSchema'
             type: array
+        "400":
+          description: Bad Request error
+          schema:
+            $ref: '#/definitions/form.BadRequestError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/form.InternalServerError'
         "503":
           description: Server does not available
           schema:
-            $ref: '#/definitions/form.ServerErrorForm'
+            $ref: '#/definitions/form.ServerUnavailableError'
       summary: Get watched bucket list
       tags:
       - buckets
-  /tasks/{bucket}:
+  /api/v1/tasks/{bucket}:
     get:
       consumes:
       - application/json
@@ -517,23 +636,31 @@ paths:
       - application/json
       responses:
         "200":
-          description: Ok
+          description: Loaded tasks
           schema:
             items:
               $ref: '#/definitions/form.TaskSchema'
             type: array
         "400":
-          description: Bad Request message
+          description: Bad Request error
           schema:
-            $ref: '#/definitions/form.BadRequestForm'
+            $ref: '#/definitions/form.BadRequestError'
+        "404":
+          description: Bucket not found
+          schema:
+            $ref: '#/definitions/form.NotFoundError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/form.InternalServerError'
         "503":
           description: Server does not available
           schema:
-            $ref: '#/definitions/form.ServerErrorForm'
+            $ref: '#/definitions/form.ServerUnavailableError'
       summary: Load processing tasks of uploaded files into bucket
       tags:
       - tasks
-  /tasks/{bucket}/{task_id}:
+  /api/v1/tasks/{bucket}/{task_id}:
     get:
       consumes:
       - application/json
@@ -554,17 +681,25 @@ paths:
       - application/json
       responses:
         "200":
-          description: Ok
+          description: Loaded tasks
           schema:
             $ref: '#/definitions/form.TaskSchema'
         "400":
-          description: Bad Request message
+          description: Bad Request error
           schema:
-            $ref: '#/definitions/form.BadRequestForm'
+            $ref: '#/definitions/form.BadRequestError'
+        "404":
+          description: Task not found
+          schema:
+            $ref: '#/definitions/form.NotFoundError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/form.InternalServerError'
         "503":
           description: Server does not available
           schema:
-            $ref: '#/definitions/form.ServerErrorForm'
+            $ref: '#/definitions/form.ServerUnavailableError'
       summary: Load processing task by id
       tags:
       - tasks
