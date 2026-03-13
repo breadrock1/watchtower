@@ -1,10 +1,9 @@
 package mw
 
 import (
-	"net/http"
 	"strings"
 
-	"github.com/labstack/echo/v4"
+	"github.com/gofiber/fiber/v2"
 )
 
 var (
@@ -17,12 +16,12 @@ var (
 	}
 )
 
-func TracerSkipper(eCtx echo.Context) bool {
+func TracerSkipper(eCtx *fiber.Ctx) bool {
 	for _, excluded := range excludedPaths {
 		if strings.HasPrefix(eCtx.Path(), excluded) {
 			return true
 		}
 	}
 
-	return eCtx.Request().Method == http.MethodOptions
+	return eCtx.Request().Header.IsOptions()
 }

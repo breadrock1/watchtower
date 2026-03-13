@@ -1,25 +1,21 @@
 package httpserver
 
 import (
-	"net/http"
 	"strconv"
 
 	"golang.org/x/exp/slices"
 
+	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
-	"github.com/labstack/echo/v4"
 
 	"watchtower/cmd/watchtower/httpserver/form"
+
 	task "watchtower/internal/support/task/domain"
 )
 
-func (s *Server) CreateTasksGroup() error {
-	group := s.server.Group("/api/v1/tasks")
-
-	group.GET("/:bucket", s.LoadTasks)
-	group.GET("/:bucket/:task_id", s.LoadTaskByID)
-
-	return nil
+func (s *Server) CreateTasksGroup(group fiber.Router) {
+	group.Get("/tasks/:bucket", s.LoadTasks)
+	group.Get("/tasks/:bucket/:task_id", s.LoadTaskByID)
 }
 
 // LoadTasks
@@ -31,30 +27,30 @@ func (s *Server) CreateTasksGroup() error {
 // @Produce json
 // @Param bucket path string true "Bucket id of uploaded files"
 // @Param status query string false "Status tasks to filter target result"
-// @Success 200 {object} []form.TaskSchema "Ok"
-// @Failure	400 {object} form.BadRequestForm "Bad Request message"
-// @Failure	503 {object} form.ServerErrorForm "Server does not available"
-// @Router /tasks/{bucket} [get]
-func (s *Server) LoadTasks(eCtx echo.Context) error {
-	ctx := eCtx.Request().Context()
-	bucket := eCtx.Param("bucket")
+// @Success 200 {object} []form.TaskSchema "Loaded tasks"
+// @Failure	400 {object} form.BadRequestError "Bad Request error"
+// @Failure	404 {object} form.NotFoundError "Bucket not found"
+// @Failure	500 {object} form.InternalServerError "Internal server error"
+// @Failure	503 {object} form.ServerUnavailableError "Server does not available"
+// @Router /api/v1/tasks/{bucket} [get]
+func (s *Server) LoadTasks(eCtx *fiber.Ctx) error {
+	ctx := eCtx.UserContext()
+
+	bucket := eCtx.Params("bucket")
 	if bucket == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, "bucket is required")
+		return eCtx.Status(fiber.StatusBadRequest).SendString("bucket is required")
 	}
 
-	tasks, err := s.state.GetTaskProcessor().GetBucketTasks(ctx, bucket)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-	}
-
-	status := eCtx.QueryParam("status")
-	if status == "" {
-		return eCtx.JSON(200, tasks)
-	}
-
+	status := eCtx.Query("status")
 	inputTaskStatus, err := strconv.Atoi(status)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusUnprocessableEntity, "unknown status")
+		return eCtx.Status(fiber.StatusBadRequest).SendString("unknown status")
+	}
+
+	taskStorage := s.state.GetTaskProcessor()
+	tasks, err := taskStorage.GetBucketTasks(ctx, bucket)
+	if err != nil {
+		return eCtx.Status(fiber.StatusInternalServerError).SendString(err.Error())
 	}
 
 	taskStatus := task.TaskStatus(inputTaskStatus)
@@ -63,11 +59,11 @@ func (s *Server) LoadTasks(eCtx echo.Context) error {
 	})
 
 	foundedTasksDto := make([]form.TaskSchema, len(foundedTasks))
-	for index, task := range foundedTasks {
-		foundedTasksDto[index] = form.TaskFromDomain(*task)
+	for index, taskIt := range foundedTasks {
+		foundedTasksDto[index] = form.TaskFromDomain(*taskIt)
 	}
 
-	return eCtx.JSON(200, foundedTasksDto)
+	return eCtx.Status(fiber.StatusOK).JSON(foundedTasksDto)
 }
 
 // LoadTaskByID
@@ -79,31 +75,37 @@ func (s *Server) LoadTasks(eCtx echo.Context) error {
 // @Produce json
 // @Param bucket path string true "Bucket id of processing task"
 // @Param task_id path string true "Task ID"
-// @Success 200 {object} form.TaskSchema "Ok"
-// @Failure	400 {object} form.BadRequestForm "Bad Request message"
-// @Failure	503 {object} form.ServerErrorForm "Server does not available"
-// @Router /tasks/{bucket}/{task_id} [get]
-func (s *Server) LoadTaskByID(eCtx echo.Context) error {
-	ctx := eCtx.Request().Context()
-	bucket := eCtx.Param("bucket")
+// @Success 200 {object} form.TaskSchema "Loaded tasks"
+// @Failure	400 {object} form.BadRequestError "Bad Request error"
+// @Failure	404 {object} form.NotFoundError "Task not found"
+// @Failure	500 {object} form.InternalServerError "Internal server error"
+// @Failure	503 {object} form.ServerUnavailableError "Server does not available"
+// @Router /api/v1/tasks/{bucket}/{task_id} [get]
+func (s *Server) LoadTaskByID(eCtx *fiber.Ctx) error {
+	ctx := eCtx.UserContext()
+
+	bucket := eCtx.Params("bucket")
 	if bucket == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, "bucket is required")
+		return eCtx.Status(fiber.StatusBadRequest).SendString("bucket is required")
 	}
 
-	taskIDParam := eCtx.Param("task_id")
+	taskIDParam := eCtx.Params("task_id")
 	if taskIDParam == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, "task_id is required")
+		return eCtx.Status(fiber.StatusBadRequest).SendString("task_id is required")
 	}
 
 	taskID, err := uuid.Parse(taskIDParam)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
 	}
 
-	task, err := s.state.GetTaskProcessor().GetTask(ctx, bucket, taskID)
+	taskStorage := s.state.GetTaskProcessor()
+	foundedTask, err := taskStorage.GetTask(ctx, bucket, taskID)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		return eCtx.Status(fiber.StatusInternalServerError).SendString(err.Error())
 	}
 
-	return eCtx.JSON(200, form.TaskFromDomain(*task))
+	taskSchema := form.TaskFromDomain(*foundedTask)
+
+	return eCtx.Status(fiber.StatusOK).JSON(taskSchema)
 }
