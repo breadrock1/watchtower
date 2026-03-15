@@ -12,6 +12,9 @@ import (
 	"watchtower/internal/core/cloud/domain"
 
 	"github.com/gofiber/fiber/v2"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func (s *Server) CreateStorageObjectsGroup(group fiber.Router) {
@@ -43,11 +46,21 @@ func (s *Server) CreateStorageObjectsGroup(group fiber.Router) {
 // @Router /api/v1/cloud/{bucket}/file/copy [post]
 func (s *Server) CopyFile(eCtx *fiber.Ctx) error {
 	ctx := eCtx.UserContext()
-	bucket := eCtx.Params("bucket")
+
+	span := trace.SpanFromContext(ctx)
+
+	bucket, err := ExtractBucketParameter(eCtx)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
+	}
 
 	var jsonForm form.CopyFileForm
-	err := json.Unmarshal(eCtx.Body(), &jsonForm)
+	err = json.Unmarshal(eCtx.Body(), &jsonForm)
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
 		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
 	}
 
@@ -58,6 +71,8 @@ func (s *Server) CopyFile(eCtx *fiber.Ctx) error {
 
 	err = s.state.GetObjectStorage().CopyObject(ctx, bucket, params)
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
 		return eCtx.Status(fiber.StatusInternalServerError).SendString(err.Error())
 	}
 
@@ -81,11 +96,21 @@ func (s *Server) CopyFile(eCtx *fiber.Ctx) error {
 // @Router /api/v1/cloud/{bucket}/file/move [post]
 func (s *Server) MoveFile(eCtx *fiber.Ctx) error {
 	ctx := eCtx.UserContext()
-	bucket := eCtx.Params("bucket")
+
+	span := trace.SpanFromContext(ctx)
+
+	bucket, err := ExtractBucketParameter(eCtx)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
+	}
 
 	var jsonForm form.CopyFileForm
-	err := json.Unmarshal(eCtx.Body(), &jsonForm)
+	err = json.Unmarshal(eCtx.Body(), &jsonForm)
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
 		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
 	}
 
@@ -96,6 +121,8 @@ func (s *Server) MoveFile(eCtx *fiber.Ctx) error {
 
 	err = s.state.GetObjectStorage().MoveObject(ctx, bucket, params)
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
 		return eCtx.Status(fiber.StatusInternalServerError).SendString(err.Error())
 	}
 
@@ -121,48 +148,68 @@ func (s *Server) MoveFile(eCtx *fiber.Ctx) error {
 func (s *Server) UploadFile(eCtx *fiber.Ctx) error {
 	ctx := eCtx.UserContext()
 
-	var fileData bytes.Buffer
+	span := trace.SpanFromContext(ctx)
 
-	multipartForm, err := eCtx.MultipartForm()
+	bucket, err := ExtractBucketParameter(eCtx)
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
 		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
 	}
 
-	bucket := eCtx.Params("bucket")
-	exist, err := s.state.GetObjectStorage().IsBucketExists(ctx, bucket)
+	span.SetAttributes(attribute.String("bucket", bucket))
+
+	objectStorage := s.state.GetObjectStorage()
+	exist, err := objectStorage.IsBucketExists(ctx, bucket)
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
 		return eCtx.Status(http.StatusBadRequest).SendString(err.Error())
 	}
 
 	if !exist {
 		err = fmt.Errorf("specified bucket %s does not exist", bucket)
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
 		return eCtx.Status(http.StatusNotFound).SendString(err.Error())
 	}
 
-	if multipartForm.File["files"] == nil {
-		err = fmt.Errorf("there are no files into multipart form")
+	multipartForm, err := ExtractMultipartForm(eCtx)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
 		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
 	}
 
-	expired := eCtx.Query("expired")
-	timeVal, timeParseErr := time.Parse(time.RFC3339, expired)
-	if timeParseErr != nil {
-		slog.Warn("failed to parse expired time param",
-			slog.String("err", timeParseErr.Error()),
-		)
+	expiredDatetime, err := ExtractExpiredDatetime(eCtx)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
 	}
 
+	var fileData bytes.Buffer
 	uploadedFiles := make([]form.TaskSchema, len(multipartForm.File["files"]))
 	for index, fileForm := range multipartForm.File["files"] {
 		fileName := fileForm.Filename
 		fileHandler, err := fileForm.Open()
 		if err != nil {
-			slog.Error("failed to open file form", slog.String("err", err.Error()))
+			err = fmt.Errorf("failed to open file form: %w", err)
+			span.SetStatus(codes.Error, err.Error())
+			span.RecordError(err)
+
+			slog.Error("multipart error",
+				slog.String("file", fileName),
+				slog.String("err", err.Error()),
+			)
 			continue
 		}
 		defer func() {
 			if err := fileHandler.Close(); err != nil {
-				slog.Error("failed to close file handler",
+				err = fmt.Errorf("failed to close file handler: %w", err)
+				span.SetStatus(codes.Error, err.Error())
+				span.RecordError(err)
+				slog.Error("multipart error",
 					slog.String("file", fileName),
 					slog.String("err", err.Error()),
 				)
@@ -173,7 +220,10 @@ func (s *Server) UploadFile(eCtx *fiber.Ctx) error {
 		fileData.Reset()
 		_, err = fileData.ReadFrom(fileHandler)
 		if err != nil {
-			slog.Error("failed to read file form",
+			err = fmt.Errorf("failed to read file form: %w", err)
+			span.SetStatus(codes.Error, err.Error())
+			span.RecordError(err)
+			slog.Error("multipart error",
 				slog.String("file", fileName),
 				slog.String("err", err.Error()),
 			)
@@ -183,12 +233,15 @@ func (s *Server) UploadFile(eCtx *fiber.Ctx) error {
 		params := &domain.UploadObjectParams{
 			FilePath: fileName,
 			FileData: &fileData,
-			Expired:  &timeVal,
+			Expired:  expiredDatetime,
 		}
 
 		task, err := s.state.UploadFile(ctx, bucket, params)
 		if err != nil {
-			slog.Error("failed to upload file to cloud",
+			err = fmt.Errorf("failed to upload file form: %w", err)
+			span.SetStatus(codes.Error, err.Error())
+			span.RecordError(err)
+			slog.Error("multipart error",
 				slog.String("file", fileName),
 				slog.String("err", err.Error()),
 			)
@@ -218,16 +271,31 @@ func (s *Server) UploadFile(eCtx *fiber.Ctx) error {
 // @Router /api/v1/cloud/{bucket}/file/download [post]
 func (s *Server) DownloadFile(eCtx *fiber.Ctx) error {
 	ctx := eCtx.UserContext()
-	bucket := eCtx.Params("bucket")
 
-	var jsonForm form.DownloadFileForm
-	err := json.Unmarshal(eCtx.Body(), &jsonForm)
+	span := trace.SpanFromContext(ctx)
+
+	bucket, err := ExtractBucketParameter(eCtx)
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
 		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
 	}
 
-	fileData, err := s.state.GetObjectStorage().GetObjectData(ctx, bucket, jsonForm.FileName)
+	span.SetAttributes(attribute.String("bucket", bucket))
+
+	var jsonForm form.DownloadFileForm
+	err = json.Unmarshal(eCtx.Body(), &jsonForm)
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
+	}
+
+	objectStorage := s.state.GetObjectStorage()
+	fileData, err := objectStorage.GetObjectData(ctx, bucket, jsonForm.FileName)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
 		return eCtx.Status(fiber.StatusInternalServerError).SendString(err.Error())
 	}
 	defer fileData.Reset()
@@ -251,15 +319,30 @@ func (s *Server) DownloadFile(eCtx *fiber.Ctx) error {
 // @Router /api/v1/cloud/{bucket}/file/remove [delete]
 func (s *Server) RemoveFile(eCtx *fiber.Ctx) error {
 	ctx := eCtx.UserContext()
-	bucket := eCtx.Params("bucket")
 
-	var jsonForm form.RemoveFileForm
-	err := json.Unmarshal(eCtx.Body(), &jsonForm)
+	span := trace.SpanFromContext(ctx)
+
+	bucket, err := ExtractBucketParameter(eCtx)
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
 		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
 	}
 
-	if err := s.state.GetObjectStorage().DeleteObject(ctx, bucket, jsonForm.FileName); err != nil {
+	span.SetAttributes(attribute.String("bucket", bucket))
+
+	var jsonForm form.RemoveFileForm
+	err = json.Unmarshal(eCtx.Body(), &jsonForm)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
+	}
+
+	objectStorage := s.state.GetObjectStorage()
+	if err = objectStorage.DeleteObject(ctx, bucket, jsonForm.FileName); err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
 		return eCtx.Status(fiber.StatusInternalServerError).SendString(err.Error())
 	}
 
@@ -282,9 +365,31 @@ func (s *Server) RemoveFile(eCtx *fiber.Ctx) error {
 // @Router /api/v1/cloud/{bucket}/file [delete]
 func (s *Server) RemoveFile2(eCtx *fiber.Ctx) error {
 	ctx := eCtx.UserContext()
-	bucket := eCtx.Params("bucket")
-	fileName := eCtx.Query("file_name")
-	if err := s.state.GetObjectStorage().DeleteObject(ctx, bucket, fileName); err != nil {
+
+	span := trace.SpanFromContext(ctx)
+
+	bucket, err := ExtractBucketParameter(eCtx)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
+	}
+
+	span.SetAttributes(attribute.String("bucket", bucket))
+
+	fileName, err := ExtractFileNameParameter(eCtx)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
+	}
+
+	span.SetAttributes(attribute.String("file_name", fileName))
+
+	objectStorage := s.state.GetObjectStorage()
+	if err = objectStorage.DeleteObject(ctx, bucket, fileName); err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
 		return eCtx.Status(fiber.StatusInternalServerError).SendString(err.Error())
 	}
 
@@ -308,11 +413,23 @@ func (s *Server) RemoveFile2(eCtx *fiber.Ctx) error {
 // @Router /api/v1/cloud/{bucket}/files [post]
 func (s *Server) GetFiles(eCtx *fiber.Ctx) error {
 	ctx := eCtx.UserContext()
-	bucket := eCtx.Params("bucket")
+
+	span := trace.SpanFromContext(ctx)
+
+	bucket, err := ExtractBucketParameter(eCtx)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
+	}
+
+	span.SetAttributes(attribute.String("bucket", bucket))
 
 	var jsonForm form.GetFilesForm
-	err := json.Unmarshal(eCtx.Body(), &jsonForm)
+	err = json.Unmarshal(eCtx.Body(), &jsonForm)
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
 		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
 	}
 
@@ -320,8 +437,11 @@ func (s *Server) GetFiles(eCtx *fiber.Ctx) error {
 		PrefixPath: jsonForm.DirectoryName,
 	}
 
-	listObjects, err := s.state.GetObjectStorage().LoadBucketObjects(ctx, bucket, params)
+	objectStorage := s.state.GetObjectStorage()
+	listObjects, err := objectStorage.LoadBucketObjects(ctx, bucket, params)
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
 		return eCtx.Status(fiber.StatusInternalServerError).SendString(err.Error())
 	}
 
@@ -350,16 +470,31 @@ func (s *Server) GetFiles(eCtx *fiber.Ctx) error {
 // @Router /api/v1/cloud/{bucket}/file/attributes [post]
 func (s *Server) GetFileInfo(eCtx *fiber.Ctx) error {
 	ctx := eCtx.UserContext()
-	bucket := eCtx.Params("bucket")
 
-	var jsonForm form.GetFileAttributesForm
-	err := json.Unmarshal(eCtx.Body(), &jsonForm)
+	span := trace.SpanFromContext(ctx)
+
+	bucket, err := ExtractBucketParameter(eCtx)
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
 		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
 	}
 
-	object, err := s.state.GetObjectStorage().GetObjectInfo(ctx, bucket, jsonForm.FilePath)
+	span.SetAttributes(attribute.String("bucket", bucket))
+
+	var jsonForm form.GetFileAttributesForm
+	err = json.Unmarshal(eCtx.Body(), &jsonForm)
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
+	}
+
+	objectStorage := s.state.GetObjectStorage()
+	object, err := objectStorage.GetObjectInfo(ctx, bucket, jsonForm.FilePath)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
 		return eCtx.Status(fiber.StatusInternalServerError).SendString(err.Error())
 	}
 
@@ -384,18 +519,34 @@ func (s *Server) GetFileInfo(eCtx *fiber.Ctx) error {
 // @Router /api/v1/cloud/{bucket}/file/share [post]
 func (s *Server) ShareFile(eCtx *fiber.Ctx) error {
 	ctx := eCtx.UserContext()
-	bucket := eCtx.Params("bucket")
+
+	span := trace.SpanFromContext(ctx)
+
+	bucket, err := ExtractBucketParameter(eCtx)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
+	}
+
+	span.SetAttributes(attribute.String("bucket", bucket))
 
 	var jsonForm form.ShareFileForm
-	err := json.Unmarshal(eCtx.Body(), &jsonForm)
+	err = json.Unmarshal(eCtx.Body(), &jsonForm)
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
 		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
 	}
 
 	expired := time.Second * time.Duration(jsonForm.ExpiredSecs)
 	params := &domain.ShareObjectParams{FilePath: jsonForm.FilePath, Expired: expired}
-	url, err := s.state.GetObjectStorage().GenShareURL(ctx, bucket, params)
+
+	objectStorage := s.state.GetObjectStorage()
+	url, err := objectStorage.GenShareURL(ctx, bucket, params)
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
 		return eCtx.Status(fiber.StatusInternalServerError).SendString(err.Error())
 	}
 

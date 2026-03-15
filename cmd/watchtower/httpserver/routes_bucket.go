@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 
 	"github.com/gofiber/fiber/v2"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 
 	"watchtower/cmd/watchtower/httpserver/form"
 )
@@ -27,9 +30,13 @@ func (s *Server) CreateStorageBucketsGroup(group fiber.Router) {
 func (s *Server) GetBuckets(eCtx *fiber.Ctx) error {
 	ctx := eCtx.UserContext()
 
+	span := trace.SpanFromContext(ctx)
+
 	objStorage := s.state.GetObjectStorage()
 	buckets, err := objStorage.GetAllBuckets(ctx)
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
 		return eCtx.Status(fiber.StatusInternalServerError).SendString(err.Error())
 	}
 
@@ -57,19 +64,27 @@ func (s *Server) GetBuckets(eCtx *fiber.Ctx) error {
 func (s *Server) CreateBucket(eCtx *fiber.Ctx) error {
 	ctx := eCtx.UserContext()
 
+	span := trace.SpanFromContext(ctx)
+
 	var jsonForm form.CreateBucketForm
 	err := json.Unmarshal(eCtx.Body(), &jsonForm)
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
 		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
 	}
 
 	objStorage := s.state.GetObjectStorage()
 	exists, err := objStorage.IsBucketExists(ctx, jsonForm.BucketName)
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
 		return eCtx.Status(fiber.StatusInternalServerError).SendString(err.Error())
 	}
 
 	if exists {
+		span.SetStatus(codes.Error, "bucket already exists")
+		span.RecordError(err)
 		// TODO: Temporary solution. Need to return 409 http error
 		// return eCtx.Status(fiber.StatusConflict).SendString("bucket already exists")
 		return eCtx.Status(fiber.StatusOK).SendString("bucket already exists")
@@ -77,6 +92,8 @@ func (s *Server) CreateBucket(eCtx *fiber.Ctx) error {
 
 	err = objStorage.CreateBucket(ctx, jsonForm.BucketName)
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
 		return eCtx.Status(fiber.StatusInternalServerError).SendString(err.Error())
 	}
 
@@ -99,15 +116,28 @@ func (s *Server) CreateBucket(eCtx *fiber.Ctx) error {
 func (s *Server) RemoveBucket(eCtx *fiber.Ctx) error {
 	ctx := eCtx.UserContext()
 
-	bucket := eCtx.Params("bucket")
+	span := trace.SpanFromContext(ctx)
+
+	bucket, err := ExtractBucketParameter(eCtx)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
+	}
+
+	span.SetAttributes(attribute.String("bucket", bucket))
 
 	objStorage := s.state.GetObjectStorage()
 	exists, err := objStorage.IsBucketExists(ctx, bucket)
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
 		return eCtx.Status(fiber.StatusInternalServerError).SendString(err.Error())
 	}
 
 	if !exists {
+		span.SetStatus(codes.Error, "buket does not exist")
+		span.RecordError(err)
 		// TODO: Temporary solution. Need to return 409 http error
 		// return eCtx.Status(fiber.StatusConflict).SendString("bucket already exists")
 		return eCtx.Status(fiber.StatusNotFound).SendString("bucket already exists")
@@ -115,6 +145,8 @@ func (s *Server) RemoveBucket(eCtx *fiber.Ctx) error {
 
 	err = objStorage.DeleteBucket(ctx, bucket)
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
 		return eCtx.Status(fiber.StatusInternalServerError).SendString(err.Error())
 	}
 

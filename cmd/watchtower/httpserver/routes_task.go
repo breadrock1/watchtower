@@ -1,12 +1,12 @@
 package httpserver
 
 import (
-	"strconv"
-
-	"golang.org/x/exp/slices"
-
 	"github.com/gofiber/fiber/v2"
-	"github.com/google/uuid"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
+	"golang.org/x/exp/slices"
 
 	"watchtower/cmd/watchtower/httpserver/form"
 
@@ -36,24 +36,35 @@ func (s *Server) CreateTasksGroup(group fiber.Router) {
 func (s *Server) LoadTasks(eCtx *fiber.Ctx) error {
 	ctx := eCtx.UserContext()
 
-	bucket := eCtx.Params("bucket")
-	if bucket == "" {
-		return eCtx.Status(fiber.StatusBadRequest).SendString("bucket is required")
+	span := trace.SpanFromContext(ctx)
+
+	bucket, err := ExtractBucketParameter(eCtx)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
 	}
 
-	status := eCtx.Query("status")
-	inputTaskStatus, err := strconv.Atoi(status)
+	span.SetAttributes(attribute.String("bucket", bucket))
+
+	status, err := ExtractTaskStatusParameter(eCtx)
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
 		return eCtx.Status(fiber.StatusBadRequest).SendString("unknown status")
 	}
+
+	span.SetAttributes(attribute.Int("status", status))
 
 	taskStorage := s.state.GetTaskProcessor()
 	tasks, err := taskStorage.GetBucketTasks(ctx, bucket)
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
 		return eCtx.Status(fiber.StatusInternalServerError).SendString(err.Error())
 	}
 
-	taskStatus := task.TaskStatus(inputTaskStatus)
+	taskStatus := task.TaskStatus(status)
 	foundedTasks := slices.DeleteFunc(tasks, func(task *task.Task) bool {
 		return task.Status != taskStatus
 	})
@@ -84,28 +95,30 @@ func (s *Server) LoadTasks(eCtx *fiber.Ctx) error {
 func (s *Server) LoadTaskByID(eCtx *fiber.Ctx) error {
 	ctx := eCtx.UserContext()
 
-	bucket := eCtx.Params("bucket")
-	if bucket == "" {
-		return eCtx.Status(fiber.StatusBadRequest).SendString("bucket is required")
-	}
+	span := trace.SpanFromContext(ctx)
 
-	taskIDParam := eCtx.Params("task_id")
-	if taskIDParam == "" {
-		return eCtx.Status(fiber.StatusBadRequest).SendString("task_id is required")
-	}
-
-	taskID, err := uuid.Parse(taskIDParam)
+	bucket, err := ExtractBucketParameter(eCtx)
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
+	}
+
+	taskID, err := ExtractTaskIDParameter(eCtx)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
 		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
 	}
 
 	taskStorage := s.state.GetTaskProcessor()
 	foundedTask, err := taskStorage.GetTask(ctx, bucket, taskID)
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
 		return eCtx.Status(fiber.StatusInternalServerError).SendString(err.Error())
 	}
 
 	taskSchema := form.TaskFromDomain(*foundedTask)
-
 	return eCtx.Status(fiber.StatusOK).JSON(taskSchema)
 }

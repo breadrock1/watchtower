@@ -12,11 +12,11 @@ var (
 		"/metrics",
 		"/favicon.ico",
 		"/static/",
-		"/api/v1/swagger",
+		"/api/swagger",
 	}
 )
 
-func TracerSkipper(eCtx *fiber.Ctx) bool {
+func TracerURLSkipper(eCtx *fiber.Ctx) bool {
 	for _, excluded := range excludedPaths {
 		if strings.HasPrefix(eCtx.Path(), excluded) {
 			return true

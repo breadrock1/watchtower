@@ -114,5 +114,7 @@ func (s *Server) initLoggerMW(logConfig telemetry.LoggerConfig) {
 }
 
 func (s *Server) initTracerMW(_ telemetry.TracerConfig) {
-	s.Server.Use(otelfiber.Middleware())
+	s.Server.Use(otelfiber.Middleware(
+		otelfiber.WithNext(mw.TracerURLSkipper),
+	))
 }
