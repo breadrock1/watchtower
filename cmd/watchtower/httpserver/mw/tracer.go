@@ -16,7 +16,7 @@ var (
 	}
 )
 
-func TracerURLSkipper(eCtx *fiber.Ctx) bool {
+func TraceURLSkipper(eCtx *fiber.Ctx) bool {
 	for _, excluded := range excludedPaths {
 		if strings.HasPrefix(eCtx.Path(), excluded) {
 			return true

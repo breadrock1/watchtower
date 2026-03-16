@@ -99,22 +99,22 @@ func (s *Server) Shutdown(_ kernel.Ctx) error {
 func (s *Server) initMeterMW() {
 	prometheus := fiberprometheus.New(telemetry.AppName)
 	prometheus.RegisterAt(s.Server, "/metrics")
-	prometheus.SetSkipPaths([]string{"/swagger"})
+	prometheus.SetSkipPaths([]string{"/api/swagger"})
 	prometheus.SetIgnoreStatusCodes([]int{401, 403, 404})
 	s.Server.Use(prometheus.Middleware)
 }
 
 func (s *Server) initLoggerMW(logConfig telemetry.LoggerConfig) {
+	s.Server.Use(mw.LocalLoggerMiddleware(logConfig))
+
 	if logConfig.EnableLoki {
 		lokiLog := telemetry.InitLokiLogger(logConfig)
 		s.Server.Use(mw.CreateLokiLoggerMW(&lokiLog))
-	} else {
-		s.Server.Use(mw.InitLocalLogger(logConfig))
 	}
 }
 
 func (s *Server) initTracerMW(_ telemetry.TracerConfig) {
 	s.Server.Use(otelfiber.Middleware(
-		otelfiber.WithNext(mw.TracerURLSkipper),
+		otelfiber.WithNext(mw.TraceURLSkipper),
 	))
 }
