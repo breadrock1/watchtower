@@ -8,6 +8,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/Marlliton/slogpretty"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 
@@ -27,11 +28,10 @@ func LocalLoggerMiddleware(config telemetry.LoggerConfig) fiber.Handler {
 		logLevel = slog.LevelError
 	}
 
-	handleOpts := &slog.HandlerOptions{
+	textHandler := slogpretty.New(os.Stdout, &slogpretty.Options{
 		Level: logLevel,
-	}
+	})
 
-	textHandler := slog.NewTextHandler(os.Stdout, handleOpts)
 	localLogger := slog.New(textHandler)
 
 	return func(eCtx *fiber.Ctx) error {
