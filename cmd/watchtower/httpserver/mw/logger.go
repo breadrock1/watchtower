@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"os"
-	"slices"
+	"strings"
 	"time"
 
 	"github.com/Marlliton/slogpretty"
@@ -40,6 +40,10 @@ func LocalLoggerMiddleware(config telemetry.LoggerConfig) fiber.Handler {
 	localLogger := slog.New(textHandler)
 
 	return func(eCtx *fiber.Ctx) error {
+		if CheckFilteredURI(telemetry.FilterURI, eCtx.Path()) {
+			return eCtx.Next()
+		}
+
 		requestID := eCtx.Get(XRequestIDHeaderKey)
 		if requestID == "" {
 			requestID = uuid.New().String()
@@ -91,7 +95,7 @@ func LocalLoggerMiddleware(config telemetry.LoggerConfig) fiber.Handler {
 
 func CreateLokiLoggerMW(sll *telemetry.SlogLokiLogger) fiber.Handler {
 	return func(eCtx *fiber.Ctx) error {
-		if slices.Contains(sll.FilterURI, eCtx.Path()) {
+		if CheckFilteredURI(sll.FilterURI, eCtx.Path()) {
 			return eCtx.Next()
 		}
 
@@ -106,7 +110,8 @@ func CreateLokiLoggerMW(sll *telemetry.SlogLokiLogger) fiber.Handler {
 
 		var responseMsg = "Ok"
 		var logLevel = slog.LevelInfo
-		if eCtx.Response().StatusCode() >= 300 {
+		statusCode := eCtx.Response().StatusCode()
+		if statusCode >= 300 {
 			logLevel = slog.LevelError
 			responseMsg = string(eCtx.Response().Body())
 		}
@@ -114,7 +119,7 @@ func CreateLokiLoggerMW(sll *telemetry.SlogLokiLogger) fiber.Handler {
 		logMessage := map[string]interface{}{
 			"message":    responseMsg,
 			"latency":    latency.String(),
-			"status":     eCtx.Response().StatusCode(),
+			"status":     statusCode,
 			"method":     eCtx.Method(),
 			"uri":        eCtx.Path(),
 			"client_ip":  eCtx.IP(),
@@ -128,4 +133,14 @@ func CreateLokiLoggerMW(sll *telemetry.SlogLokiLogger) fiber.Handler {
 
 		return err
 	}
+}
+
+func CheckFilteredURI(filteredURI []string, currURI string) bool {
+	for _, filtered := range filteredURI {
+		if strings.HasPrefix(currURI, filtered) {
+			return true
+		}
+	}
+
+	return false
 }
