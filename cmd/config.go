@@ -72,7 +72,6 @@ func InitConfig() (*Config, error) {
 
 	viperInst.AddConfigPath(".")
 	viperInst.AddConfigPath("./configs")
-	viperInst.AddConfigPath("../configs")
 
 	if err := viperInst.ReadInConfig(); err != nil {
 		//nolint
@@ -86,7 +85,7 @@ func InitConfig() (*Config, error) {
 	setupEnv(viperInst)
 
 	config := &Config{}
-	if err := viper.Unmarshal(config); err != nil {
+	if err := viperInst.Unmarshal(config); err != nil {
 		confErr := fmt.Errorf("failed while unmarshaling config: %w", err)
 		return config, confErr
 	}

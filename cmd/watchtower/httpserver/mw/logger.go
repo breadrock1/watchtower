@@ -15,6 +15,11 @@ import (
 	"watchtower/internal/shared/telemetry"
 )
 
+const (
+	XRequestIDHeaderKey = "X-Request-ID"
+	ContextRequestIDKey = "request_id"
+)
+
 func LocalLoggerMiddleware(config telemetry.LoggerConfig) fiber.Handler {
 	var logLevel = slog.LevelInfo
 	switch config.Level {
@@ -35,15 +40,16 @@ func LocalLoggerMiddleware(config telemetry.LoggerConfig) fiber.Handler {
 	localLogger := slog.New(textHandler)
 
 	return func(eCtx *fiber.Ctx) error {
-		requestID := eCtx.Get("X-Request-ID")
+		requestID := eCtx.Get(XRequestIDHeaderKey)
 		if requestID == "" {
 			requestID = uuid.New().String()
-			eCtx.Set("X-Request-ID", requestID)
+			eCtx.Set(XRequestIDHeaderKey, requestID)
 		}
 
 		startTime := time.Now()
 
-		ctx := context.WithValue(eCtx.UserContext(), "request_id", requestID)
+		//nolint
+		ctx := context.WithValue(eCtx.UserContext(), ContextRequestIDKey, requestID)
 		eCtx.SetUserContext(ctx)
 
 		err := eCtx.Next()
@@ -52,6 +58,7 @@ func LocalLoggerMiddleware(config telemetry.LoggerConfig) fiber.Handler {
 
 		statusCode := eCtx.Response().StatusCode()
 		if err != nil {
+			//nolint
 			if fiberErr, ok := err.(*fiber.Error); ok {
 				statusCode = fiberErr.Code
 			}

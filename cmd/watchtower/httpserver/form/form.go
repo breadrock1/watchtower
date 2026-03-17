@@ -49,3 +49,8 @@ type CopyFileForm struct {
 	SrcPath string `json:"src_path" example:"old-test-document.docx"`
 	DstPath string `json:"dst_path" example:"test-document.docx"`
 }
+
+// FolderForm example
+type FolderForm struct {
+	Prefix string `json:"prefix" example:"test-folder"`
+}

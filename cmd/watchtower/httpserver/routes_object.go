@@ -6,16 +6,19 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"path"
 	"time"
-
-	"watchtower/cmd/watchtower/httpserver/form"
-	"watchtower/internal/core/cloud/domain"
 
 	"github.com/gofiber/fiber/v2"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
+
+	"watchtower/cmd/watchtower/httpserver/form"
+	"watchtower/internal/core/cloud/domain"
 )
+
+const FolderFileKeeper = ".keeper"
 
 func (s *Server) CreateStorageObjectsGroup(group fiber.Router) {
 	group.Post("/cloud/:bucket/files", s.GetFiles)
@@ -23,6 +26,8 @@ func (s *Server) CreateStorageObjectsGroup(group fiber.Router) {
 	group.Post("/cloud/:bucket/file/move", s.MoveFile)
 	group.Put("/cloud/:bucket/file/upload", s.UploadFile)
 	group.Post("/cloud/:bucket/file/download", s.DownloadFile)
+	group.Post("/cloud/:bucket/folder", s.CreateFolder)
+	group.Delete("/cloud/:bucket/folder", s.DeleteFolder)
 	group.Delete("/cloud/:bucket/file", s.RemoveFile2)
 	group.Delete("/cloud/:bucket/file/remove", s.RemoveFile)
 	group.Post("/cloud/:bucket/file/attributes", s.GetFileInfo)
@@ -44,6 +49,7 @@ func (s *Server) CreateStorageObjectsGroup(group fiber.Router) {
 // @Failure	500 {object} form.InternalServerError "Internal server error"
 // @Failure	503 {object} form.ServerUnavailableError "Server does not available"
 // @Router /api/v1/cloud/{bucket}/file/copy [post]
+// nolint
 func (s *Server) CopyFile(eCtx *fiber.Ctx) error {
 	ctx := eCtx.UserContext()
 
@@ -94,6 +100,7 @@ func (s *Server) CopyFile(eCtx *fiber.Ctx) error {
 // @Failure	500 {object} form.InternalServerError "Internal server error"
 // @Failure	503 {object} form.ServerUnavailableError "Server does not available"
 // @Router /api/v1/cloud/{bucket}/file/move [post]
+// nolint
 func (s *Server) MoveFile(eCtx *fiber.Ctx) error {
 	ctx := eCtx.UserContext()
 
@@ -120,6 +127,137 @@ func (s *Server) MoveFile(eCtx *fiber.Ctx) error {
 	}
 
 	err = s.state.GetObjectStorage().MoveObject(ctx, bucket, params)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return eCtx.Status(fiber.StatusInternalServerError).SendString(err.Error())
+	}
+
+	return eCtx.Status(fiber.StatusOK).SendString("Ok")
+}
+
+// CreateFolder
+// @Summary Create empty folder into cloud storage
+// @Description Create empty folder into cloud storage
+// @ID create-folder
+// @Tags files
+// @Accept  application/json
+// @Produce  json
+// @Param bucket path string true "Bucket name to create folder"
+// @Param jsonQuery body form.FolderForm true "Params to create folder"
+// @Success 200 {object} form.Success "Ok"
+// @Failure	400 {object} form.BadRequestError "Bad Request error"
+// @Failure	404 {object} form.NotFoundError "Bucket not found"
+// @Failure	500 {object} form.InternalServerError "Internal server error"
+// @Failure	503 {object} form.ServerUnavailableError "Server does not available"
+// @Router /api/v1/cloud/{bucket}/folder [post]
+func (s *Server) CreateFolder(eCtx *fiber.Ctx) error {
+	ctx := eCtx.UserContext()
+
+	span := trace.SpanFromContext(ctx)
+
+	bucket, err := ExtractBucketParameter(eCtx)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
+	}
+
+	span.SetAttributes(attribute.String("bucket", bucket))
+
+	objectStorage := s.state.GetObjectStorage()
+	exist, err := objectStorage.IsBucketExists(ctx, bucket)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return eCtx.Status(http.StatusBadRequest).SendString(err.Error())
+	}
+
+	if !exist {
+		err = fmt.Errorf("specified bucket %s does not exist", bucket)
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return eCtx.Status(http.StatusNotFound).SendString(err.Error())
+	}
+
+	var jsonForm form.FolderForm
+	err = json.Unmarshal(eCtx.Body(), &jsonForm)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
+	}
+
+	keepFilePath := path.Join(jsonForm.Prefix, FolderFileKeeper)
+	params := &domain.UploadObjectParams{
+		FilePath: keepFilePath,
+		FileData: bytes.NewBufferString(""),
+		Expired:  nil,
+	}
+
+	_, err = objectStorage.StoreObject(ctx, bucket, params)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return eCtx.Status(fiber.StatusInternalServerError).SendString(err.Error())
+	}
+
+	return eCtx.Status(fiber.StatusCreated).SendString("Ok")
+}
+
+// DeleteFolder
+// @Summary Delete folder into cloud storage
+// @Description Delete empty folder into cloud storage
+// @ID delete-folder
+// @Tags files
+// @Accept  application/json
+// @Produce  json
+// @Param bucket path string true "Bucket name to delete folder"
+// @Param jsonQuery body form.FolderForm true "Params to delete folder"
+// @Success 200 {object} form.Success "Ok"
+// @Failure	400 {object} form.BadRequestError "Bad Request error"
+// @Failure	404 {object} form.NotFoundError "Bucket not found"
+// @Failure	500 {object} form.InternalServerError "Internal server error"
+// @Failure	503 {object} form.ServerUnavailableError "Server does not available"
+// @Router /api/v1/cloud/{bucket}/folder [delete]
+func (s *Server) DeleteFolder(eCtx *fiber.Ctx) error {
+	ctx := eCtx.UserContext()
+
+	span := trace.SpanFromContext(ctx)
+
+	bucket, err := ExtractBucketParameter(eCtx)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
+	}
+
+	span.SetAttributes(attribute.String("bucket", bucket))
+
+	objectStorage := s.state.GetObjectStorage()
+	exist, err := objectStorage.IsBucketExists(ctx, bucket)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return eCtx.Status(http.StatusBadRequest).SendString(err.Error())
+	}
+
+	if !exist {
+		err = fmt.Errorf("specified bucket %s does not exist", bucket)
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return eCtx.Status(http.StatusNotFound).SendString(err.Error())
+	}
+
+	var jsonForm form.FolderForm
+	err = json.Unmarshal(eCtx.Body(), &jsonForm)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
+	}
+
+	err = objectStorage.DeleteObjects(ctx, bucket, jsonForm.Prefix)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
