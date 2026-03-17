@@ -2,10 +2,11 @@ package mocks
 
 import (
 	"net/url"
-	"watchtower/internal/core/cloud/domain"
-	"watchtower/internal/shared/kernel"
 
 	"github.com/stretchr/testify/mock"
+
+	"watchtower/internal/core/cloud/domain"
+	"watchtower/internal/shared/kernel"
 )
 
 type MockObjectStorage struct {
@@ -66,6 +67,11 @@ func (m *MockObjectStorage) CopyObject(_ kernel.Ctx, bucketID kernel.BucketID, p
 
 func (m *MockObjectStorage) DeleteObject(_ kernel.Ctx, bucketID kernel.BucketID, objID kernel.ObjectID) error {
 	args := m.Called(bucketID, objID)
+	return args.Error(0)
+}
+
+func (m *MockObjectStorage) DeleteObjects(ctx kernel.Ctx, bucketID kernel.BucketID, prefix string) error {
+	args := m.Called(bucketID, prefix)
 	return args.Error(0)
 }
 
