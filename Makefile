@@ -7,7 +7,7 @@ build:
 	go build -v -o $(SERVICE_BIN_FILE_PATH) ./cmd/watchtower
 
 run: build
-	$(SERVICE_BIN_FILE_PATH) -c ./configs/config.toml
+	$(SERVICE_BIN_FILE_PATH) -d
 
 test:
 	go test -race ./tests/...
