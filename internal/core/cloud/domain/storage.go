@@ -204,6 +204,26 @@ type IObjectManager interface {
 	//       // Handle error, but ignore "not found" as it's already gone
 	//   }
 	DeleteObject(ctx kernel.Ctx, bucketID kernel.BucketID, objID kernel.ObjectID) error
+
+	// DeleteObjects permanently removes an objects from storage.
+	// This operation cannot be undone.
+	//
+	// Parameters:
+	//   - kernel.Ctx: Context for cancellation and timeout
+	//   - bucketID: ID of the bucket containing the object
+	//   - prefix: relative path of object to delete
+	//
+	// Returns:
+	//   - error: ErrObjectNotFound if object doesn't exist (idempotent),
+	//            ErrBucketNotFound if bucket doesn't exist,
+	//            or other provider-specific errors
+	//
+	// Example:
+	//   err := storage.DeleteObjects(ctx, "temp-files", "cache")
+	//   if err != nil && !errors.Is(err, ErrObjectNotFound) {
+	//       // Handle error, but ignore "not found" as it's already gone
+	//   }
+	DeleteObjects(ctx kernel.Ctx, bucketID kernel.BucketID, prefix string) error
 }
 
 // IObjectWalker defines operations for listing and iterating through objects in a bucket.

@@ -168,6 +168,32 @@ func (s *S3Client) CopyObject(ctx kernel.Ctx, bucketID kernel.BucketID, params *
 	return nil
 }
 
+func (s *S3Client) DeleteObjects(ctx kernel.Ctx, bucketID kernel.BucketID, prefix string) error {
+	listObjOpts := minio.ListObjectsOptions{
+		Prefix:    prefix,
+		Recursive: true,
+		UseV1:     true,
+	}
+	objInfoCh := s.mc.ListObjects(ctx, bucketID, listObjOpts)
+
+	removeObjOpts := minio.RemoveObjectsOptions{
+		GovernanceBypass: true,
+	}
+	errCh := s.mc.RemoveObjects(ctx, bucketID, objInfoCh, removeObjOpts)
+	for err := range errCh {
+		if err.Err != nil {
+			slog.Warn("failed to delete object",
+				slog.String("bucket", bucketID),
+				slog.String("prefix", prefix),
+				slog.String("error", err.ObjectName),
+				slog.String("err", err.Err.Error()),
+			)
+		}
+	}
+
+	return nil
+}
+
 func (s *S3Client) DeleteObject(ctx kernel.Ctx, bucketID kernel.BucketID, objID kernel.ObjectID) error {
 	opts := minio.RemoveObjectOptions{}
 	filePath := path.Clean(objID)

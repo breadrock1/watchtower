@@ -147,6 +147,25 @@ func (s *StorageUseCase) DeleteObject(ctx kernel.Ctx, bucketID kernel.BucketID, 
 	return nil
 }
 
+func (s *StorageUseCase) DeleteObjects(ctx kernel.Ctx, bucketID kernel.BucketID, prefix string) error {
+	ctx, span := telemetry.GlobalTracer.Start(ctx, "copy-object")
+	defer span.End()
+
+	span.SetAttributes(
+		attribute.String("bucket", bucketID),
+		attribute.String("prefix", prefix),
+	)
+
+	err := s.cloudStorage.DeleteObjects(ctx, bucketID, prefix)
+	if err != nil {
+		err = fmt.Errorf("failed to remove objects %s: %w", bucketID, err)
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return err
+	}
+	return nil
+}
+
 func (s *StorageUseCase) MoveObject(ctx kernel.Ctx, bucketID kernel.BucketID, params *domain.CopyObjectParams) error {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "move-file")
 	defer span.End()
@@ -211,7 +230,6 @@ func (s *StorageUseCase) StoreObject(
 	span.SetAttributes(
 		attribute.String("bucket", bucketID),
 		attribute.String("file-path", params.FilePath),
-		attribute.Int64("expired", params.Expired.Unix()),
 		attribute.Int("data-len", params.FileData.Len()),
 	)
 
