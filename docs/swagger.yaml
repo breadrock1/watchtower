@@ -38,6 +38,12 @@ definitions:
         example: test-file.docx
         type: string
     type: object
+  form.FolderForm:
+    properties:
+      prefix:
+        example: test-folder
+        type: string
+    type: object
   form.GetFileAttributesForm:
     properties:
       file_path:
@@ -553,6 +559,93 @@ paths:
       summary: Get files list into bucket
       tags:
       - files
+  /api/v1/cloud/{bucket}/folder:
+    delete:
+      consumes:
+      - application/json
+      description: Delete empty folder into cloud storage
+      operationId: delete-folder
+      parameters:
+      - description: Bucket name to delete folder
+        in: path
+        name: bucket
+        required: true
+        type: string
+      - description: Params to delete folder
+        in: body
+        name: jsonQuery
+        required: true
+        schema:
+          $ref: '#/definitions/form.FolderForm'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ok
+          schema:
+            $ref: '#/definitions/form.Success'
+        "400":
+          description: Bad Request error
+          schema:
+            $ref: '#/definitions/form.BadRequestError'
+        "404":
+          description: Bucket not found
+          schema:
+            $ref: '#/definitions/form.NotFoundError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/form.InternalServerError'
+        "503":
+          description: Server does not available
+          schema:
+            $ref: '#/definitions/form.ServerUnavailableError'
+      summary: Delete folder into cloud storage
+      tags:
+      - files
+    post:
+      consumes:
+      - application/json
+      description: Create empty folder into cloud storage
+      operationId: create-folder
+      parameters:
+      - description: Bucket name to create folder
+        in: path
+        name: bucket
+        required: true
+        type: string
+      - description: Params to create folder
+        in: body
+        name: jsonQuery
+        required: true
+        schema:
+          $ref: '#/definitions/form.FolderForm'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ok
+          schema:
+            $ref: '#/definitions/form.Success'
+        "400":
+          description: Bad Request error
+          schema:
+            $ref: '#/definitions/form.BadRequestError'
+        "404":
+          description: Bucket not found
+          schema:
+            $ref: '#/definitions/form.NotFoundError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/form.InternalServerError'
+        "503":
+          description: Server does not available
+          schema:
+            $ref: '#/definitions/form.ServerUnavailableError'
+      summary: Create empty folder into cloud storage
+      tags:
+      - files
   /api/v1/cloud/bucket:
     put:
       consumes:
@@ -601,10 +694,6 @@ paths:
             items:
               $ref: '#/definitions/form.BucketSchema'
             type: array
-        "400":
-          description: Bad Request error
-          schema:
-            $ref: '#/definitions/form.BadRequestError'
         "500":
           description: Internal server error
           schema:

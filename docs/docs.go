@@ -89,12 +89,6 @@ const docTemplate = `{
                             }
                         }
                     },
-                    "400": {
-                        "description": "Bad Request error",
-                        "schema": {
-                            "$ref": "#/definitions/form.BadRequestError"
-                        }
-                    },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
@@ -754,6 +748,136 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/cloud/{bucket}/folder": {
+            "post": {
+                "description": "Create empty folder into cloud storage",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Create empty folder into cloud storage",
+                "operationId": "create-folder",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bucket name to create folder",
+                        "name": "bucket",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Params to create folder",
+                        "name": "jsonQuery",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/form.FolderForm"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Ok",
+                        "schema": {
+                            "$ref": "#/definitions/form.Success"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request error",
+                        "schema": {
+                            "$ref": "#/definitions/form.BadRequestError"
+                        }
+                    },
+                    "404": {
+                        "description": "Bucket not found",
+                        "schema": {
+                            "$ref": "#/definitions/form.NotFoundError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/form.InternalServerError"
+                        }
+                    },
+                    "503": {
+                        "description": "Server does not available",
+                        "schema": {
+                            "$ref": "#/definitions/form.ServerUnavailableError"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete empty folder into cloud storage",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Delete folder into cloud storage",
+                "operationId": "delete-folder",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bucket name to delete folder",
+                        "name": "bucket",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Params to delete folder",
+                        "name": "jsonQuery",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/form.FolderForm"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Ok",
+                        "schema": {
+                            "$ref": "#/definitions/form.Success"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request error",
+                        "schema": {
+                            "$ref": "#/definitions/form.BadRequestError"
+                        }
+                    },
+                    "404": {
+                        "description": "Bucket not found",
+                        "schema": {
+                            "$ref": "#/definitions/form.NotFoundError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/form.InternalServerError"
+                        }
+                    },
+                    "503": {
+                        "description": "Server does not available",
+                        "schema": {
+                            "$ref": "#/definitions/form.ServerUnavailableError"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/tasks/{bucket}": {
             "get": {
                 "description": "Load tasks (processing/unrecognized/done) of uploaded files",
@@ -941,6 +1065,15 @@ const docTemplate = `{
                 "file_name": {
                     "type": "string",
                     "example": "test-file.docx"
+                }
+            }
+        },
+        "form.FolderForm": {
+            "type": "object",
+            "properties": {
+                "prefix": {
+                    "type": "string",
+                    "example": "test-folder"
                 }
             }
         },
