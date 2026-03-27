@@ -2,7 +2,6 @@ package utils
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -15,10 +14,11 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
 
+	"watchtower/internal/shared/kernel"
 	"watchtower/internal/shared/telemetry"
 )
 
-func PUT(ctx context.Context, body *bytes.Buffer, url, mime string, timeout time.Duration) ([]byte, error) {
+func PUT(ctx kernel.Ctx, body *bytes.Buffer, url, mime string, timeout time.Duration) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPut, url, body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
@@ -29,7 +29,7 @@ func PUT(ctx context.Context, body *bytes.Buffer, url, mime string, timeout time
 	return sendRequest(ctx, client, req)
 }
 
-func POST(ctx context.Context, body *bytes.Buffer, url, mime string, timeout time.Duration) ([]byte, error) {
+func POST(ctx kernel.Ctx, body *bytes.Buffer, url, mime string, timeout time.Duration) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
@@ -40,7 +40,7 @@ func POST(ctx context.Context, body *bytes.Buffer, url, mime string, timeout tim
 	return sendRequest(ctx, client, req)
 }
 
-func sendRequest(ctx context.Context, client *http.Client, req *http.Request) ([]byte, error) {
+func sendRequest(ctx kernel.Ctx, client *http.Client, req *http.Request) ([]byte, error) {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "http-request")
 	defer span.End()
 
@@ -50,6 +50,7 @@ func sendRequest(ctx context.Context, client *http.Client, req *http.Request) ([
 	)
 
 	injectSpanContext(ctx, req)
+	//nolint
 	response, err := client.Do(req)
 	if err != nil {
 		err = fmt.Errorf("sending request error: %w", err)
@@ -78,13 +79,13 @@ func sendRequest(ctx context.Context, client *http.Client, req *http.Request) ([
 	return respData, nil
 }
 
-func extractSpanContext(ctx context.Context, resp *http.Response) context.Context {
+func extractSpanContext(ctx kernel.Ctx, resp *http.Response) kernel.Ctx {
 	propagator := telemetry.TracePropagator
 	carrier := propagation.HeaderCarrier(resp.Header)
 	return propagator.Extract(ctx, carrier)
 }
 
-func injectSpanContext(ctx context.Context, req *http.Request) {
+func injectSpanContext(ctx kernel.Ctx, req *http.Request) {
 	propagator := otel.GetTextMapPropagator()
 	carrier := propagation.HeaderCarrier(req.Header)
 	propagator.Inject(ctx, carrier)

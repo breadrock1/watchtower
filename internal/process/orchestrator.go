@@ -1,7 +1,6 @@
 package process
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
 
@@ -18,8 +17,6 @@ import (
 	taskUC "watchtower/internal/support/task/application"
 	taskDomain "watchtower/internal/support/task/domain"
 )
-
-type Ctx = context.Context
 
 type Orchestrator struct {
 	config    Config
@@ -39,7 +36,7 @@ func (o *Orchestrator) GetTaskProcessor() *taskUC.TaskUseCase {
 	return o.taskUC
 }
 
-func (o *Orchestrator) LaunchListener(gCtx Ctx) {
+func (o *Orchestrator) LaunchListener(ctx kernel.Ctx) {
 	go func() {
 		consumeCh := o.taskUC.GetConsumerChannel()
 		sem := semaphore.NewWeighted(o.config.SemaphoreSize)
@@ -61,7 +58,7 @@ func (o *Orchestrator) LaunchListener(gCtx Ctx) {
 					ctx.Done()
 				}()
 
-			case <-gCtx.Done():
+			case <-ctx.Done():
 				slog.Info("terminating processing")
 				return
 			}
@@ -70,8 +67,8 @@ func (o *Orchestrator) LaunchListener(gCtx Ctx) {
 }
 
 func (o *Orchestrator) UploadFile(
-	ctx Ctx,
-	bucketID domain.BucketID,
+	ctx kernel.Ctx,
+	bucketID kernel.BucketID,
 	params *domain.UploadObjectParams,
 ) (*taskDomain.Task, error) {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "upload-file")
@@ -102,7 +99,11 @@ func (o *Orchestrator) UploadFile(
 	return task, nil
 }
 
-func (o *Orchestrator) CreateTask(ctx Ctx, bucketID kernel.BucketID, objID kernel.ObjectID) (*taskDomain.Task, error) {
+func (o *Orchestrator) CreateTask(
+	ctx kernel.Ctx,
+	bucketID kernel.BucketID,
+	objID kernel.ObjectID,
+) (*taskDomain.Task, error) {
 	task := taskDomain.CreateNewTask(bucketID, objID)
 
 	taskID := task.ID.String()
@@ -141,7 +142,7 @@ func (o *Orchestrator) CreateTask(ctx Ctx, bucketID kernel.BucketID, objID kerne
 	return task, nil
 }
 
-func (o *Orchestrator) handleTask(ctx Ctx, task *taskDomain.Task) {
+func (o *Orchestrator) handleTask(ctx kernel.Ctx, task *taskDomain.Task) {
 	slog.Info("processing task event", slog.String("task-id", task.ID.String()))
 
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "handle-task-from-queue")
@@ -170,7 +171,7 @@ func (o *Orchestrator) handleTask(ctx Ctx, task *taskDomain.Task) {
 	slog.Info(msg, slog.String("task-id", task.ID.String()))
 }
 
-func (o *Orchestrator) processTask(ctx Ctx, task *taskDomain.Task) error {
+func (o *Orchestrator) processTask(ctx kernel.Ctx, task *taskDomain.Task) error {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "task-processing")
 	defer span.End()
 

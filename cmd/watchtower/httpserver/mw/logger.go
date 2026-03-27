@@ -3,79 +3,144 @@ package mw
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log/slog"
-	"slices"
+	"os"
 	"strings"
 	"time"
 
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
+	"github.com/Marlliton/slogpretty"
+	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
+
 	"watchtower/internal/shared/telemetry"
 )
 
-func InitLocalLogger(config telemetry.LoggerConfig) echo.MiddlewareFunc {
-	logConfig := middleware.LoggerConfig{
-		Skipper: func(c echo.Context) bool {
-			uri := c.Path()
-			return strings.Contains(uri, "swagger")
-		},
-		CustomTimeFormat: "2006/01/02 15:04:05",
-		Format: fmt.Sprintf(
-			"%s %s http-response={%s %s %s %s %s}\n",
-			"${time_custom}",
-			config.Level,
-			"method=${method}",
-			"uri=${path}",
-			"latency=${latency}",
-			"status=${status}",
-			"error=\"${error}\"",
-		),
+const (
+	XRequestIDHeaderKey = "X-Request-ID"
+	ContextRequestIDKey = "request_id"
+)
+
+func LocalLoggerMiddleware(config telemetry.LoggerConfig) fiber.Handler {
+	var logLevel = slog.LevelInfo
+	switch config.Level {
+	case "debug":
+		logLevel = slog.LevelDebug
+	case "info":
+		logLevel = slog.LevelInfo
+	case "warn":
+		logLevel = slog.LevelWarn
+	case "error":
+		logLevel = slog.LevelError
 	}
 
-	return middleware.LoggerWithConfig(logConfig)
+	textHandler := slogpretty.New(os.Stdout, &slogpretty.Options{
+		Level: logLevel,
+	})
+
+	localLogger := slog.New(textHandler)
+
+	return func(eCtx *fiber.Ctx) error {
+		if CheckFilteredURI(telemetry.FilterURI, eCtx.Path()) {
+			return eCtx.Next()
+		}
+
+		requestID := eCtx.Get(XRequestIDHeaderKey)
+		if requestID == "" {
+			requestID = uuid.New().String()
+			eCtx.Set(XRequestIDHeaderKey, requestID)
+		}
+
+		startTime := time.Now()
+
+		//nolint
+		ctx := context.WithValue(eCtx.UserContext(), ContextRequestIDKey, requestID)
+		eCtx.SetUserContext(ctx)
+
+		err := eCtx.Next()
+
+		latency := time.Since(startTime)
+
+		statusCode := eCtx.Response().StatusCode()
+		if err != nil {
+			//nolint
+			if fiberErr, ok := err.(*fiber.Error); ok {
+				statusCode = fiberErr.Code
+			}
+		}
+
+		var responseMsg = "Ok"
+		var level = slog.LevelInfo
+		if statusCode >= 300 {
+			level = slog.LevelError
+			responseMsg = string(eCtx.Response().Body())
+		}
+
+		localLogger.LogAttrs(ctx, level, "http-request",
+			slog.String("request_id", requestID),
+			slog.String("method", eCtx.Method()),
+			slog.String("uri", eCtx.OriginalURL()),
+			slog.Int("status", statusCode),
+			slog.String("message", responseMsg),
+			slog.Int("bytes_received", len(eCtx.Request().Body())),
+			slog.Int("bytes_sent", len(eCtx.Response().Body())),
+			slog.Duration("latency", latency),
+			slog.String("referer", eCtx.Get("Referer")),
+			slog.String("client_ip", eCtx.IP()),
+			slog.String("user_agent", eCtx.Get("User-Agent")),
+		)
+
+		return err
+	}
 }
 
-func CreateLokiLoggerMW(sll *telemetry.SlogLokiLogger) echo.MiddlewareFunc {
-	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(eCtx echo.Context) error {
-			if slices.Contains(sll.FilterURI, eCtx.Path()) {
-				return next(eCtx)
-			}
+func CreateLokiLoggerMW(sll *telemetry.SlogLokiLogger) fiber.Handler {
+	return func(eCtx *fiber.Ctx) error {
+		if CheckFilteredURI(sll.FilterURI, eCtx.Path()) {
+			return eCtx.Next()
+		}
 
-			start := time.Now()
+		start := time.Now()
 
-			err := next(eCtx)
-			if err != nil {
-				eCtx.Error(err)
-			}
-
-			latency := time.Since(start)
-
-			logMessage := map[string]interface{}{
-				"message":    eCtx.Response().Status,
-				"latency":    latency.String(),
-				"status":     eCtx.Response().Status,
-				"method":     eCtx.Request().Method,
-				"uri":        eCtx.Path(),
-				"client_ip":  eCtx.RealIP(),
-				"user_agent": eCtx.Request().UserAgent(),
-			}
-			jsonMessage, _ := json.Marshal(logMessage)
-
-			var logLevel slog.Level
-			statusCategory := eCtx.Response().Status / 100
-			if statusCategory < 3 && statusCategory >= 2 {
-				logLevel = slog.LevelInfo
-			} else {
-				logLevel = slog.LevelError
-			}
-
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			sll.Client.Log(ctx, logLevel, string(jsonMessage))
-			defer cancel()
-
+		err := eCtx.Next()
+		if err != nil {
 			return err
 		}
+
+		latency := time.Since(start)
+
+		var responseMsg = "Ok"
+		var logLevel = slog.LevelInfo
+		statusCode := eCtx.Response().StatusCode()
+		if statusCode >= 300 {
+			logLevel = slog.LevelError
+			responseMsg = string(eCtx.Response().Body())
+		}
+
+		logMessage := map[string]interface{}{
+			"message":    responseMsg,
+			"latency":    latency.String(),
+			"status":     statusCode,
+			"method":     eCtx.Method(),
+			"uri":        eCtx.Path(),
+			"client_ip":  eCtx.IP(),
+			"user_agent": eCtx.Request(),
+		}
+		jsonMessage, _ := json.Marshal(logMessage)
+
+		ctx, cancel := context.WithTimeout(eCtx.Context(), 5*time.Second)
+		sll.Client.Log(ctx, logLevel, string(jsonMessage))
+		defer cancel()
+
+		return err
 	}
+}
+
+func CheckFilteredURI(filteredURI []string, currURI string) bool {
+	for _, filtered := range filteredURI {
+		if strings.HasPrefix(currURI, filtered) {
+			return true
+		}
+	}
+
+	return false
 }

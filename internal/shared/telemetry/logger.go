@@ -9,9 +9,9 @@ import (
 )
 
 var (
-	filterURI = []string{
+	FilterURI = []string{
 		"/metrics",
-		"/swagger/*",
+		"/api/swagger",
 	}
 )
 
@@ -34,5 +34,5 @@ func InitLokiLogger(config LoggerConfig) SlogLokiLogger {
 		With("detected_level", config.Level).
 		With("level", config.Level)
 
-	return SlogLokiLogger{Client: logger, FilterURI: filterURI}
+	return SlogLokiLogger{Client: logger, FilterURI: FilterURI}
 }

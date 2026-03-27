@@ -1,7 +1,9 @@
 package docstorage
 
-import "context"
+import (
+	"watchtower/internal/shared/kernel"
+)
 
 type IDocumentStorage interface {
-	StoreDocument(ctx context.Context, document *Document) (DocumentID, error)
+	StoreDocument(ctx kernel.Ctx, document *Document) (DocumentID, error)
 }

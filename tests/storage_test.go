@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"watchtower/internal/core/cloud/domain"
+	"watchtower/internal/shared/kernel"
 	"watchtower/tests/common"
 )
 
@@ -63,7 +64,7 @@ func TestStorage(t *testing.T) {
 	})
 }
 
-func StoreObjectToStorage(ctx context.Context, testEnv *common.TestEnvironment, filePath string) error {
+func StoreObjectToStorage(ctx kernel.Ctx, testEnv *common.TestEnvironment, filePath string) error {
 	uploadParams := domain.UploadObjectParams{
 		FilePath: filePath,
 		FileData: bytes.NewBufferString("there is some file content"),

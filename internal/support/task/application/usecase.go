@@ -2,7 +2,6 @@ package application
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"log/slog"
 	"path"
@@ -17,8 +16,6 @@ import (
 	"watchtower/internal/support/task/application/service/recognizer"
 	"watchtower/internal/support/task/domain"
 )
-
-type Ctx context.Context
 
 type TaskUseCase struct {
 	taskStorage domain.ITaskManager
@@ -41,7 +38,7 @@ func NewTaskUseCase(
 	}
 }
 
-func (p *TaskUseCase) GetBucketTasks(ctx Ctx, bucketID kernel.BucketID) ([]*domain.Task, error) {
+func (p *TaskUseCase) GetBucketTasks(ctx kernel.Ctx, bucketID kernel.BucketID) ([]*domain.Task, error) {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "get-all-bucket-tasks")
 	defer span.End()
 
@@ -58,7 +55,7 @@ func (p *TaskUseCase) GetBucketTasks(ctx Ctx, bucketID kernel.BucketID) ([]*doma
 	return allTasks, nil
 }
 
-func (p *TaskUseCase) GetTask(ctx Ctx, bucketID kernel.BucketID, taskID domain.TaskID) (*domain.Task, error) {
+func (p *TaskUseCase) GetTask(ctx kernel.Ctx, bucketID kernel.BucketID, taskID kernel.TaskID) (*domain.Task, error) {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "get-task-by-id")
 	defer span.End()
 
@@ -69,7 +66,7 @@ func (p *TaskUseCase) GetTask(ctx Ctx, bucketID kernel.BucketID, taskID domain.T
 
 	task, err := p.taskStorage.GetTask(ctx, bucketID, taskID)
 	if err != nil {
-		err = fmt.Errorf("ftask manager error: %w", err)
+		err = fmt.Errorf("task manager error: %w", err)
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
 		return nil, err
@@ -78,7 +75,7 @@ func (p *TaskUseCase) GetTask(ctx Ctx, bucketID kernel.BucketID, taskID domain.T
 	return task, nil
 }
 
-func (p *TaskUseCase) UpdateTaskStatus(ctx Ctx, task *domain.Task) {
+func (p *TaskUseCase) UpdateTaskStatus(ctx kernel.Ctx, task *domain.Task) {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "update-task-status")
 	defer span.End()
 
@@ -97,7 +94,7 @@ func (p *TaskUseCase) UpdateTaskStatus(ctx Ctx, task *domain.Task) {
 	}
 }
 
-func (p *TaskUseCase) IsTaskAlreadyExists(ctx Ctx, task *domain.Task) bool {
+func (p *TaskUseCase) IsTaskAlreadyExists(ctx kernel.Ctx, task *domain.Task) bool {
 	ctx, span := telemetry.GlobalTracer.Start(ctx, "check-task-already-created")
 	defer span.End()
 
@@ -135,7 +132,7 @@ func (p *TaskUseCase) IsTaskAlreadyExists(ctx Ctx, task *domain.Task) bool {
 	}
 }
 
-func (p *TaskUseCase) PublishTaskToQueue(ctx Ctx, task *domain.Task) error {
+func (p *TaskUseCase) PublishTaskToQueue(ctx kernel.Ctx, task *domain.Task) error {
 	msg := mapping.MessageFromTask(task)
 	err := p.taskQueue.Publish(ctx, msg)
 	return err
@@ -146,7 +143,7 @@ func (p *TaskUseCase) GetConsumerChannel() chan domain.Message {
 }
 
 func (p *TaskUseCase) Recognize(
-	ctx Ctx,
+	ctx kernel.Ctx,
 	task *domain.Task,
 	fileData *bytes.Buffer,
 ) (*recognizer.Recognized, error) {
@@ -178,7 +175,7 @@ func (p *TaskUseCase) Recognize(
 }
 
 func (p *TaskUseCase) StoreDocument(
-	ctx Ctx,
+	ctx kernel.Ctx,
 	task *domain.Task,
 	recData *recognizer.Recognized,
 ) (docstorage.DocumentID, error) {
