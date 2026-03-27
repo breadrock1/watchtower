@@ -1,9 +1,9 @@
 package recognizer
 
 import (
-	"context"
+	"watchtower/internal/shared/kernel"
 )
 
 type IRecognizer interface {
-	Recognize(ctx context.Context, params *RecognizeParams) (*Recognized, error)
+	Recognize(ctx kernel.Ctx, params *RecognizeParams) (*Recognized, error)
 }

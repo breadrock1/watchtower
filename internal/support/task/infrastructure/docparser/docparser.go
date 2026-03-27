@@ -2,19 +2,17 @@ package docparser
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"mime/multipart"
 	"time"
 
+	"watchtower/internal/shared/kernel"
 	"watchtower/internal/shared/utils"
 	"watchtower/internal/support/task/application/service/recognizer"
 )
 
-type Ctx = context.Context
-
-const RecognitionURL = "/parser/parse/text"
+const RecognitionURL = "/api/v1/parser/parse/text"
 
 type DocParser struct {
 	config Config
@@ -24,7 +22,7 @@ func New(config Config) recognizer.IRecognizer {
 	return &DocParser{config}
 }
 
-func (dc *DocParser) Recognize(ctx Ctx, params *recognizer.RecognizeParams) (*recognizer.Recognized, error) {
+func (dc *DocParser) Recognize(ctx kernel.Ctx, params *recognizer.RecognizeParams) (*recognizer.Recognized, error) {
 	var buf bytes.Buffer
 
 	mpw := multipart.NewWriter(&buf)

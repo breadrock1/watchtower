@@ -1,14 +1,14 @@
 package rmq
 
 import (
-	"context"
-
 	"github.com/google/uuid"
+
+	"watchtower/internal/shared/kernel"
 	"watchtower/internal/support/task/domain"
 )
 
 type Message struct {
-	Ctx     context.Context
+	Ctx     kernel.Ctx
 	EventId uuid.UUID   `json:"event_id"`
 	Body    domain.Task `json:"body"`
 }
