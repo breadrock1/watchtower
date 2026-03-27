@@ -49,7 +49,7 @@ func (s *Server) CreateStorageObjectsGroup(group fiber.Router) {
 // @Failure	500 {object} form.InternalServerError "Internal server error"
 // @Failure	503 {object} form.ServerUnavailableError "Server does not available"
 // @Router /api/v1/cloud/{bucket}/file/copy [post]
-// nolint
+//nolint
 func (s *Server) CopyFile(eCtx *fiber.Ctx) error {
 	ctx := eCtx.UserContext()
 
@@ -100,7 +100,7 @@ func (s *Server) CopyFile(eCtx *fiber.Ctx) error {
 // @Failure	500 {object} form.InternalServerError "Internal server error"
 // @Failure	503 {object} form.ServerUnavailableError "Server does not available"
 // @Router /api/v1/cloud/{bucket}/file/move [post]
-// nolint
+//nolint
 func (s *Server) MoveFile(eCtx *fiber.Ctx) error {
 	ctx := eCtx.UserContext()
 
