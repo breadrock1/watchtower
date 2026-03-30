@@ -6,12 +6,12 @@ import (
 	"os"
 	"strings"
 
+	otlp_go "github.com/breadrock1/otlp-go/otlp"
 	"github.com/spf13/viper"
 
 	"watchtower/cmd/watchtower/httpserver"
 	"watchtower/internal/core/cloud/infrastructure/s3"
 	"watchtower/internal/process"
-	"watchtower/internal/shared/telemetry"
 	"watchtower/internal/support/task/infrastructure/docparser"
 	"watchtower/internal/support/task/infrastructure/docsearch"
 	"watchtower/internal/support/task/infrastructure/redis"
@@ -19,11 +19,11 @@ import (
 )
 
 type Config struct {
-	Orchestrator process.Config       `mapstructure:"orchestrator"`
-	Otlp         telemetry.OtlpConfig `mapstructure:"otlp"`
-	Server       ServerConfig         `mapstructure:"server"`
-	Storage      StorageConfig        `mapstructure:"storage"`
-	Task         TaskConfig           `mapstructure:"task"`
+	Otlp         otlp_go.OtlpConfig `mapstructure:"otlp"`
+	Orchestrator process.Config     `mapstructure:"orchestrator"`
+	Server       ServerConfig       `mapstructure:"server"`
+	Storage      StorageConfig      `mapstructure:"storage"`
+	Task         TaskConfig         `mapstructure:"task"`
 }
 
 type ServerConfig struct {
@@ -72,6 +72,11 @@ func InitConfig() (*Config, error) {
 
 	viperInst.AddConfigPath(".")
 	viperInst.AddConfigPath("./configs")
+
+	if launchMode == defaultLaunchMode {
+		// Used to include config from integration tests
+		viperInst.AddConfigPath("../../configs")
+	}
 
 	if err := viperInst.ReadInConfig(); err != nil {
 		//nolint

@@ -2,7 +2,6 @@ package httpserver
 
 import (
 	"github.com/gofiber/fiber/v2"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
@@ -14,8 +13,9 @@ import (
 )
 
 func (s *Server) CreateTasksGroup(group fiber.Router) {
-	group.Get("/tasks/:bucket", s.LoadTasks)
-	group.Get("/tasks/:bucket/:task_id", s.LoadTaskByID)
+	tasksGroup := group.Group("/tasks")
+	tasksGroup.Get("/:bucket", s.LoadTasks)
+	tasksGroup.Get("/:bucket/:task_id", s.LoadTaskByID)
 }
 
 // LoadTasks

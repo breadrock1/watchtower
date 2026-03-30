@@ -6,11 +6,11 @@ import (
 	"log/slog"
 	"path"
 
+	"github.com/breadrock1/otlp-go/otlp"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 
 	"watchtower/internal/shared/kernel"
-	"watchtower/internal/shared/telemetry"
 	"watchtower/internal/support/task/application/mapping"
 	"watchtower/internal/support/task/application/service/docstorage"
 	"watchtower/internal/support/task/application/service/recognizer"
@@ -39,7 +39,7 @@ func NewTaskUseCase(
 }
 
 func (p *TaskUseCase) GetBucketTasks(ctx kernel.Ctx, bucketID kernel.BucketID) ([]*domain.Task, error) {
-	ctx, span := telemetry.GlobalTracer.Start(ctx, "get-all-bucket-tasks")
+	ctx, span := otlp_go.GlobalTracer.Start(ctx, "get-all-bucket-tasks")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("bucket", bucketID))
@@ -56,7 +56,7 @@ func (p *TaskUseCase) GetBucketTasks(ctx kernel.Ctx, bucketID kernel.BucketID) (
 }
 
 func (p *TaskUseCase) GetTask(ctx kernel.Ctx, bucketID kernel.BucketID, taskID kernel.TaskID) (*domain.Task, error) {
-	ctx, span := telemetry.GlobalTracer.Start(ctx, "get-task-by-id")
+	ctx, span := otlp_go.GlobalTracer.Start(ctx, "get-task-by-id")
 	defer span.End()
 
 	span.SetAttributes(
@@ -76,7 +76,7 @@ func (p *TaskUseCase) GetTask(ctx kernel.Ctx, bucketID kernel.BucketID, taskID k
 }
 
 func (p *TaskUseCase) UpdateTaskStatus(ctx kernel.Ctx, task *domain.Task) {
-	ctx, span := telemetry.GlobalTracer.Start(ctx, "update-task-status")
+	ctx, span := otlp_go.GlobalTracer.Start(ctx, "update-task-status")
 	defer span.End()
 
 	span.SetAttributes(
@@ -95,7 +95,7 @@ func (p *TaskUseCase) UpdateTaskStatus(ctx kernel.Ctx, task *domain.Task) {
 }
 
 func (p *TaskUseCase) IsTaskAlreadyExists(ctx kernel.Ctx, task *domain.Task) bool {
-	ctx, span := telemetry.GlobalTracer.Start(ctx, "check-task-already-created")
+	ctx, span := otlp_go.GlobalTracer.Start(ctx, "check-task-already-created")
 	defer span.End()
 
 	span.SetAttributes(
@@ -147,7 +147,7 @@ func (p *TaskUseCase) Recognize(
 	task *domain.Task,
 	fileData *bytes.Buffer,
 ) (*recognizer.Recognized, error) {
-	ctx, span := telemetry.GlobalTracer.Start(ctx, "recognize-object-data")
+	ctx, span := otlp_go.GlobalTracer.Start(ctx, "recognize-object-data")
 	defer span.End()
 
 	span.SetAttributes(
@@ -179,7 +179,7 @@ func (p *TaskUseCase) StoreDocument(
 	task *domain.Task,
 	recData *recognizer.Recognized,
 ) (docstorage.DocumentID, error) {
-	ctx, span := telemetry.GlobalTracer.Start(ctx, "store-document-to-index")
+	ctx, span := otlp_go.GlobalTracer.Start(ctx, "store-document-to-index")
 	defer span.End()
 
 	span.SetAttributes(

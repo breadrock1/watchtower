@@ -4,14 +4,13 @@ import (
 	"fmt"
 	"log/slog"
 
-	"golang.org/x/sync/semaphore"
-
+	"github.com/breadrock1/otlp-go/otlp"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"golang.org/x/sync/semaphore"
 
 	"watchtower/internal/core/cloud/domain"
 	"watchtower/internal/shared/kernel"
-	"watchtower/internal/shared/telemetry"
 
 	cloudApp "watchtower/internal/core/cloud/application"
 	taskUC "watchtower/internal/support/task/application"
@@ -37,6 +36,7 @@ func (o *Orchestrator) GetTaskProcessor() *taskUC.TaskUseCase {
 }
 
 func (o *Orchestrator) LaunchListener(ctx kernel.Ctx) {
+	slog.Info("starting orchestrator processing")
 	go func() {
 		consumeCh := o.taskUC.GetConsumerChannel()
 		sem := semaphore.NewWeighted(o.config.SemaphoreSize)
@@ -59,7 +59,7 @@ func (o *Orchestrator) LaunchListener(ctx kernel.Ctx) {
 				}()
 
 			case <-ctx.Done():
-				slog.Info("terminating processing")
+				slog.Info("terminating orchestrator processing")
 				return
 			}
 		}
@@ -71,7 +71,7 @@ func (o *Orchestrator) UploadFile(
 	bucketID kernel.BucketID,
 	params *domain.UploadObjectParams,
 ) (*taskDomain.Task, error) {
-	ctx, span := telemetry.GlobalTracer.Start(ctx, "upload-file")
+	ctx, span := otlp_go.GlobalTracer.Start(ctx, "upload-file")
 	defer span.End()
 
 	span.SetAttributes(
@@ -113,7 +113,7 @@ func (o *Orchestrator) CreateTask(
 		slog.String("file-path", objID),
 	)
 
-	ctx, span := telemetry.GlobalTracer.Start(ctx, "create-and-publish-task")
+	ctx, span := otlp_go.GlobalTracer.Start(ctx, "create-and-publish-task")
 	defer span.End()
 
 	span.SetAttributes(
@@ -145,7 +145,7 @@ func (o *Orchestrator) CreateTask(
 func (o *Orchestrator) handleTask(ctx kernel.Ctx, task *taskDomain.Task) {
 	slog.Info("processing task event", slog.String("task-id", task.ID.String()))
 
-	ctx, span := telemetry.GlobalTracer.Start(ctx, "handle-task-from-queue")
+	ctx, span := otlp_go.GlobalTracer.Start(ctx, "handle-task-from-queue")
 	defer span.End()
 
 	span.SetAttributes(
@@ -172,7 +172,7 @@ func (o *Orchestrator) handleTask(ctx kernel.Ctx, task *taskDomain.Task) {
 }
 
 func (o *Orchestrator) processTask(ctx kernel.Ctx, task *taskDomain.Task) error {
-	ctx, span := telemetry.GlobalTracer.Start(ctx, "task-processing")
+	ctx, span := otlp_go.GlobalTracer.Start(ctx, "task-processing")
 	defer span.End()
 
 	span.SetAttributes(
