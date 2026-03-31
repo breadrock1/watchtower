@@ -1,6 +1,6 @@
 module watchtower
 
-go 1.25.7
+go 1.26
 
 require (
 	github.com/breadrock1/otlp-go v0.0.2
