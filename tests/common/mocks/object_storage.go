@@ -84,7 +84,7 @@ func (m *MockObjectStorage) DeleteObjects(
 	prefix string,
 ) error {
 	args := m.Called(bucketID, prefix)
-	return args.Error(0)
+	return args.Error(1)
 }
 
 func (m *MockObjectStorage) GetBucketObjects(
