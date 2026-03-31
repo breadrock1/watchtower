@@ -57,8 +57,3 @@ type CopyFileForm struct {
 type FolderForm struct {
 	Prefix string `json:"prefix" example:"test-folder"`
 }
-
-// FolderForm example
-type FolderForm struct {
-	Prefix string `json:"prefix" example:"test-folder"`
-}
