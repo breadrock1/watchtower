@@ -76,8 +76,13 @@ func (rs *RedisClient) GetTask(
 		return nil, fmt.Errorf("redis error: %w: %w", domain.ErrExecution, cmd.Err())
 	}
 
-	value := &RedisValue{}
-	if err := cmd.Scan(value); err != nil {
+	data, err := cmd.Bytes()
+	if err != nil {
+		return nil, fmt.Errorf("redis payload error: %w: %w", domain.ErrExecution, cmd.Err())
+	}
+
+	var value *RedisValue
+	if err = json.Unmarshal(data, &value); err != nil {
 		return nil, fmt.Errorf("deserialize error: %w: %w", domain.ErrInvalidTaskData, err)
 	}
 
