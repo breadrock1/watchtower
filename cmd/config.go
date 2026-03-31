@@ -6,12 +6,12 @@ import (
 	"os"
 	"strings"
 
+	otlp_go "github.com/breadrock1/otlp-go/otlp"
 	"github.com/spf13/viper"
 
 	"watchtower/cmd/watchtower/httpserver"
 	"watchtower/internal/core/cloud/infrastructure/s3"
 	"watchtower/internal/process"
-	"watchtower/internal/shared/telemetry"
 	"watchtower/internal/support/task/infrastructure/docparser"
 	"watchtower/internal/support/task/infrastructure/docsearch"
 	"watchtower/internal/support/task/infrastructure/redis"
@@ -19,11 +19,11 @@ import (
 )
 
 type Config struct {
-	Orchestrator process.Config       `mapstructure:"orchestrator"`
-	Otlp         telemetry.OtlpConfig `mapstructure:"otlp"`
-	Server       ServerConfig         `mapstructure:"server"`
-	Storage      StorageConfig        `mapstructure:"storage"`
-	Task         TaskConfig           `mapstructure:"task"`
+	Otlp         otlp_go.OtlpConfig `mapstructure:"otlp"`
+	Orchestrator process.Config     `mapstructure:"orchestrator"`
+	Server       ServerConfig       `mapstructure:"server"`
+	Storage      StorageConfig      `mapstructure:"storage"`
+	Task         TaskConfig         `mapstructure:"task"`
 }
 
 type ServerConfig struct {
@@ -74,6 +74,11 @@ func InitConfig() (*Config, error) {
 	viperInst.AddConfigPath("./configs")
 	viperInst.AddConfigPath("../configs")
 
+	if launchMode == defaultLaunchMode {
+		// Used to include config from integration tests
+		viperInst.AddConfigPath("../../configs")
+	}
+
 	if err := viperInst.ReadInConfig(); err != nil {
 		//nolint
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
@@ -86,7 +91,7 @@ func InitConfig() (*Config, error) {
 	setupEnv(viperInst)
 
 	config := &Config{}
-	if err := viper.Unmarshal(config); err != nil {
+	if err := viperInst.Unmarshal(config); err != nil {
 		confErr := fmt.Errorf("failed while unmarshaling config: %w", err)
 		return config, confErr
 	}
@@ -99,6 +104,7 @@ func setupEnv(viperInst *viper.Viper) {
 	viperInst.SetEnvPrefix(serviceEnvPrefix)
 	viperInst.SetEnvKeyReplacer(strings.NewReplacer(".", "__"))
 
+	//nolint
 	envMappings := map[string]string{
 		"orchestrator.semaphore_size":       "ORCHESTRATOR__SEMAPHORE_SIZE",
 		"otlp.logger.level":                 "OTLP__LOGGER__LEVEL",
@@ -130,7 +136,7 @@ func setupEnv(viperInst *viper.Viper) {
 	for key, value := range envMappings {
 		bindErr = viperInst.BindEnv(key, fmt.Sprintf("%s__%s", serviceEnvPrefix, value))
 		if bindErr != nil {
-			slog.Warn("failed to bind env var", bindErr)
+			slog.Warn("failed to bind env var", slog.String("err", bindErr.Error()))
 		}
 	}
 }

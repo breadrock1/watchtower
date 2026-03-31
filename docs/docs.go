@@ -44,19 +44,25 @@ const docTemplate = `{
                     "200": {
                         "description": "Ok",
                         "schema": {
-                            "$ref": "#/definitions/form.ResponseForm"
+                            "$ref": "#/definitions/form.Success"
                         }
                     },
                     "400": {
-                        "description": "Bad Request message",
+                        "description": "Bad Request error",
                         "schema": {
-                            "$ref": "#/definitions/form.BadRequestForm"
+                            "$ref": "#/definitions/form.BadRequestError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/form.InternalServerError"
                         }
                     },
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/form.ServerErrorForm"
+                            "$ref": "#/definitions/form.ServerUnavailableError"
                         }
                     }
                 }
@@ -75,18 +81,24 @@ const docTemplate = `{
                 "operationId": "get-buckets",
                 "responses": {
                     "200": {
-                        "description": "Ok",
+                        "description": "Loaded buckets info",
                         "schema": {
                             "type": "array",
                             "items": {
-                                "type": "string"
+                                "$ref": "#/definitions/form.BucketSchema"
                             }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/form.InternalServerError"
                         }
                     },
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/form.ServerErrorForm"
+                            "$ref": "#/definitions/form.ServerUnavailableError"
                         }
                     }
                 }
@@ -116,19 +128,31 @@ const docTemplate = `{
                     "200": {
                         "description": "Ok",
                         "schema": {
-                            "$ref": "#/definitions/form.ResponseForm"
+                            "$ref": "#/definitions/form.Success"
                         }
                     },
                     "400": {
-                        "description": "Bad Request message",
+                        "description": "Bad Request error",
                         "schema": {
-                            "$ref": "#/definitions/form.BadRequestForm"
+                            "$ref": "#/definitions/form.BadRequestError"
+                        }
+                    },
+                    "404": {
+                        "description": "Bucket not found",
+                        "schema": {
+                            "$ref": "#/definitions/form.NotFoundError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/form.InternalServerError"
                         }
                     },
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/form.ServerErrorForm"
+                            "$ref": "#/definitions/form.ServerUnavailableError"
                         }
                     }
                 }
@@ -165,19 +189,31 @@ const docTemplate = `{
                     "200": {
                         "description": "Ok",
                         "schema": {
-                            "$ref": "#/definitions/form.ResponseForm"
+                            "$ref": "#/definitions/form.Success"
                         }
                     },
                     "400": {
-                        "description": "Bad Request message",
+                        "description": "Bad Request error",
                         "schema": {
-                            "$ref": "#/definitions/form.BadRequestForm"
+                            "$ref": "#/definitions/form.BadRequestError"
+                        }
+                    },
+                    "404": {
+                        "description": "Bucket not found",
+                        "schema": {
+                            "$ref": "#/definitions/form.NotFoundError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/form.InternalServerError"
                         }
                     },
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/form.ServerErrorForm"
+                            "$ref": "#/definitions/form.ServerUnavailableError"
                         }
                     }
                 }
@@ -219,19 +255,31 @@ const docTemplate = `{
                     "200": {
                         "description": "Ok",
                         "schema": {
-                            "$ref": "#/definitions/form.ResponseForm"
+                            "$ref": "#/definitions/form.Success"
                         }
                     },
                     "400": {
-                        "description": "Bad Request message",
+                        "description": "Bad Request error",
                         "schema": {
-                            "$ref": "#/definitions/form.BadRequestForm"
+                            "$ref": "#/definitions/form.BadRequestError"
+                        }
+                    },
+                    "404": {
+                        "description": "Bucket or Object not found",
+                        "schema": {
+                            "$ref": "#/definitions/form.NotFoundError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/form.InternalServerError"
                         }
                     },
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/form.ServerErrorForm"
+                            "$ref": "#/definitions/form.ServerUnavailableError"
                         }
                     }
                 }
@@ -273,19 +321,31 @@ const docTemplate = `{
                     "200": {
                         "description": "Ok",
                         "schema": {
-                            "$ref": "#/definitions/form.ResponseForm"
+                            "$ref": "#/definitions/form.Success"
                         }
                     },
                     "400": {
-                        "description": "Bad Request message",
+                        "description": "Bad Request error",
                         "schema": {
-                            "$ref": "#/definitions/form.BadRequestForm"
+                            "$ref": "#/definitions/form.BadRequestError"
+                        }
+                    },
+                    "404": {
+                        "description": "Bucket or file not found",
+                        "schema": {
+                            "$ref": "#/definitions/form.NotFoundError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/form.InternalServerError"
                         }
                     },
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/form.ServerErrorForm"
+                            "$ref": "#/definitions/form.ServerUnavailableError"
                         }
                     }
                 }
@@ -325,21 +385,33 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Ok",
+                        "description": "Returned file bytes",
                         "schema": {
                             "type": "file"
                         }
                     },
                     "400": {
-                        "description": "Bad Request message",
+                        "description": "Bad Request error",
                         "schema": {
-                            "$ref": "#/definitions/form.BadRequestForm"
+                            "$ref": "#/definitions/form.BadRequestError"
+                        }
+                    },
+                    "404": {
+                        "description": "Bucket not found",
+                        "schema": {
+                            "$ref": "#/definitions/form.NotFoundError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/form.InternalServerError"
                         }
                     },
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/form.ServerErrorForm"
+                            "$ref": "#/definitions/form.ServerUnavailableError"
                         }
                     }
                 }
@@ -381,19 +453,31 @@ const docTemplate = `{
                     "200": {
                         "description": "Ok",
                         "schema": {
-                            "$ref": "#/definitions/form.ResponseForm"
+                            "$ref": "#/definitions/form.Success"
                         }
                     },
                     "400": {
-                        "description": "Bad Request message",
+                        "description": "Bad Request error",
                         "schema": {
-                            "$ref": "#/definitions/form.BadRequestForm"
+                            "$ref": "#/definitions/form.BadRequestError"
+                        }
+                    },
+                    "404": {
+                        "description": "Bucket or file not found",
+                        "schema": {
+                            "$ref": "#/definitions/form.NotFoundError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/form.InternalServerError"
                         }
                     },
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/form.ServerErrorForm"
+                            "$ref": "#/definitions/form.ServerUnavailableError"
                         }
                     }
                 }
@@ -432,19 +516,31 @@ const docTemplate = `{
                     "200": {
                         "description": "Ok",
                         "schema": {
-                            "$ref": "#/definitions/form.ResponseForm"
+                            "$ref": "#/definitions/form.Success"
                         }
                     },
                     "400": {
-                        "description": "Bad Request message",
+                        "description": "Bad Request error",
                         "schema": {
-                            "$ref": "#/definitions/form.BadRequestForm"
+                            "$ref": "#/definitions/form.BadRequestError"
+                        }
+                    },
+                    "404": {
+                        "description": "Bucket not found",
+                        "schema": {
+                            "$ref": "#/definitions/form.NotFoundError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/form.InternalServerError"
                         }
                     },
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/form.ServerErrorForm"
+                            "$ref": "#/definitions/form.ServerUnavailableError"
                         }
                     }
                 }
@@ -484,21 +580,33 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Ok",
+                        "description": "URL with shared file",
                         "schema": {
-                            "$ref": "#/definitions/form.ResponseForm"
+                            "$ref": "#/definitions/form.Success"
                         }
                     },
                     "400": {
-                        "description": "Bad Request message",
+                        "description": "Bad Request error",
                         "schema": {
-                            "$ref": "#/definitions/form.BadRequestForm"
+                            "$ref": "#/definitions/form.BadRequestError"
+                        }
+                    },
+                    "404": {
+                        "description": "Bucket of object not found",
+                        "schema": {
+                            "$ref": "#/definitions/form.NotFoundError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/form.InternalServerError"
                         }
                     },
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/form.ServerErrorForm"
+                            "$ref": "#/definitions/form.ServerUnavailableError"
                         }
                     }
                 }
@@ -544,19 +652,31 @@ const docTemplate = `{
                     "200": {
                         "description": "Ok",
                         "schema": {
-                            "$ref": "#/definitions/form.ResponseForm"
+                            "$ref": "#/definitions/form.Success"
                         }
                     },
                     "400": {
-                        "description": "Bad Request message",
+                        "description": "Bad Request error",
                         "schema": {
-                            "$ref": "#/definitions/form.BadRequestForm"
+                            "$ref": "#/definitions/form.BadRequestError"
+                        }
+                    },
+                    "404": {
+                        "description": "Bucket not found",
+                        "schema": {
+                            "$ref": "#/definitions/form.NotFoundError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/form.InternalServerError"
                         }
                     },
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/form.ServerErrorForm"
+                            "$ref": "#/definitions/form.ServerUnavailableError"
                         }
                     }
                 }
@@ -598,19 +718,161 @@ const docTemplate = `{
                     "200": {
                         "description": "Ok",
                         "schema": {
-                            "$ref": "#/definitions/form.ResponseForm"
+                            "$ref": "#/definitions/form.Success"
                         }
                     },
                     "400": {
-                        "description": "Bad Request message",
+                        "description": "Bad Request error",
                         "schema": {
-                            "$ref": "#/definitions/form.BadRequestForm"
+                            "$ref": "#/definitions/form.BadRequestError"
+                        }
+                    },
+                    "404": {
+                        "description": "Bucket not found",
+                        "schema": {
+                            "$ref": "#/definitions/form.NotFoundError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/form.InternalServerError"
                         }
                     },
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/form.ServerErrorForm"
+                            "$ref": "#/definitions/form.ServerUnavailableError"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/cloud/{bucket}/folder": {
+            "post": {
+                "description": "Create empty folder into cloud storage",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Create empty folder into cloud storage",
+                "operationId": "create-folder",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bucket name to create folder",
+                        "name": "bucket",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Params to create folder",
+                        "name": "jsonQuery",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/form.FolderForm"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Ok",
+                        "schema": {
+                            "$ref": "#/definitions/form.Success"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request error",
+                        "schema": {
+                            "$ref": "#/definitions/form.BadRequestError"
+                        }
+                    },
+                    "404": {
+                        "description": "Bucket not found",
+                        "schema": {
+                            "$ref": "#/definitions/form.NotFoundError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/form.InternalServerError"
+                        }
+                    },
+                    "503": {
+                        "description": "Server does not available",
+                        "schema": {
+                            "$ref": "#/definitions/form.ServerUnavailableError"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete empty folder into cloud storage",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Delete folder into cloud storage",
+                "operationId": "delete-folder",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bucket name to delete folder",
+                        "name": "bucket",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Params to delete folder",
+                        "name": "jsonQuery",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/form.FolderForm"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Ok",
+                        "schema": {
+                            "$ref": "#/definitions/form.Success"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request error",
+                        "schema": {
+                            "$ref": "#/definitions/form.BadRequestError"
+                        }
+                    },
+                    "404": {
+                        "description": "Bucket not found",
+                        "schema": {
+                            "$ref": "#/definitions/form.NotFoundError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/form.InternalServerError"
+                        }
+                    },
+                    "503": {
+                        "description": "Server does not available",
+                        "schema": {
+                            "$ref": "#/definitions/form.ServerUnavailableError"
                         }
                     }
                 }
@@ -647,7 +909,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Ok",
+                        "description": "Loaded tasks",
                         "schema": {
                             "type": "array",
                             "items": {
@@ -656,15 +918,27 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Bad Request message",
+                        "description": "Bad Request error",
                         "schema": {
-                            "$ref": "#/definitions/form.BadRequestForm"
+                            "$ref": "#/definitions/form.BadRequestError"
+                        }
+                    },
+                    "404": {
+                        "description": "Bucket not found",
+                        "schema": {
+                            "$ref": "#/definitions/form.NotFoundError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/form.InternalServerError"
                         }
                     },
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/form.ServerErrorForm"
+                            "$ref": "#/definitions/form.ServerUnavailableError"
                         }
                     }
                 }
@@ -702,21 +976,33 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Ok",
+                        "description": "Loaded tasks",
                         "schema": {
                             "$ref": "#/definitions/form.TaskSchema"
                         }
                     },
                     "400": {
-                        "description": "Bad Request message",
+                        "description": "Bad Request error",
                         "schema": {
-                            "$ref": "#/definitions/form.BadRequestForm"
+                            "$ref": "#/definitions/form.BadRequestError"
+                        }
+                    },
+                    "404": {
+                        "description": "Task not found",
+                        "schema": {
+                            "$ref": "#/definitions/form.NotFoundError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/form.InternalServerError"
                         }
                     },
                     "503": {
                         "description": "Server does not available",
                         "schema": {
-                            "$ref": "#/definitions/form.ServerErrorForm"
+                            "$ref": "#/definitions/form.ServerUnavailableError"
                         }
                     }
                 }
@@ -724,7 +1010,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "form.BadRequestForm": {
+        "form.BadRequestError": {
             "type": "object",
             "properties": {
                 "message": {
@@ -734,6 +1020,20 @@ const docTemplate = `{
                 "status": {
                     "type": "integer",
                     "example": 400
+                }
+            }
+        },
+        "form.BucketSchema": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "path": {
+                    "type": "string"
                 }
             }
         },
@@ -768,6 +1068,15 @@ const docTemplate = `{
                 }
             }
         },
+        "form.FolderForm": {
+            "type": "object",
+            "properties": {
+                "prefix": {
+                    "type": "string",
+                    "example": "test-folder"
+                }
+            }
+        },
         "form.GetFileAttributesForm": {
             "type": "object",
             "properties": {
@@ -786,6 +1095,32 @@ const docTemplate = `{
                 }
             }
         },
+        "form.InternalServerError": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "Internal server error message"
+                },
+                "status": {
+                    "type": "integer",
+                    "example": 500
+                }
+            }
+        },
+        "form.NotFoundError": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "Not found"
+                },
+                "status": {
+                    "type": "integer",
+                    "example": 404
+                }
+            }
+        },
         "form.RemoveFileForm": {
             "type": "object",
             "properties": {
@@ -795,25 +1130,12 @@ const docTemplate = `{
                 }
             }
         },
-        "form.ResponseForm": {
+        "form.ServerUnavailableError": {
             "type": "object",
             "properties": {
                 "message": {
                     "type": "string",
-                    "example": "Done"
-                },
-                "status": {
-                    "type": "integer",
-                    "example": 200
-                }
-            }
-        },
-        "form.ServerErrorForm": {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string",
-                    "example": "Server Error message"
+                    "example": "Server unavailable error message"
                 },
                 "status": {
                     "type": "integer",
@@ -831,6 +1153,19 @@ const docTemplate = `{
                 "file_path": {
                     "type": "string",
                     "example": "test-file.docx"
+                }
+            }
+        },
+        "form.Success": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "Done"
+                },
+                "status": {
+                    "type": "integer",
+                    "example": 200
                 }
             }
         },

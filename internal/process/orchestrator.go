@@ -1,25 +1,24 @@
 package process
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
+	"strconv"
+	"time"
 
-	"golang.org/x/sync/semaphore"
-
+	"github.com/breadrock1/otlp-go/otlp"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"golang.org/x/sync/semaphore"
 
 	"watchtower/internal/core/cloud/domain"
 	"watchtower/internal/shared/kernel"
-	"watchtower/internal/shared/telemetry"
+	"watchtower/internal/shared/metrics"
 
 	cloudApp "watchtower/internal/core/cloud/application"
 	taskUC "watchtower/internal/support/task/application"
 	taskDomain "watchtower/internal/support/task/domain"
 )
-
-type Ctx = context.Context
 
 type Orchestrator struct {
 	config    Config
@@ -39,7 +38,8 @@ func (o *Orchestrator) GetTaskProcessor() *taskUC.TaskUseCase {
 	return o.taskUC
 }
 
-func (o *Orchestrator) LaunchListener(gCtx Ctx) {
+func (o *Orchestrator) LaunchListener(ctx kernel.Ctx) {
+	slog.Info("starting orchestrator processing")
 	go func() {
 		consumeCh := o.taskUC.GetConsumerChannel()
 		sem := semaphore.NewWeighted(o.config.SemaphoreSize)
@@ -55,14 +55,27 @@ func (o *Orchestrator) LaunchListener(gCtx Ctx) {
 					defer sem.Release(1)
 
 					task := &cMsg.Body
+
+					instant := time.Now()
 					o.handleTask(ctx, task)
+
+					elapsedTime := time.Since(instant)
+					statusInt := strconv.Itoa(int(task.Status))
+					metrics.OrchestratorProcessingDurationSeconds.
+						WithLabelValues(kernel.AppName, statusInt).
+						Observe(elapsedTime.Seconds())
+
 					o.taskUC.UpdateTaskStatus(ctx, task)
+
+					metrics.OrchestratorProcessingCounter.
+						WithLabelValues(kernel.AppName, statusInt).
+						Inc()
 
 					ctx.Done()
 				}()
 
-			case <-gCtx.Done():
-				slog.Info("terminating processing")
+			case <-ctx.Done():
+				slog.Info("terminating orchestrator processing")
 				return
 			}
 		}
@@ -70,11 +83,11 @@ func (o *Orchestrator) LaunchListener(gCtx Ctx) {
 }
 
 func (o *Orchestrator) UploadFile(
-	ctx Ctx,
-	bucketID domain.BucketID,
+	ctx kernel.Ctx,
+	bucketID kernel.BucketID,
 	params *domain.UploadObjectParams,
 ) (*taskDomain.Task, error) {
-	ctx, span := telemetry.GlobalTracer.Start(ctx, "upload-file")
+	ctx, span := otlp_go.GlobalTracer.Start(ctx, "upload-file")
 	defer span.End()
 
 	span.SetAttributes(
@@ -84,6 +97,11 @@ func (o *Orchestrator) UploadFile(
 	)
 
 	objID, err := o.storageUC.StoreObject(ctx, bucketID, params)
+
+	metrics.UploadedFilesCounter.
+		WithLabelValues(kernel.AppName, strconv.FormatBool(err != nil)).
+		Inc()
+
 	if err != nil {
 		err = fmt.Errorf("failed to upload file %s: %w", params.FilePath, err)
 		span.SetStatus(codes.Error, err.Error())
@@ -92,6 +110,11 @@ func (o *Orchestrator) UploadFile(
 	}
 
 	task, err := o.CreateTask(ctx, bucketID, objID)
+
+	metrics.CreatedProcessingTasksCounter.
+		WithLabelValues(kernel.AppName, strconv.FormatBool(err != nil)).
+		Inc()
+
 	if err != nil {
 		err = fmt.Errorf("failed to create taskUC %s: %w", params.FilePath, err)
 		span.SetStatus(codes.Error, err.Error())
@@ -102,7 +125,11 @@ func (o *Orchestrator) UploadFile(
 	return task, nil
 }
 
-func (o *Orchestrator) CreateTask(ctx Ctx, bucketID kernel.BucketID, objID kernel.ObjectID) (*taskDomain.Task, error) {
+func (o *Orchestrator) CreateTask(
+	ctx kernel.Ctx,
+	bucketID kernel.BucketID,
+	objID kernel.ObjectID,
+) (*taskDomain.Task, error) {
 	task := taskDomain.CreateNewTask(bucketID, objID)
 
 	taskID := task.ID.String()
@@ -112,7 +139,7 @@ func (o *Orchestrator) CreateTask(ctx Ctx, bucketID kernel.BucketID, objID kerne
 		slog.String("file-path", objID),
 	)
 
-	ctx, span := telemetry.GlobalTracer.Start(ctx, "create-and-publish-task")
+	ctx, span := otlp_go.GlobalTracer.Start(ctx, "create-and-publish-task")
 	defer span.End()
 
 	span.SetAttributes(
@@ -141,10 +168,10 @@ func (o *Orchestrator) CreateTask(ctx Ctx, bucketID kernel.BucketID, objID kerne
 	return task, nil
 }
 
-func (o *Orchestrator) handleTask(ctx Ctx, task *taskDomain.Task) {
+func (o *Orchestrator) handleTask(ctx kernel.Ctx, task *taskDomain.Task) {
 	slog.Info("processing task event", slog.String("task-id", task.ID.String()))
 
-	ctx, span := telemetry.GlobalTracer.Start(ctx, "handle-task-from-queue")
+	ctx, span := otlp_go.GlobalTracer.Start(ctx, "handle-task-from-queue")
 	defer span.End()
 
 	span.SetAttributes(
@@ -170,8 +197,8 @@ func (o *Orchestrator) handleTask(ctx Ctx, task *taskDomain.Task) {
 	slog.Info(msg, slog.String("task-id", task.ID.String()))
 }
 
-func (o *Orchestrator) processTask(ctx Ctx, task *taskDomain.Task) error {
-	ctx, span := telemetry.GlobalTracer.Start(ctx, "task-processing")
+func (o *Orchestrator) processTask(ctx kernel.Ctx, task *taskDomain.Task) error {
+	ctx, span := otlp_go.GlobalTracer.Start(ctx, "task-processing")
 	defer span.End()
 
 	span.SetAttributes(

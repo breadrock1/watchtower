@@ -1,23 +1,24 @@
 package httpserver
 
 import (
-	"context"
 	"fmt"
+	"log/slog"
 
-	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
+	"github.com/breadrock1/otlp-go/otlp"
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/adaptor"
+	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/monitor"
+	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/gofiber/swagger"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/labstack/echo-contrib/echoprometheus"
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
-
-	"watchtower/cmd/watchtower/httpserver/mw"
+	_ "watchtower/docs"
 	"watchtower/internal/process"
-	"watchtower/internal/shared/telemetry"
+	"watchtower/internal/shared/kernel"
 
-	docs "watchtower/docs"
-
-	echoSwagger "github.com/swaggo/echo-swagger"
+	otlppfiber "github.com/breadrock1/otlp-go/pkg/fiber"
 )
 
 // Server
@@ -46,69 +47,71 @@ type Server struct {
 	tracer trace.Tracer
 
 	state  *process.Orchestrator
-	server *echo.Echo
+	Server *fiber.App
 }
 
-func SetupServer(
-	config telemetry.OtlpConfig,
-	state *process.Orchestrator,
-	tracer trace.Tracer,
-) *Server {
+func SetupServer(otlpConfig otlp_go.OtlpConfig, state *process.Orchestrator) *Server {
+	tracer, err := otlp_go.InitTracer(otlpConfig.Tracer)
+	if err != nil {
+		slog.Warn("failed to init tracer", slog.String("err", err.Error()))
+	}
+
 	serverApp := &Server{
 		tracer: tracer,
 		state:  state,
 	}
 
-	serverApp.server = echo.New()
+	serverApp.Server = fiber.New(
+		fiber.Config{
+			DisableStartupMessage: true,
+		},
+	)
 
-	serverApp.server.Use(middleware.CORS())
-	serverApp.server.Use(middleware.Recover())
+	serverApp.initMiddlewares(otlpConfig)
 
-	serverApp.initMeterMW()
-	serverApp.initTracerMW()
-	serverApp.initLoggerMW(config.Logger)
+	serverApp.Server.Get("/", serverApp.Home)
+	serverApp.Server.Get("/monitor", monitor.New())
+	serverApp.Server.Get("/processing/metrics", adaptor.HTTPHandler(promhttp.Handler()))
 
-	_ = serverApp.CreateSystemGroup()
-	_ = serverApp.CreateTasksGroup()
-	_ = serverApp.CreateStorageBucketsGroup()
-	_ = serverApp.CreateStorageObjectsGroup()
+	api := serverApp.Server.Group("/api")
 
-	docs.SwaggerInfo.BasePath = "/api/v1"
-	serverApp.server.GET("/api/swagger/*", echoSwagger.WrapHandler)
+	api.Get("/swagger/*", swagger.HandlerDefault)
+
+	v1Api := api.Group("/v1")
+	serverApp.CreateSystemGroup(v1Api)
+	serverApp.CreateTasksGroup(v1Api)
+	serverApp.CreateStorageBucketsGroup(v1Api)
+	serverApp.CreateStorageObjectsGroup(v1Api)
 
 	return serverApp
 }
 
-func (s *Server) Start(_ context.Context, config Config) error {
-	if err := s.server.Start(config.Address); err != nil {
+func (s *Server) Start(config Config) error {
+	slog.Info("starting http server", slog.String("address", config.Address))
+	if err := s.Server.Listen(config.Address); err != nil {
 		return fmt.Errorf("failed to start server: %w", err)
 	}
 
 	return nil
 }
 
-func (s *Server) Shutdown(ctx context.Context) error {
-	return s.server.Shutdown(ctx)
+func (s *Server) Shutdown(ctx kernel.Ctx) error {
+	slog.Info("http server shutting down")
+	return s.Server.ShutdownWithContext(ctx)
 }
 
-func (s *Server) initMeterMW() {
-	s.server.Use(echoprometheus.NewMiddleware(telemetry.AppName))
-	s.server.GET("/metrics", echoprometheus.NewHandler())
-}
+func (s *Server) initMiddlewares(otlpConfig otlp_go.OtlpConfig) {
+	s.Server.Use(cors.New(cors.Config{}))
+	s.Server.Use(recover.New())
 
-func (s *Server) initLoggerMW(logConfig telemetry.LoggerConfig) {
-	if logConfig.EnableLoki {
-		lokiLog := telemetry.InitLokiLogger(logConfig)
-		s.server.Use(mw.CreateLokiLoggerMW(&lokiLog))
-	} else {
-		s.server.Use(mw.InitLocalLogger(logConfig))
+	s.Server.Use(otlppfiber.PrometheusMeterMiddleware(s.Server))
+	s.Server.Use(otlppfiber.OtlpJaegerTracerMiddleware())
+
+	logger := otlp_go.InitLocalLogger(otlpConfig.Logger)
+	slog.SetDefault(logger)
+
+	s.Server.Use(otlppfiber.StdoutLoggerMiddleware(otlpConfig.Logger))
+	if otlpConfig.Logger.EnableLoki {
+		s.Server.Use(otlppfiber.RemoteLokiLoggerMiddleware(otlpConfig.Logger))
 	}
-}
-
-func (s *Server) initTracerMW() {
-	s.server.Use(otelecho.Middleware(
-		telemetry.AppName,
-		otelecho.WithPropagators(telemetry.TracePropagator),
-		otelecho.WithSkipper(mw.TracerSkipper),
-	))
 }
