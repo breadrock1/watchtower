@@ -72,6 +72,7 @@ func InitConfig() (*Config, error) {
 
 	viperInst.AddConfigPath(".")
 	viperInst.AddConfigPath("./configs")
+	viperInst.AddConfigPath("../configs")
 
 	if launchMode == defaultLaunchMode {
 		// Used to include config from integration tests
