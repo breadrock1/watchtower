@@ -73,7 +73,7 @@ var (
 	})
 )
 
-// nolint
+//nolint
 func TestObjectAPIRoutes(t *testing.T) {
 	servConfig, err := cmd.InitConfig()
 	assert.NoError(t, err, "failed to read config file")
