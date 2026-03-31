@@ -21,7 +21,7 @@ enable_ssl = false
 token = ""
 
 [task.storage.redis]
-address = "redis:6379"
+address = "localhost:6379"
 username = "redis"
 password = "redis"
 expired = 360

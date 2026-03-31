@@ -28,7 +28,7 @@ services:
 
   redis:
     image: redis:alpine
-    restart: on-failure
+    restart: unless-stopped
     environment:
       REDIS_USER: 'redis'
       REDIS_PASSWORD: 'redis'
