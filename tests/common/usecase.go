@@ -7,10 +7,11 @@ import (
 	"os"
 	"time"
 
-	"watchtower/cmd/watchtower/config"
+	"github.com/breadrock1/otlp-go/otlp"
+	"watchtower/cmd"
+
 	"watchtower/internal/core/cloud/infrastructure/s3"
 	"watchtower/internal/process"
-	"watchtower/internal/shared/telemetry"
 	"watchtower/internal/support/task/infrastructure/redis"
 	"watchtower/internal/support/task/infrastructure/rmq"
 	"watchtower/tests/common/mocks"
@@ -36,13 +37,14 @@ type TestEnvironment struct {
 
 func InitTestEnvironment(configFilePath string) (*TestEnvironment, error) {
 	ctx := context.Background()
-	servConfig, err := config.FromFile(configFilePath)
+
+	servConfig, err := cmd.InitConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file %s: %w", configFilePath, err)
 	}
 
-	tracerProvider, _ := telemetry.InitTracer(servConfig.Otlp.Tracer)
-	telemetry.GlobalTracer = tracerProvider
+	tracerProvider, _ := otlp_go.InitTracer(servConfig.Otlp.Tracer)
+	otlp_go.GlobalTracer = tracerProvider
 
 	docParser := new(mocks.MockRecognizer)
 	docStorage := new(mocks.MockDocStorage)

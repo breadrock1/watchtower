@@ -5,14 +5,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"time"
 
+	"github.com/breadrock1/otlp-go/otlp"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 
-	"watchtower/internal/shared/telemetry"
+	"watchtower/internal/shared/kernel"
+	"watchtower/internal/shared/metrics"
 	"watchtower/internal/support/task/domain"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -22,7 +25,6 @@ const ConsumerName = "watchtower-consumer"
 
 type RabbitMQClient struct {
 	redirect chan domain.Message
-	done     chan error
 	config   Config
 
 	conn    *amqp.Connection
@@ -47,9 +49,10 @@ func New(config Config) (domain.ITaskQueue, error) {
 		return nil, fmt.Errorf("failed to create rmq channel: %w", err)
 	}
 
+	slog.Info("rmq connection established", slog.String("address", config.Address))
+
 	rmqClient = RabbitMQClient{
 		make(chan domain.Message),
-		make(chan error),
 		config,
 		conn,
 		rmqCh,
@@ -62,8 +65,8 @@ func (r *RabbitMQClient) GetConsumerChannel() chan domain.Message {
 	return r.redirect
 }
 
-func (r *RabbitMQClient) Publish(ctx context.Context, msg domain.Message) error {
-	ctx, span := telemetry.GlobalTracer.Start(ctx, "rmq-publish")
+func (r *RabbitMQClient) Publish(ctx kernel.Ctx, msg domain.Message) error {
+	ctx, span := otlp_go.GlobalTracer.Start(ctx, "rmq-publish")
 	defer span.End()
 
 	headers := injectSpanContextToHeaders(ctx)
@@ -104,8 +107,8 @@ func (r *RabbitMQClient) Publish(ctx context.Context, msg domain.Message) error 
 	return nil
 }
 
-func (r *RabbitMQClient) StartConsuming(_ context.Context) error {
-	go r.handleReconnect()
+func (r *RabbitMQClient) StartConsuming(ctx kernel.Ctx) error {
+	go r.handleReconnect(ctx)
 
 	deliveries, err := r.channel.Consume(
 		r.config.QueueName, // name
@@ -121,12 +124,12 @@ func (r *RabbitMQClient) StartConsuming(_ context.Context) error {
 		return fmt.Errorf("rmq: consume error: %w", err)
 	}
 
-	go r.handleMessage(deliveries, r.done)
+	go r.handleMessage(ctx, deliveries)
 
 	return nil
 }
 
-func (r *RabbitMQClient) StopConsuming(_ context.Context) error {
+func (r *RabbitMQClient) StopConsuming(_ kernel.Ctx) error {
 	if err := r.channel.Cancel(ConsumerName, true); err != nil {
 		return fmt.Errorf("rmq: consumer cancel failed: %w", err)
 	}
@@ -135,46 +138,57 @@ func (r *RabbitMQClient) StopConsuming(_ context.Context) error {
 		return fmt.Errorf("rmq: close connection failed: %w", err)
 	}
 
-	// wait for handleMessage() to exit
-	return <-r.done
+	return nil
 }
 
-func (r *RabbitMQClient) handleMessage(deliveries <-chan amqp.Delivery, done chan error) {
-	cleanup := func() {
-		slog.Warn("rmq: deliveries channel closed")
-		done <- nil
-	}
+func (r *RabbitMQClient) handleMessage(ctx kernel.Ctx, deliveries <-chan amqp.Delivery) {
+	slog.Info("launching rmq consumer")
 
-	defer cleanup()
-
-	for delMsg := range deliveries {
-		ctx := extractSpanContextFromHeaders(delMsg.Headers)
-		span := trace.SpanFromContext(ctx)
-
-		consumeMsg := &Message{}
-		err := json.Unmarshal(delMsg.Body, consumeMsg)
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
-			slog.Error("rmq: failed while deserialize msg", slog.String("err", err.Error()))
-			continue
-		}
-
-		span.SetName("rmq-consume")
-		span.SetAttributes(attribute.String("task-id", consumeMsg.EventId.String()))
-
-		consumeMsg.Ctx = ctx
-		msg := consumeMsg.ToMessage()
-
-		r.redirect <- *msg
-		span.End()
-	}
-}
-
-func (r *RabbitMQClient) handleReconnect() {
 	for {
 		select {
-		case <-r.done:
+		case <-ctx.Done():
+			if err := r.StopConsuming(ctx); err != nil {
+				slog.Error("failed to stop rmq consuming", slog.String("err", err.Error()))
+				return
+			}
+
+			slog.Info("rmq deliveries channel has been closed")
+
+			return
+
+		case delMsg, ok := <-deliveries:
+			if !ok {
+				continue
+			}
+
+			spanCtx := extractSpanContextFromHeaders(delMsg.Headers)
+			span := trace.SpanFromContext(spanCtx)
+
+			consumeMsg := &Message{}
+			err := json.Unmarshal(delMsg.Body, consumeMsg)
+			if err != nil {
+				span.RecordError(err)
+				span.SetStatus(codes.Error, err.Error())
+				slog.Error("rmq: failed while deserialize msg", slog.String("err", err.Error()))
+				continue
+			}
+
+			span.SetName("rmq-consume")
+			span.SetAttributes(attribute.String("task-id", consumeMsg.EventId.String()))
+
+			consumeMsg.Ctx = spanCtx
+			msg := consumeMsg.ToMessage()
+
+			r.redirect <- *msg
+			span.End()
+		}
+	}
+}
+
+func (r *RabbitMQClient) handleReconnect(ctx kernel.Ctx) {
+	for {
+		select {
+		case <-ctx.Done():
 			return
 
 		case <-r.conn.NotifyClose(make(chan *amqp.Error)):
@@ -203,9 +217,18 @@ func (r *RabbitMQClient) handleReconnect() {
 				}
 
 				slog.Error("rmq: failed to create channel", slog.String("err", err.Error()))
+
 				reconnectDelay = reconnectCounter * reconnectCounter
 				time.Sleep(time.Duration(reconnectDelay) * time.Second)
+
+				metrics.RmqReconnectCounter.
+					WithLabelValues(kernel.AppName, strconv.FormatBool(err != nil)).
+					Inc()
 			}
+
+			metrics.RmqReconnectCounter.
+				WithLabelValues(kernel.AppName, strconv.FormatBool(err != nil)).
+				Inc()
 
 			if err != nil {
 				slog.Error("rmq: failed to restore connection", slog.String("err", err.Error()))
@@ -215,9 +238,9 @@ func (r *RabbitMQClient) handleReconnect() {
 	}
 }
 
-func injectSpanContextToHeaders(ctx context.Context) amqp.Table {
+func injectSpanContextToHeaders(ctx kernel.Ctx) amqp.Table {
 	carrier := propagation.HeaderCarrier{}
-	telemetry.TracePropagator.Inject(ctx, carrier)
+	otlp_go.TracePropagator.Inject(ctx, carrier)
 
 	span := trace.SpanFromContext(ctx)
 	sCtx := span.SpanContext()
@@ -231,7 +254,7 @@ func injectSpanContextToHeaders(ctx context.Context) amqp.Table {
 	return headers
 }
 
-func extractSpanContextFromHeaders(headers amqp.Table) context.Context {
+func extractSpanContextFromHeaders(headers amqp.Table) kernel.Ctx {
 	ctx := context.Background()
 	if headers == nil {
 		return ctx

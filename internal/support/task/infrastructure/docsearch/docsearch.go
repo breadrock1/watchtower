@@ -2,13 +2,13 @@ package docsearch
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strings"
 	"time"
 
+	"watchtower/internal/shared/kernel"
 	"watchtower/internal/shared/utils"
 	"watchtower/internal/support/task/application/service/docstorage"
 )
@@ -25,7 +25,7 @@ func New(config Config) docstorage.IDocumentStorage {
 	}
 }
 
-func (ds *DocSearch) StoreDocument(ctx context.Context, doc *docstorage.Document) (docstorage.DocumentID, error) {
+func (ds *DocSearch) StoreDocument(ctx kernel.Ctx, doc *docstorage.Document) (docstorage.DocumentID, error) {
 	index := doc.Index
 	storeDoc := StoreDocumentForm{
 		FileName:   doc.Name,
@@ -42,9 +42,10 @@ func (ds *DocSearch) StoreDocument(ctx context.Context, doc *docstorage.Document
 		return "", err
 	}
 
-	buildURL := strings.Builder{}
+	urlPath := fmt.Sprintf("/api/v1/storage/%s/create?force=true", index)
+	buildURL := &strings.Builder{}
 	buildURL.WriteString(ds.config.Address)
-	buildURL.WriteString(fmt.Sprintf("/storage/%s/create?force=true", index))
+	buildURL.WriteString(urlPath)
 	targetURL := buildURL.String()
 
 	slog.Debug("storing document to index",

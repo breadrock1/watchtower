@@ -2,7 +2,6 @@ package s3
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"log/slog"
 	"net/url"
@@ -12,6 +11,7 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 
 	"watchtower/internal/core/cloud/domain"
+	"watchtower/internal/shared/kernel"
 )
 
 type S3Client struct {
@@ -30,6 +30,8 @@ func New(config Config) (domain.ICloudStorage, error) {
 		return nil, fmt.Errorf("s3 connection error: %w", err)
 	}
 
+	slog.Info("s3 connection established", slog.String("address", config.Address))
+
 	client := &S3Client{
 		mc: s3Client,
 	}
@@ -37,7 +39,7 @@ func New(config Config) (domain.ICloudStorage, error) {
 	return client, nil
 }
 
-func (s *S3Client) GetAllBuckets(ctx context.Context) ([]domain.Bucket, error) {
+func (s *S3Client) GetAllBuckets(ctx kernel.Ctx) ([]domain.Bucket, error) {
 	buckets, err := s.mc.ListBuckets(ctx)
 	if err != nil {
 		err = fmt.Errorf("s3 error: %w", err)
@@ -56,7 +58,7 @@ func (s *S3Client) GetAllBuckets(ctx context.Context) ([]domain.Bucket, error) {
 	return bucketNames, nil
 }
 
-func (s *S3Client) IsBucketExist(ctx context.Context, bucketID domain.BucketID) (bool, error) {
+func (s *S3Client) IsBucketExist(ctx kernel.Ctx, bucketID kernel.BucketID) (bool, error) {
 	result, err := s.mc.BucketExists(ctx, bucketID)
 	if err != nil {
 		err = fmt.Errorf("s3 error: %w", err)
@@ -65,7 +67,7 @@ func (s *S3Client) IsBucketExist(ctx context.Context, bucketID domain.BucketID) 
 	return result, nil
 }
 
-func (s *S3Client) CreateBucket(ctx context.Context, bucketID domain.BucketID) error {
+func (s *S3Client) CreateBucket(ctx kernel.Ctx, bucketID kernel.BucketID) error {
 	opts := minio.MakeBucketOptions{}
 	if err := s.mc.MakeBucket(ctx, bucketID, opts); err != nil {
 		err = fmt.Errorf("s3 error: %w", err)
@@ -74,7 +76,7 @@ func (s *S3Client) CreateBucket(ctx context.Context, bucketID domain.BucketID) e
 	return nil
 }
 
-func (s *S3Client) DeleteBucket(ctx context.Context, bucketID domain.BucketID) error {
+func (s *S3Client) DeleteBucket(ctx kernel.Ctx, bucketID kernel.BucketID) error {
 	if err := s.mc.RemoveBucket(ctx, bucketID); err != nil {
 		err = fmt.Errorf("s3 error: %w", err)
 		return err
@@ -83,9 +85,9 @@ func (s *S3Client) DeleteBucket(ctx context.Context, bucketID domain.BucketID) e
 }
 
 func (s *S3Client) GetObjectInfo(
-	ctx context.Context,
-	bucketID domain.BucketID,
-	objID domain.ObjectID,
+	ctx kernel.Ctx,
+	bucketID kernel.BucketID,
+	objID kernel.ObjectID,
 ) (domain.Object, error) {
 	var objectAttrs domain.Object
 	opts := minio.StatObjectOptions{}
@@ -111,9 +113,9 @@ func (s *S3Client) GetObjectInfo(
 }
 
 func (s *S3Client) GetObjectData(
-	ctx context.Context,
-	bucketID domain.BucketID,
-	objID domain.ObjectID,
+	ctx kernel.Ctx,
+	bucketID kernel.BucketID,
+	objID kernel.ObjectID,
 ) (domain.ObjectData, error) {
 	opts := minio.GetObjectOptions{}
 	filePath := path.Clean(objID)
@@ -134,10 +136,10 @@ func (s *S3Client) GetObjectData(
 }
 
 func (s *S3Client) StoreObject(
-	ctx context.Context,
-	bucketID domain.BucketID,
+	ctx kernel.Ctx,
+	bucketID kernel.BucketID,
 	params *domain.UploadObjectParams,
-) (domain.ObjectID, error) {
+) (kernel.ObjectID, error) {
 	opts := minio.PutObjectOptions{}
 	if params.Expired != nil {
 		opts.Expires = *params.Expired
@@ -153,7 +155,7 @@ func (s *S3Client) StoreObject(
 	return filePath, nil
 }
 
-func (s *S3Client) CopyObject(ctx context.Context, bucketID domain.BucketID, params *domain.CopyObjectParams) error {
+func (s *S3Client) CopyObject(ctx kernel.Ctx, bucketID kernel.BucketID, params *domain.CopyObjectParams) error {
 	srcPath := path.Clean(params.SourcePath)
 	dstPath := path.Clean(params.DestinationPath)
 
@@ -168,7 +170,33 @@ func (s *S3Client) CopyObject(ctx context.Context, bucketID domain.BucketID, par
 	return nil
 }
 
-func (s *S3Client) DeleteObject(ctx context.Context, bucketID domain.BucketID, objID domain.ObjectID) error {
+func (s *S3Client) DeleteObjects(ctx kernel.Ctx, bucketID kernel.BucketID, prefix string) error {
+	listObjOpts := minio.ListObjectsOptions{
+		Prefix:    prefix,
+		Recursive: true,
+		UseV1:     true,
+	}
+	objInfoCh := s.mc.ListObjects(ctx, bucketID, listObjOpts)
+
+	removeObjOpts := minio.RemoveObjectsOptions{
+		GovernanceBypass: true,
+	}
+	errCh := s.mc.RemoveObjects(ctx, bucketID, objInfoCh, removeObjOpts)
+	for err := range errCh {
+		if err.Err != nil {
+			slog.Warn("failed to delete object",
+				slog.String("bucket", bucketID),
+				slog.String("prefix", prefix),
+				slog.String("error", err.ObjectName),
+				slog.String("err", err.Err.Error()),
+			)
+		}
+	}
+
+	return nil
+}
+
+func (s *S3Client) DeleteObject(ctx kernel.Ctx, bucketID kernel.BucketID, objID kernel.ObjectID) error {
 	opts := minio.RemoveObjectOptions{}
 	filePath := path.Clean(objID)
 	if err := s.mc.RemoveObject(ctx, bucketID, filePath, opts); err != nil {
@@ -179,8 +207,8 @@ func (s *S3Client) DeleteObject(ctx context.Context, bucketID domain.BucketID, o
 }
 
 func (s *S3Client) GetBucketObjects(
-	ctx context.Context,
-	bucketID domain.BucketID,
+	ctx kernel.Ctx,
+	bucketID kernel.BucketID,
 	params *domain.GetObjectsParams,
 ) ([]domain.Object, error) {
 	opts := minio.ListObjectsOptions{
@@ -220,8 +248,8 @@ func (s *S3Client) GetBucketObjects(
 }
 
 func (s *S3Client) GenShareURL(
-	ctx context.Context,
-	bucketID domain.BucketID,
+	ctx kernel.Ctx,
+	bucketID kernel.BucketID,
 	params *domain.ShareObjectParams,
 ) (*url.URL, error) {
 	filePath := path.Clean(params.FilePath)

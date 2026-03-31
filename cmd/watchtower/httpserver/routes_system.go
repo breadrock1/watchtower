@@ -1,21 +1,21 @@
 package httpserver
 
 import (
-	"net/http"
 	"os"
 
-	"github.com/labstack/echo/v4"
+	"github.com/gofiber/fiber/v2"
 )
 
-func (s *Server) CreateSystemGroup() error {
-	s.server.GET("/", s.Home)
-	return nil
+func (s *Server) CreateSystemGroup(group fiber.Router) {
+	group.Get("/", s.Home)
 }
 
-func (s *Server) Home(eCtx echo.Context) error {
+func (s *Server) Home(eCtx *fiber.Ctx) error {
 	fileData, err := os.ReadFile("./static/index.html")
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		return eCtx.SendStatus(fiber.StatusInternalServerError)
 	}
-	return eCtx.HTMLBlob(http.StatusOK, fileData)
+
+	eCtx.Set(fiber.HeaderContentType, fiber.MIMETextHTML)
+	return eCtx.SendString(string(fileData))
 }
