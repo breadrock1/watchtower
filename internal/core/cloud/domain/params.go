@@ -15,6 +15,9 @@ type CopyObjectParams struct {
 	// DestinationPath is the full path where the object should be copied
 	// Example: "backups/file.pdf" or "documents/copy/file.pdf"
 	DestinationPath string
+
+	// WithRemoving is bool flag to remove source path after copying.
+	WithRemoving bool
 }
 
 // ShareObjectParams defines parameters for generating a shareable URL for an object.
@@ -36,9 +39,13 @@ type GetObjectsParams struct {
 	// Example: "documents/2024/" to list all objects in the 2024 folder
 	PrefixPath string
 
-	// MaxKeys limits the number of objects returned (pagination)
+	// Limit limits the number of objects returned (pagination)
 	// Zero means use provider default
-	MaxKeys int32
+	Limit int32
+
+	// Offset base (pagination)
+	// Zero means use offset from begin
+	Offset int32
 
 	// ContinuationToken for pagination through large result sets
 	ContinuationToken string

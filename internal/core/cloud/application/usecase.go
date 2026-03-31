@@ -116,6 +116,7 @@ func (s *StorageUseCase) CopyObject(ctx kernel.Ctx, bucketID kernel.BucketID, pa
 		attribute.String("bucket", bucketID),
 		attribute.String("src-file-path", params.SourcePath),
 		attribute.String("dst-file-path", params.DestinationPath),
+		attribute.Bool("with-removed", params.WithRemoving),
 	)
 
 	err := s.cloudStorage.CopyObject(ctx, bucketID, params)
@@ -163,35 +164,6 @@ func (s *StorageUseCase) DeleteObjects(ctx kernel.Ctx, bucketID kernel.BucketID,
 		span.RecordError(err)
 		return err
 	}
-	return nil
-}
-
-func (s *StorageUseCase) MoveObject(ctx kernel.Ctx, bucketID kernel.BucketID, params *domain.CopyObjectParams) error {
-	ctx, span := otlp_go.GlobalTracer.Start(ctx, "move-file")
-	defer span.End()
-
-	span.SetAttributes(
-		attribute.String("bucket", bucketID),
-		attribute.String("src-file-path", params.SourcePath),
-		attribute.String("dst-file-path", params.DestinationPath),
-	)
-
-	err := s.cloudStorage.CopyObject(ctx, bucketID, params)
-	if err != nil {
-		err = fmt.Errorf("failed to move object %s to %s: %w", params.SourcePath, params.DestinationPath, err)
-		span.SetStatus(codes.Error, err.Error())
-		span.RecordError(err)
-		return err
-	}
-
-	err = s.cloudStorage.DeleteObject(ctx, bucketID, params.DestinationPath)
-	if err != nil {
-		err = fmt.Errorf("failed to delete object: %w", err)
-		span.SetStatus(codes.Error, err.Error())
-		span.RecordError(err)
-		return err
-	}
-
 	return nil
 }
 
