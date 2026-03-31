@@ -61,7 +61,7 @@ var (
 	}
 
 	MatchedStoreObjectParams = mock.MatchedBy(func(params *domain.UploadObjectParams) bool {
-		filePathFlag := params.FilePath == "test-object.docx/.keeper"
+		filePathFlag := params.FilePath == fmt.Sprintf("%s/.keeper", TestFolderPath)
 		return filePathFlag
 	})
 
@@ -82,36 +82,51 @@ func TestObjectAPIRoutes(t *testing.T) {
 		HttpMethod          string
 		MockMethodName      string
 		RequestPayload      *form.CopyFileForm
+		IsBucketExists      bool
 		ReturnedData        interface{}
 		ReturnedError       error
 		ExpectedCalledTimes int
 		ExpectedStatusCode  int
 	}{
 		{
-			TargetURL:           fmt.Sprintf("/api/v1/cloud/%s/file/copy", TestBucketName),
-			HttpMethod:          http.MethodPost,
+			TargetURL:           fmt.Sprintf("/api/v1/cloud/%s/file", TestBucketName),
+			HttpMethod:          http.MethodPatch,
 			MockMethodName:      CopyObjectMethodName,
 			RequestPayload:      &TestCopyFileForm,
+			IsBucketExists:      true,
 			ReturnedData:        nil,
 			ReturnedError:       nil,
 			ExpectedCalledTimes: 1,
 			ExpectedStatusCode:  http.StatusOK,
 		},
 		{
-			TargetURL:           fmt.Sprintf("/api/v1/cloud/%s/file/copy", TestBucketName),
-			HttpMethod:          http.MethodPost,
+			TargetURL:           fmt.Sprintf("/api/v1/cloud/%s/file", TestBucketName),
+			HttpMethod:          http.MethodPatch,
+			RequestPayload:      &TestCopyFileForm,
+			IsBucketExists:      false,
+			MockMethodName:      StoreObjectMethodName,
+			ReturnedData:        nil,
+			ReturnedError:       nil,
+			ExpectedCalledTimes: 0,
+			ExpectedStatusCode:  http.StatusNotFound,
+		},
+		{
+			TargetURL:           fmt.Sprintf("/api/v1/cloud/%s/file", TestBucketName),
+			HttpMethod:          http.MethodPatch,
 			MockMethodName:      CopyObjectMethodName,
 			RequestPayload:      nil,
+			IsBucketExists:      true,
 			ReturnedData:        nil,
 			ReturnedError:       errors.New("invalid request"),
 			ExpectedCalledTimes: 0,
 			ExpectedStatusCode:  http.StatusBadRequest,
 		},
 		{
-			TargetURL:           fmt.Sprintf("/api/v1/cloud/%s/file/copy", TestBucketName),
-			HttpMethod:          http.MethodPost,
+			TargetURL:           fmt.Sprintf("/api/v1/cloud/%s/file", TestBucketName),
+			HttpMethod:          http.MethodPatch,
 			MockMethodName:      CopyObjectMethodName,
 			RequestPayload:      &TestCopyFileForm,
+			IsBucketExists:      true,
 			ReturnedData:        nil,
 			ReturnedError:       errors.New("internal error"),
 			ExpectedCalledTimes: 1,
@@ -126,6 +141,10 @@ func TestObjectAPIRoutes(t *testing.T) {
 				testEnv := common.InitTestAppEnvironment()
 				appServer, err := testEnv.BuildAppServer(servConfig)
 				assert.NoError(t, err, "failed to build app server")
+
+				testEnv.ObjectStorage.
+					On(IsBucketExistsMethodName, TestBucketName).
+					Return(testCase.IsBucketExists, nil)
 
 				testEnv.ObjectStorage.
 					On(testCase.MockMethodName, TestBucketName, MatchedCopyFilesParams).
