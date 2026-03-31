@@ -5,12 +5,15 @@ import (
 	"fmt"
 	"log/slog"
 	"path"
+	"strconv"
+	"time"
 
 	"github.com/breadrock1/otlp-go/otlp"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 
 	"watchtower/internal/shared/kernel"
+	"watchtower/internal/shared/metrics"
 	"watchtower/internal/support/task/application/mapping"
 	"watchtower/internal/support/task/application/service/docstorage"
 	"watchtower/internal/support/task/application/service/recognizer"
@@ -161,8 +164,16 @@ func (p *TaskUseCase) Recognize(
 		FileData: fileData,
 	}
 
+	instant := time.Now()
+
 	// TODO: impled retry pattern
 	recData, err := p.recognizer.Recognize(ctx, inputFile)
+
+	elapsedTime := time.Since(instant)
+	metrics.RecognizerDurationSeconds.
+		WithLabelValues(kernel.AppName, strconv.FormatBool(err != nil)).
+		Observe(elapsedTime.Seconds())
+
 	if err != nil {
 		task.SetStatusAndText(domain.Failed, "failed to recognize file")
 		err = fmt.Errorf("failed to recognize file %s: %w", task.ID, err)
@@ -198,7 +209,15 @@ func (p *TaskUseCase) StoreDocument(
 		ModifiedAt: task.ModifiedAt,
 	}
 
+	instant := time.Now()
+
 	docID, err := p.docStorage.StoreDocument(ctx, doc)
+
+	elapsedTime := time.Since(instant)
+	metrics.StoreProcessedDocumentDurationSeconds.
+		WithLabelValues(kernel.AppName, strconv.FormatBool(err != nil)).
+		Observe(elapsedTime.Seconds())
+
 	if err != nil {
 		err = fmt.Errorf("failed to store document: %w", err)
 		span.SetStatus(codes.Error, err.Error())

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"time"
 
 	"github.com/breadrock1/otlp-go/otlp"
@@ -14,6 +15,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"watchtower/internal/shared/kernel"
+	"watchtower/internal/shared/metrics"
 	"watchtower/internal/support/task/domain"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -215,9 +217,18 @@ func (r *RabbitMQClient) handleReconnect(ctx kernel.Ctx) {
 				}
 
 				slog.Error("rmq: failed to create channel", slog.String("err", err.Error()))
+
 				reconnectDelay = reconnectCounter * reconnectCounter
 				time.Sleep(time.Duration(reconnectDelay) * time.Second)
+
+				metrics.RmqReconnectCounter.
+					WithLabelValues(kernel.AppName, strconv.FormatBool(err != nil)).
+					Inc()
 			}
+
+			metrics.RmqReconnectCounter.
+				WithLabelValues(kernel.AppName, strconv.FormatBool(err != nil)).
+				Inc()
 
 			if err != nil {
 				slog.Error("rmq: failed to restore connection", slog.String("err", err.Error()))

@@ -3,6 +3,8 @@ package process
 import (
 	"fmt"
 	"log/slog"
+	"strconv"
+	"time"
 
 	"github.com/breadrock1/otlp-go/otlp"
 	"go.opentelemetry.io/otel/attribute"
@@ -11,6 +13,7 @@ import (
 
 	"watchtower/internal/core/cloud/domain"
 	"watchtower/internal/shared/kernel"
+	"watchtower/internal/shared/metrics"
 
 	cloudApp "watchtower/internal/core/cloud/application"
 	taskUC "watchtower/internal/support/task/application"
@@ -52,8 +55,21 @@ func (o *Orchestrator) LaunchListener(ctx kernel.Ctx) {
 					defer sem.Release(1)
 
 					task := &cMsg.Body
+
+					instant := time.Now()
 					o.handleTask(ctx, task)
+
+					elapsedTime := time.Since(instant)
+					statusInt := strconv.Itoa(int(task.Status))
+					metrics.OrchestratorProcessingDurationSeconds.
+						WithLabelValues(kernel.AppName, statusInt).
+						Observe(elapsedTime.Seconds())
+
 					o.taskUC.UpdateTaskStatus(ctx, task)
+
+					metrics.OrchestratorProcessingCounter.
+						WithLabelValues(kernel.AppName, statusInt).
+						Inc()
 
 					ctx.Done()
 				}()
@@ -81,6 +97,11 @@ func (o *Orchestrator) UploadFile(
 	)
 
 	objID, err := o.storageUC.StoreObject(ctx, bucketID, params)
+
+	metrics.UploadedFilesCounter.
+		WithLabelValues(kernel.AppName, strconv.FormatBool(err != nil)).
+		Inc()
+
 	if err != nil {
 		err = fmt.Errorf("failed to upload file %s: %w", params.FilePath, err)
 		span.SetStatus(codes.Error, err.Error())
@@ -89,6 +110,11 @@ func (o *Orchestrator) UploadFile(
 	}
 
 	task, err := o.CreateTask(ctx, bucketID, objID)
+
+	metrics.CreatedProcessingTasksCounter.
+		WithLabelValues(kernel.AppName, strconv.FormatBool(err != nil)).
+		Inc()
+
 	if err != nil {
 		err = fmt.Errorf("failed to create taskUC %s: %w", params.FilePath, err)
 		span.SetStatus(codes.Error, err.Error())
