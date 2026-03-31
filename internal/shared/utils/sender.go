@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/breadrock1/otlp-go/otlp"
 	"github.com/labstack/echo/v4"
 
 	"go.opentelemetry.io/otel"
@@ -15,7 +16,6 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 
 	"watchtower/internal/shared/kernel"
-	"watchtower/internal/shared/telemetry"
 )
 
 func PUT(ctx kernel.Ctx, body *bytes.Buffer, url, mime string, timeout time.Duration) ([]byte, error) {
@@ -41,7 +41,7 @@ func POST(ctx kernel.Ctx, body *bytes.Buffer, url, mime string, timeout time.Dur
 }
 
 func sendRequest(ctx kernel.Ctx, client *http.Client, req *http.Request) ([]byte, error) {
-	ctx, span := telemetry.GlobalTracer.Start(ctx, "http-request")
+	ctx, span := otlp_go.GlobalTracer.Start(ctx, "http-request")
 	defer span.End()
 
 	span.SetAttributes(
@@ -80,7 +80,7 @@ func sendRequest(ctx kernel.Ctx, client *http.Client, req *http.Request) ([]byte
 }
 
 func extractSpanContext(ctx kernel.Ctx, resp *http.Response) kernel.Ctx {
-	propagator := telemetry.TracePropagator
+	propagator := otlp_go.TracePropagator
 	carrier := propagation.HeaderCarrier(resp.Header)
 	return propagator.Extract(ctx, carrier)
 }

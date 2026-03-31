@@ -2,6 +2,7 @@ package routes_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -73,6 +74,8 @@ func TestBucketAPIRoutes(t *testing.T) {
 	}
 
 	t.Run("Get buckets", func(t *testing.T) {
+		ctx := context.Background()
+
 		for index, testCase := range getBucketsTestCases {
 			testCaseName := fmt.Sprintf("Get buckets case %d", index)
 			t.Run(testCaseName, func(t *testing.T) {
@@ -84,7 +87,7 @@ func TestBucketAPIRoutes(t *testing.T) {
 					On(testCase.MockMethodName).
 					Return(testCase.ReturnedData, testCase.ReturnedError)
 
-				req := httptest.NewRequest(testCase.HttpMethod, testCase.TargetURL, nil)
+				req := httptest.NewRequestWithContext(ctx, testCase.HttpMethod, testCase.TargetURL, nil)
 
 				resp, respErr := appServer.Server.Test(req, -1)
 				assert.NoError(t, respErr, "failed to create tag")
@@ -155,6 +158,8 @@ func TestBucketAPIRoutes(t *testing.T) {
 	}
 
 	t.Run("Delete bucket", func(t *testing.T) {
+		ctx := context.Background()
+
 		for index, testCase := range createBucketTestCases {
 			testCaseName := fmt.Sprintf("Create bucket case %d", index)
 			t.Run(testCaseName, func(t *testing.T) {
@@ -177,7 +182,7 @@ func TestBucketAPIRoutes(t *testing.T) {
 					buffer = bytes.NewBuffer(jsonBytes)
 				}
 
-				req := httptest.NewRequest(testCase.HttpMethod, testCase.TargetURL, buffer)
+				req := httptest.NewRequestWithContext(ctx, testCase.HttpMethod, testCase.TargetURL, buffer)
 
 				resp, respErr := appServer.Server.Test(req, -1)
 				assert.NoError(t, respErr, "failed to delete tag")
@@ -227,6 +232,8 @@ func TestBucketAPIRoutes(t *testing.T) {
 	}
 
 	t.Run("Delete buckets", func(t *testing.T) {
+		ctx := context.Background()
+
 		for index, testCase := range deleteBucketsTestCases {
 			testCaseName := fmt.Sprintf("Delete bucket case %d", index)
 			t.Run(testCaseName, func(t *testing.T) {
@@ -242,7 +249,7 @@ func TestBucketAPIRoutes(t *testing.T) {
 					On(testCase.MockMethodName, TestBucket.ID).
 					Return(testCase.ReturnedError, testCase.ReturnedError)
 
-				req := httptest.NewRequest(testCase.HttpMethod, testCase.TargetURL, nil)
+				req := httptest.NewRequestWithContext(ctx, testCase.HttpMethod, testCase.TargetURL, nil)
 
 				resp, respErr := appServer.Server.Test(req, -1)
 				assert.NoError(t, respErr, "delete bucket")

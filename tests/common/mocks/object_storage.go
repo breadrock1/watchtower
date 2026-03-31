@@ -60,19 +60,31 @@ func (m *MockObjectStorage) StoreObject(
 	return args.Get(0).(kernel.ObjectID), args.Error(1)
 }
 
-func (m *MockObjectStorage) CopyObject(_ kernel.Ctx, bucketID kernel.BucketID, params *domain.CopyObjectParams) error {
+func (m *MockObjectStorage) CopyObject(
+	_ kernel.Ctx,
+	bucketID kernel.BucketID,
+	params *domain.CopyObjectParams,
+) error {
 	args := m.Called(bucketID, params)
 	return args.Error(0)
 }
 
-func (m *MockObjectStorage) DeleteObject(_ kernel.Ctx, bucketID kernel.BucketID, objID kernel.ObjectID) error {
+func (m *MockObjectStorage) DeleteObject(
+	_ kernel.Ctx,
+	bucketID kernel.BucketID,
+	objID kernel.ObjectID,
+) error {
 	args := m.Called(bucketID, objID)
 	return args.Error(0)
 }
 
-func (m *MockObjectStorage) DeleteObjects(ctx kernel.Ctx, bucketID kernel.BucketID, prefix string) error {
+func (m *MockObjectStorage) DeleteObjects(
+	_ kernel.Ctx,
+	bucketID kernel.BucketID,
+	prefix string,
+) error {
 	args := m.Called(bucketID, prefix)
-	return args.Error(0)
+	return args.Error(1)
 }
 
 func (m *MockObjectStorage) GetBucketObjects(

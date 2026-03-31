@@ -25,6 +25,9 @@ definitions:
       src_path:
         example: old-test-document.docx
         type: string
+      with_remove:
+        example: true
+        type: boolean
     type: object
   form.CreateBucketForm:
     properties:
@@ -55,6 +58,12 @@ definitions:
       directory:
         example: test-folder/
         type: string
+      limit:
+        example: 10
+        type: integer
+      offset:
+        example: 0
+        type: integer
     type: object
   form.InternalServerError:
     properties:
@@ -206,6 +215,49 @@ paths:
       summary: Remove file from cloud
       tags:
       - files
+    patch:
+      consumes:
+      - application/json
+      description: Copy file to another location into bucket
+      operationId: copy-file
+      parameters:
+      - description: Bucket name of src file
+        in: path
+        name: bucket
+        required: true
+        type: string
+      - description: Params to copy file
+        in: body
+        name: jsonQuery
+        required: true
+        schema:
+          $ref: '#/definitions/form.CopyFileForm'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ok
+          schema:
+            $ref: '#/definitions/form.Success'
+        "400":
+          description: Bad Request error
+          schema:
+            $ref: '#/definitions/form.BadRequestError'
+        "404":
+          description: Bucket or file not found
+          schema:
+            $ref: '#/definitions/form.NotFoundError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/form.InternalServerError'
+        "503":
+          description: Server does not available
+          schema:
+            $ref: '#/definitions/form.ServerUnavailableError'
+      summary: Copy file to another location into bucket
+      tags:
+      - files
   /api/v1/cloud/{bucket}/file/attributes:
     post:
       consumes:
@@ -250,50 +302,6 @@ paths:
       summary: Get file attributes
       tags:
       - files
-  /api/v1/cloud/{bucket}/file/copy:
-    post:
-      consumes:
-      - application/json
-      description: Copy file to another location into bucket
-      operationId: copy-file
-      parameters:
-      - description: Bucket name of src file
-        in: path
-        name: bucket
-        required: true
-        type: string
-      - description: Params to copy file
-        in: body
-        name: jsonQuery
-        required: true
-        schema:
-          $ref: '#/definitions/form.CopyFileForm'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Ok
-          schema:
-            $ref: '#/definitions/form.Success'
-        "400":
-          description: Bad Request error
-          schema:
-            $ref: '#/definitions/form.BadRequestError'
-        "404":
-          description: Bucket or file not found
-          schema:
-            $ref: '#/definitions/form.NotFoundError'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/form.InternalServerError'
-        "503":
-          description: Server does not available
-          schema:
-            $ref: '#/definitions/form.ServerUnavailableError'
-      summary: Copy file to another location into bucket
-      tags:
-      - files
   /api/v1/cloud/{bucket}/file/download:
     post:
       consumes:
@@ -336,50 +344,6 @@ paths:
           schema:
             $ref: '#/definitions/form.ServerUnavailableError'
       summary: Download file from cloud
-      tags:
-      - files
-  /api/v1/cloud/{bucket}/file/move:
-    post:
-      consumes:
-      - application/json
-      description: Move file to another location into bucket
-      operationId: move-file
-      parameters:
-      - description: Bucket name of src file
-        in: path
-        name: bucket
-        required: true
-        type: string
-      - description: Params to move file
-        in: body
-        name: jsonQuery
-        required: true
-        schema:
-          $ref: '#/definitions/form.CopyFileForm'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Ok
-          schema:
-            $ref: '#/definitions/form.Success'
-        "400":
-          description: Bad Request error
-          schema:
-            $ref: '#/definitions/form.BadRequestError'
-        "404":
-          description: Bucket or file not found
-          schema:
-            $ref: '#/definitions/form.NotFoundError'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/form.InternalServerError'
-        "503":
-          description: Server does not available
-          schema:
-            $ref: '#/definitions/form.ServerUnavailableError'
-      summary: Move file to another location into bucket
       tags:
       - files
   /api/v1/cloud/{bucket}/file/remove:

@@ -2,23 +2,23 @@ package httpserver
 
 import (
 	"fmt"
+	"log/slog"
 
-	"go.opentelemetry.io/otel/trace"
-
-	"github.com/ansrivas/fiberprometheus/v2"
-	"github.com/gofiber/contrib/otelfiber/v2"
+	"github.com/breadrock1/otlp-go/otlp"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/adaptor"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/monitor"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/swagger"
-
-	"watchtower/cmd/watchtower/httpserver/mw"
-	"watchtower/internal/process"
-	"watchtower/internal/shared/kernel"
-	"watchtower/internal/shared/telemetry"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opentelemetry.io/otel/trace"
 
 	_ "watchtower/docs"
+	"watchtower/internal/process"
+	"watchtower/internal/shared/kernel"
+
+	otlppfiber "github.com/breadrock1/otlp-go/pkg/fiber"
 )
 
 // Server
@@ -50,32 +50,34 @@ type Server struct {
 	Server *fiber.App
 }
 
-func SetupServer(
-	otlpConfig telemetry.OtlpConfig,
-	state *process.Orchestrator,
-	tracer trace.Tracer,
-) *Server {
+func SetupServer(otlpConfig otlp_go.OtlpConfig, state *process.Orchestrator) *Server {
+	tracer, err := otlp_go.InitTracer(otlpConfig.Tracer)
+	if err != nil {
+		slog.Warn("failed to init tracer", slog.String("err", err.Error()))
+	}
+
 	serverApp := &Server{
 		tracer: tracer,
 		state:  state,
 	}
 
-	serverApp.Server = fiber.New()
+	serverApp.Server = fiber.New(
+		fiber.Config{
+			DisableStartupMessage: true,
+		},
+	)
 
-	serverApp.Server.Use(cors.New(cors.Config{}))
-	serverApp.Server.Use(recover.New())
+	serverApp.initMiddlewares(otlpConfig)
 
-	serverApp.initMeterMW()
-	serverApp.initTracerMW(otlpConfig.Tracer)
-	serverApp.initLoggerMW(otlpConfig.Logger)
-
+	serverApp.Server.Get("/", serverApp.Home)
 	serverApp.Server.Get("/monitor", monitor.New())
+	serverApp.Server.Get("/processing/metrics", adaptor.HTTPHandler(promhttp.Handler()))
 
 	api := serverApp.Server.Group("/api")
+
 	api.Get("/swagger/*", swagger.HandlerDefault)
 
 	v1Api := api.Group("/v1")
-
 	serverApp.CreateSystemGroup(v1Api)
 	serverApp.CreateTasksGroup(v1Api)
 	serverApp.CreateStorageBucketsGroup(v1Api)
@@ -84,37 +86,32 @@ func SetupServer(
 	return serverApp
 }
 
-func (s *Server) Start(_ kernel.Ctx, config Config) error {
+func (s *Server) Start(config Config) error {
+	slog.Info("starting http server", slog.String("address", config.Address))
 	if err := s.Server.Listen(config.Address); err != nil {
-		return fmt.Errorf("failed to start Server: %w", err)
+		return fmt.Errorf("failed to start server: %w", err)
 	}
 
 	return nil
 }
 
-func (s *Server) Shutdown(_ kernel.Ctx) error {
-	return s.Server.Shutdown()
+func (s *Server) Shutdown(ctx kernel.Ctx) error {
+	slog.Info("http server shutting down")
+	return s.Server.ShutdownWithContext(ctx)
 }
 
-func (s *Server) initMeterMW() {
-	prometheus := fiberprometheus.New(telemetry.AppName)
-	prometheus.RegisterAt(s.Server, "/metrics")
-	prometheus.SetSkipPaths([]string{"/api/swagger"})
-	prometheus.SetIgnoreStatusCodes([]int{401, 403, 404})
-	s.Server.Use(prometheus.Middleware)
-}
+func (s *Server) initMiddlewares(otlpConfig otlp_go.OtlpConfig) {
+	s.Server.Use(cors.New(cors.Config{}))
+	s.Server.Use(recover.New())
 
-func (s *Server) initLoggerMW(logConfig telemetry.LoggerConfig) {
-	s.Server.Use(mw.LocalLoggerMiddleware(logConfig))
+	s.Server.Use(otlppfiber.PrometheusMeterMiddleware(s.Server))
+	s.Server.Use(otlppfiber.OtlpJaegerTracerMiddleware())
 
-	if logConfig.EnableLoki {
-		lokiLog := telemetry.InitLokiLogger(logConfig)
-		s.Server.Use(mw.CreateLokiLoggerMW(&lokiLog))
+	logger := otlp_go.InitLocalLogger(otlpConfig.Logger)
+	slog.SetDefault(logger)
+
+	s.Server.Use(otlppfiber.StdoutLoggerMiddleware(otlpConfig.Logger))
+	if otlpConfig.Logger.EnableLoki {
+		s.Server.Use(otlppfiber.RemoteLokiLoggerMiddleware(otlpConfig.Logger))
 	}
-}
-
-func (s *Server) initTracerMW(_ telemetry.TracerConfig) {
-	s.Server.Use(otelfiber.Middleware(
-		otelfiber.WithNext(mw.TraceURLSkipper),
-	))
 }

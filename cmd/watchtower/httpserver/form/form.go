@@ -37,6 +37,8 @@ type ShareFileForm struct {
 // GetFilesForm example
 type GetFilesForm struct {
 	DirectoryName string `json:"directory" example:"test-folder/"`
+	Limit         int32  `json:"limit" example:"10"`
+	Offset        int32  `json:"offset" example:"0"`
 }
 
 // GetFileAttributesForm example
@@ -46,8 +48,14 @@ type GetFileAttributesForm struct {
 
 // CopyFileForm example
 type CopyFileForm struct {
-	SrcPath string `json:"src_path" example:"old-test-document.docx"`
-	DstPath string `json:"dst_path" example:"test-document.docx"`
+	SrcPath    string `json:"src_path" example:"old-test-document.docx"`
+	DstPath    string `json:"dst_path" example:"test-document.docx"`
+	WithRemove bool   `json:"with_remove" example:"true"`
+}
+
+// FolderForm example
+type FolderForm struct {
+	Prefix string `json:"prefix" example:"test-folder"`
 }
 
 // FolderForm example

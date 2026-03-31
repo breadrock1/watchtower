@@ -6,11 +6,10 @@ import (
 	"log/slog"
 	"time"
 
-	"watchtower/internal/shared/kernel"
-	"watchtower/internal/shared/telemetry"
-	"watchtower/internal/support/task/domain"
-
 	"github.com/redis/go-redis/v9"
+
+	"watchtower/internal/shared/kernel"
+	"watchtower/internal/support/task/domain"
 )
 
 type RedisClient struct {
@@ -21,6 +20,9 @@ type RedisClient struct {
 func New(config Config) domain.ITaskStorage {
 	redisOpts := &redis.Options{Addr: config.Address}
 	conn := redis.NewClient(redisOpts)
+
+	slog.Info("redis connection established", slog.String("address", config.Address))
+
 	return &RedisClient{
 		config: config,
 		rsConn: conn,
@@ -74,8 +76,13 @@ func (rs *RedisClient) GetTask(
 		return nil, fmt.Errorf("redis error: %w: %w", domain.ErrExecution, cmd.Err())
 	}
 
-	value := &RedisValue{}
-	if err := cmd.Scan(value); err != nil {
+	data, err := cmd.Bytes()
+	if err != nil {
+		return nil, fmt.Errorf("redis payload error: %w: %w", domain.ErrExecution, cmd.Err())
+	}
+
+	var value *RedisValue
+	if err = json.Unmarshal(data, &value); err != nil {
 		return nil, fmt.Errorf("deserialize error: %w: %w", domain.ErrInvalidTaskData, err)
 	}
 
@@ -105,5 +112,5 @@ func (rs *RedisClient) UpdateTask(ctx kernel.Ctx, task *domain.Task) error {
 }
 
 func (rs *RedisClient) generateUniqID(bucketID kernel.BucketID, taskID string) string {
-	return fmt.Sprintf("%s:%s:%s", telemetry.AppName, bucketID, taskID)
+	return fmt.Sprintf("%s:%s:%s", kernel.AppName, bucketID, taskID)
 }

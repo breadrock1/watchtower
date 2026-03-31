@@ -30,6 +30,8 @@ func New(config Config) (domain.ICloudStorage, error) {
 		return nil, fmt.Errorf("s3 connection error: %w", err)
 	}
 
+	slog.Info("s3 connection established", slog.String("address", config.Address))
+
 	client := &S3Client{
 		mc: s3Client,
 	}

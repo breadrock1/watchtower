@@ -1,11 +1,9 @@
 package common
 
 import (
-	"fmt"
 	"watchtower/cmd"
 	"watchtower/cmd/watchtower/httpserver"
 	"watchtower/internal/process"
-	"watchtower/internal/shared/telemetry"
 	"watchtower/tests/common/mocks"
 
 	cloudApp "watchtower/internal/core/cloud/application"
@@ -36,15 +34,9 @@ func InitTestAppEnvironment() *TestAppServerEnvironment {
 }
 
 func (e *TestAppServerEnvironment) BuildAppServer(servConfig *cmd.Config) (*httpserver.Server, error) {
-	tracerProvider, err := telemetry.InitTracer(servConfig.Otlp.Tracer)
-	telemetry.GlobalTracer = tracerProvider
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize tracer: %w", err)
-	}
-
 	storageUseCase := cloudApp.NewStorageUseCase(e.ObjectStorage)
 	taskUseCase := taskApp.NewTaskUseCase(e.TaskStorage, e.TaskQueue, e.Recognizer, e.DocStorage)
 	orchestrator := process.NewOrchestrator(servConfig.Orchestrator, storageUseCase, taskUseCase)
-	appServer := httpserver.SetupServer(servConfig.Otlp, orchestrator, tracerProvider)
+	appServer := httpserver.SetupServer(servConfig.Otlp, orchestrator)
 	return appServer, nil
 }

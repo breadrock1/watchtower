@@ -217,6 +217,70 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "patch": {
+                "description": "Copy file to another location into bucket",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "files"
+                ],
+                "summary": "Copy file to another location into bucket",
+                "operationId": "copy-file",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bucket name of src file",
+                        "name": "bucket",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Params to copy file",
+                        "name": "jsonQuery",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/form.CopyFileForm"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Ok",
+                        "schema": {
+                            "$ref": "#/definitions/form.Success"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request error",
+                        "schema": {
+                            "$ref": "#/definitions/form.BadRequestError"
+                        }
+                    },
+                    "404": {
+                        "description": "Bucket or file not found",
+                        "schema": {
+                            "$ref": "#/definitions/form.NotFoundError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/form.InternalServerError"
+                        }
+                    },
+                    "503": {
+                        "description": "Server does not available",
+                        "schema": {
+                            "$ref": "#/definitions/form.ServerUnavailableError"
+                        }
+                    }
+                }
             }
         },
         "/api/v1/cloud/{bucket}/file/attributes": {
@@ -285,72 +349,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/cloud/{bucket}/file/copy": {
-            "post": {
-                "description": "Copy file to another location into bucket",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "files"
-                ],
-                "summary": "Copy file to another location into bucket",
-                "operationId": "copy-file",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Bucket name of src file",
-                        "name": "bucket",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Params to copy file",
-                        "name": "jsonQuery",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/form.CopyFileForm"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Ok",
-                        "schema": {
-                            "$ref": "#/definitions/form.Success"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request error",
-                        "schema": {
-                            "$ref": "#/definitions/form.BadRequestError"
-                        }
-                    },
-                    "404": {
-                        "description": "Bucket or file not found",
-                        "schema": {
-                            "$ref": "#/definitions/form.NotFoundError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/form.InternalServerError"
-                        }
-                    },
-                    "503": {
-                        "description": "Server does not available",
-                        "schema": {
-                            "$ref": "#/definitions/form.ServerUnavailableError"
-                        }
-                    }
-                }
-            }
-        },
         "/api/v1/cloud/{bucket}/file/download": {
             "post": {
                 "description": "Download file from cloud",
@@ -398,72 +396,6 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Bucket not found",
-                        "schema": {
-                            "$ref": "#/definitions/form.NotFoundError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/form.InternalServerError"
-                        }
-                    },
-                    "503": {
-                        "description": "Server does not available",
-                        "schema": {
-                            "$ref": "#/definitions/form.ServerUnavailableError"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/cloud/{bucket}/file/move": {
-            "post": {
-                "description": "Move file to another location into bucket",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "files"
-                ],
-                "summary": "Move file to another location into bucket",
-                "operationId": "move-file",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Bucket name of src file",
-                        "name": "bucket",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Params to move file",
-                        "name": "jsonQuery",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/form.CopyFileForm"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Ok",
-                        "schema": {
-                            "$ref": "#/definitions/form.Success"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request error",
-                        "schema": {
-                            "$ref": "#/definitions/form.BadRequestError"
-                        }
-                    },
-                    "404": {
-                        "description": "Bucket or file not found",
                         "schema": {
                             "$ref": "#/definitions/form.NotFoundError"
                         }
@@ -1047,6 +979,10 @@ const docTemplate = `{
                 "src_path": {
                     "type": "string",
                     "example": "old-test-document.docx"
+                },
+                "with_remove": {
+                    "type": "boolean",
+                    "example": true
                 }
             }
         },
@@ -1092,6 +1028,14 @@ const docTemplate = `{
                 "directory": {
                     "type": "string",
                     "example": "test-folder/"
+                },
+                "limit": {
+                    "type": "integer",
+                    "example": 10
+                },
+                "offset": {
+                    "type": "integer",
+                    "example": 0
                 }
             }
         },
