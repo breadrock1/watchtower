@@ -1,6 +1,7 @@
 package routes_test
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -105,6 +106,8 @@ func TestTaskAPIRoutes(t *testing.T) {
 	}
 
 	t.Run("Load tasks", func(t *testing.T) {
+		ctx := context.Background()
+
 		for index, testCase := range loadTasksTestCases {
 			testCaseName := fmt.Sprintf("Load tasks case %d", index)
 			t.Run(testCaseName, func(t *testing.T) {
@@ -116,7 +119,7 @@ func TestTaskAPIRoutes(t *testing.T) {
 					On(testCase.MockMethodName, matchedBucketID).
 					Return(testCase.ReturnedData, testCase.ReturnedError)
 
-				req := httptest.NewRequest(testCase.HttpMethod, testCase.TargetURL, nil)
+				req := httptest.NewRequestWithContext(ctx, testCase.HttpMethod, testCase.TargetURL, nil)
 
 				resp, respErr := appServer.Server.Test(req, -1)
 				assert.NoError(t, respErr, "failed to load tasks")
@@ -166,6 +169,8 @@ func TestTaskAPIRoutes(t *testing.T) {
 	}
 
 	t.Run("Load task by id", func(t *testing.T) {
+		ctx := context.Background()
+
 		for index, testCase := range loadTaskByIDTestCases {
 			testCaseName := fmt.Sprintf("Load task by id case %d", index)
 			t.Run(testCaseName, func(t *testing.T) {
@@ -177,7 +182,7 @@ func TestTaskAPIRoutes(t *testing.T) {
 					On(testCase.MockMethodName, matchedBucketID, matchedTaskID).
 					Return(testCase.ReturnedData, testCase.ReturnedError)
 
-				req := httptest.NewRequest(testCase.HttpMethod, testCase.TargetURL, nil)
+				req := httptest.NewRequestWithContext(ctx, testCase.HttpMethod, testCase.TargetURL, nil)
 
 				resp, respErr := appServer.Server.Test(req, -1)
 				assert.NoError(t, respErr, "failed to load task by id")

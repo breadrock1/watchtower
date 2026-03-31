@@ -2,6 +2,7 @@ package routes_test
 
 import (
 	"bytes"
+	"context"
 	"crypto/md5"
 	"encoding/json"
 	"errors"
@@ -135,6 +136,8 @@ func TestObjectAPIRoutes(t *testing.T) {
 	}
 
 	t.Run("Copy file", func(t *testing.T) {
+		ctx := context.Background()
+
 		for index, testCase := range copyFileTestCases {
 			testCaseName := fmt.Sprintf("Copy file case %d", index)
 			t.Run(testCaseName, func(t *testing.T) {
@@ -157,7 +160,7 @@ func TestObjectAPIRoutes(t *testing.T) {
 					buffer = bytes.NewBuffer(jsonBytes)
 				}
 
-				req := httptest.NewRequest(testCase.HttpMethod, testCase.TargetURL, buffer)
+				req := httptest.NewRequestWithContext(ctx, testCase.HttpMethod, testCase.TargetURL, buffer)
 
 				resp, respErr := appServer.Server.Test(req, -1)
 				assert.NoError(t, respErr, "failed to copy file")
@@ -227,6 +230,8 @@ func TestObjectAPIRoutes(t *testing.T) {
 
 	//nolint
 	t.Run("Create folder", func(t *testing.T) {
+		ctx := context.Background()
+
 		for index, testCase := range createFolderTestCases {
 			testCaseName := fmt.Sprintf("Create folder case %d", index)
 			t.Run(testCaseName, func(t *testing.T) {
@@ -249,7 +254,7 @@ func TestObjectAPIRoutes(t *testing.T) {
 					buffer = bytes.NewBuffer(jsonBytes)
 				}
 
-				req := httptest.NewRequest(testCase.HttpMethod, testCase.TargetURL, buffer)
+				req := httptest.NewRequestWithContext(ctx, testCase.HttpMethod, testCase.TargetURL, buffer)
 
 				resp, respErr := appServer.Server.Test(req, -1)
 				assert.NoError(t, respErr, "failed to create folder")
@@ -319,6 +324,8 @@ func TestObjectAPIRoutes(t *testing.T) {
 
 	//nolint
 	t.Run("Delete folder", func(t *testing.T) {
+		ctx := context.Background()
+
 		for index, testCase := range deleteFolderTestCases {
 			testCaseName := fmt.Sprintf("Delete folder case %d", index)
 			t.Run(testCaseName, func(t *testing.T) {
@@ -341,7 +348,7 @@ func TestObjectAPIRoutes(t *testing.T) {
 					buffer = bytes.NewBuffer(jsonBytes)
 				}
 
-				req := httptest.NewRequest(testCase.HttpMethod, testCase.TargetURL, buffer)
+				req := httptest.NewRequestWithContext(ctx, testCase.HttpMethod, testCase.TargetURL, buffer)
 
 				resp, respErr := appServer.Server.Test(req, -1)
 				assert.NoError(t, respErr, "failed to delete folder")
