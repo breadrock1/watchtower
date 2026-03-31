@@ -14,7 +14,7 @@ enable_jaeger = false
 address = "0.0.0.0:2893"
 
 [storage.s3]
-address = "minio:9000"
+address = "localhost:9000"
 access_id = "minio-root"
 secret_key = "minio-root"
 enable_ssl = false
@@ -27,15 +27,15 @@ password = "redis"
 expired = 360
 
 [task.queue.rmq]
-address = "amqp://rabbitmq:5672"
+address = "amqp://localhost:5672"
 exchange = "test-watchtower"
 routing_key = "test-task"
 queue = "test-watchtower-tasks"
 
 [task.processor.docparser]
-address = "http://localhost:8012/api/v1"
+address = "http://localhost:8012"
 timeout = 300
 
 [task.processor.docstorage]
-address = "http://localhost:2892/api/v1"
+address = "http://localhost:2892"
 timeout = 300
