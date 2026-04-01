@@ -2,6 +2,7 @@ kind: pipeline
 type: docker
 name: watchtower-pr
 
+
 trigger:
   event:
     - pull_request
@@ -171,6 +172,7 @@ trigger:
     - tag
 
 environment:
+  WATCHTOWER__RUN_MODE: integration
   REGISTRY_ADDRESS: ${REGISTRY_ADDRESS}
 
 steps:
