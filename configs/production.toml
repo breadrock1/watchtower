@@ -33,9 +33,9 @@ routing_key = "task"
 queue = "watchtower-tasks"
 
 [task.processor.docparser]
-address = "http://doc-parser:8012/api/v1"
+address = "http://doc-parser:8012"
 timeout = 300
 
 [task.processor.docstorage]
-address = "http://doc-searcher:2892/api/v1"
+address = "http://doc-searcher:2892"
 timeout = 300
