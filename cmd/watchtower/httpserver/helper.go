@@ -75,7 +75,7 @@ func ExtractExpiredDatetime(eCtx *fiber.Ctx) (*time.Time, error) {
 	expired := eCtx.Query("expired")
 	if expired == "" {
 		slog.Debug("expired parameter has not been set")
-		return &time.Time{}, nil
+		return nil, nil
 	}
 
 	timeVal, err := time.Parse(time.RFC3339, expired)
