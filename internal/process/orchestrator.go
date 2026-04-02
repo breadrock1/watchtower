@@ -93,7 +93,6 @@ func (o *Orchestrator) UploadFile(
 	span.SetAttributes(
 		attribute.String("bucket", bucketID),
 		attribute.String("file-path", params.FilePath),
-		attribute.Int64("expired", params.Expired.Unix()),
 	)
 
 	objID, err := o.storageUC.StoreObject(ctx, bucketID, params)
