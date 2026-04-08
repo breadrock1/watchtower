@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"path"
+	"slices"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -563,6 +564,11 @@ func (s *Server) GetFiles(eCtx *fiber.Ctx) error {
 		span.RecordError(err)
 		return eCtx.Status(fiber.StatusInternalServerError).SendString(err.Error())
 	}
+
+	// Remove all .keeper meta files from target list objects
+	listObjects = slices.DeleteFunc(listObjects, func(object domain.Object) bool {
+		return object.Name == FolderFileKeeper
+	})
 
 	objectsDto := make([]form.ObjectSchema, len(listObjects))
 	for index, object := range listObjects {
