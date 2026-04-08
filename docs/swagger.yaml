@@ -444,6 +444,10 @@ paths:
         name: bucket
         required: true
         type: string
+      - description: Prefix to load files
+        in: formData
+        name: prefix
+        type: string
       - description: Files multipart form
         in: formData
         name: files

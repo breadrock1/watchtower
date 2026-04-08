@@ -567,6 +567,12 @@ const docTemplate = `{
                         "required": true
                     },
                     {
+                        "type": "string",
+                        "description": "Prefix to load files",
+                        "name": "prefix",
+                        "in": "formData"
+                    },
+                    {
                         "type": "file",
                         "description": "Files multipart form",
                         "name": "files",
