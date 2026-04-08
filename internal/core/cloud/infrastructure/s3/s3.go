@@ -233,8 +233,8 @@ func (s *S3Client) GetBucketObjects(
 		}
 
 		dirObjects = append(dirObjects, domain.Object{
-			Name:         obj.Key,
-			Path:         params.PrefixPath,
+			Name:         path.Base(obj.Key),
+			Path:         obj.Key,
 			Checksum:     obj.ChecksumSHA256,
 			ContentType:  obj.ContentType,
 			LastModified: obj.LastModified,

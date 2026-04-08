@@ -57,6 +57,10 @@ func ExtractFileNameParameter(eCtx *fiber.Ctx) (string, error) {
 	return fileNameQuery, nil
 }
 
+func ExtractFilePrefixParameter(eCtx *fiber.Ctx) string {
+	return eCtx.FormValue("prefix", "./")
+}
+
 func ExtractMultipartForm(eCtx *fiber.Ctx) (*multipart.Form, error) {
 	multipartForm, err := eCtx.MultipartForm()
 	if err != nil {

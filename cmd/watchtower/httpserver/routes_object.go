@@ -172,6 +172,7 @@ func (s *Server) DeleteFolder(eCtx *fiber.Ctx) error {
 // @Accept  multipart/form
 // @Produce  json
 // @Param bucket path string true "Bucket name to upload files"
+// @Param prefix formData string false "Prefix to load files"
 // @Param files formData file true "Files multipart form"
 // @Param expired query string false "File datetime expired like 2025-01-01T12:01:01Z"
 // @Success 200 {object} form.Success "Ok"
@@ -216,6 +217,7 @@ func (s *Server) UploadFile(eCtx *fiber.Ctx) error {
 		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
 	}
 
+	filePrefixParam := ExtractFilePrefixParameter(eCtx)
 	expiredDatetime, err := ExtractExpiredDatetime(eCtx)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
@@ -227,6 +229,7 @@ func (s *Server) UploadFile(eCtx *fiber.Ctx) error {
 	uploadedFiles := make([]form.TaskSchema, len(multipartForm.File["files"]))
 	for index, fileForm := range multipartForm.File["files"] {
 		fileName := fileForm.Filename
+		filePath := path.Join(filePrefixParam, fileName)
 		fileHandler, err := fileForm.Open()
 		if err != nil {
 			err = fmt.Errorf("failed to open file form: %w", err)
@@ -235,6 +238,7 @@ func (s *Server) UploadFile(eCtx *fiber.Ctx) error {
 
 			slog.Error("multipart error",
 				slog.String("file", fileName),
+				slog.String("prefix", filePrefixParam),
 				slog.String("err", err.Error()),
 			)
 			continue
@@ -246,6 +250,7 @@ func (s *Server) UploadFile(eCtx *fiber.Ctx) error {
 				span.RecordError(err)
 				slog.Error("multipart error",
 					slog.String("file", fileName),
+					slog.String("prefix", filePrefixParam),
 					slog.String("err", err.Error()),
 				)
 				return
@@ -260,13 +265,14 @@ func (s *Server) UploadFile(eCtx *fiber.Ctx) error {
 			span.RecordError(err)
 			slog.Error("multipart error",
 				slog.String("file", fileName),
+				slog.String("prefix", filePrefixParam),
 				slog.String("err", err.Error()),
 			)
 			continue
 		}
 
 		params := &domain.UploadObjectParams{
-			FilePath: fileName,
+			FilePath: filePath,
 			FileData: &fileData,
 			Expired:  expiredDatetime,
 		}
@@ -278,6 +284,7 @@ func (s *Server) UploadFile(eCtx *fiber.Ctx) error {
 			span.RecordError(err)
 			slog.Error("multipart error",
 				slog.String("file", fileName),
+				slog.String("prefix", filePrefixParam),
 				slog.String("err", err.Error()),
 			)
 			continue
