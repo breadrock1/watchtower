@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"log"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -40,7 +39,8 @@ func main() {
 	taskStorage := redis.New(servConfig.Task.TaskStorage.Redis)
 	taskQueue, err := rmq.New(servConfig.Task.TaskQueue.Rmq)
 	if err != nil {
-		log.Fatalf("task queue connection failed: %v", err)
+		slog.Error("task queue connection failed: %v", err)
+		os.Exit(1)
 	}
 	err = taskQueue.StartConsuming(cCtx)
 	if err != nil {

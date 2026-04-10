@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"log"
 	"log/slog"
 	"os"
 
@@ -32,7 +31,8 @@ var rootCmd = &cobra.Command{
 
 		serviceConfig, parseErr = InitConfig()
 		if parseErr != nil {
-			log.Fatalf("launch failed: %s", parseErr.Error())
+			slog.Error("application launching failed: %s", parseErr.Error())
+			os.Exit(1)
 		}
 	},
 }
