@@ -31,7 +31,7 @@ var rootCmd = &cobra.Command{
 
 		serviceConfig, parseErr = InitConfig()
 		if parseErr != nil {
-			slog.Error("application launching failed: %s", parseErr.Error())
+			slog.Error("application launching failed", slog.String("err", parseErr.Error()))
 			os.Exit(1)
 		}
 	},

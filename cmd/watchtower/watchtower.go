@@ -39,7 +39,7 @@ func main() {
 	taskStorage := redis.New(servConfig.Task.TaskStorage.Redis)
 	taskQueue, err := rmq.New(servConfig.Task.TaskQueue.Rmq)
 	if err != nil {
-		slog.Error("task queue connection failed: %v", err)
+		slog.Error("task queue connection failed", slog.String("err", err.Error()))
 		os.Exit(1)
 	}
 	err = taskQueue.StartConsuming(cCtx)
