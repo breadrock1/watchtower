@@ -21,9 +21,15 @@ import (
 	otlppfiber "github.com/breadrock1/otlp-go/pkg/fiber"
 )
 
-// HeaderBufferSize Increase this value to accommodate larger headers
-// e.g., 8192 (8KB), 16384 (16KB), or 32768 (32KB)
-const HeaderBufferSize = 8192
+const (
+	// HeaderBufferSize Increase this value to accommodate larger headers
+	// e.g., 8192 (8KB), 16384 (16KB), or 32768 (32KB)
+	HeaderBufferSize = 8192
+
+	// MultipartBodyLimit Increase this value to accommodate larger request body
+	// e.g., 52428800 (50 Mb) 104857600 (100 Mb)
+	MultipartBodyLimit = 104857600
+)
 
 // Server
 // @title          Watchtower service
@@ -69,6 +75,7 @@ func SetupServer(otlpConfig otlp_go.OtlpConfig, state *process.Orchestrator) *Se
 		fiber.Config{
 			DisableStartupMessage: true,
 			ReadBufferSize:        HeaderBufferSize,
+			BodyLimit:             MultipartBodyLimit,
 		},
 	)
 
