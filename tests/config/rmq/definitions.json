@@ -22,7 +22,7 @@
   ],
   "exchanges": [
     {
-      "name": "test-watchtower",
+      "name": "watchtower",
       "vhost": "/",
       "type": "direct",
       "durable": true,
@@ -33,7 +33,7 @@
   ],
   "queues": [
     {
-      "name": "test-watchtower-tasks",
+      "name": "watchtower-tasks",
       "vhost": "/",
       "durable": true,
       "auto_delete": false,
@@ -42,11 +42,11 @@
   ],
   "bindings": [
     {
-      "source": "test-watchtower",
+      "source": "watchtower",
       "vhost": "/",
-      "destination": "test-watchtower-tasks",
+      "destination": "watchtower-tasks",
       "destination_type": "queue",
-      "routing_key": "test-task",
+      "routing_key": "task",
       "arguments": {}
     }
   ]
