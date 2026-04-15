@@ -49,7 +49,11 @@ func (o *Orchestrator) LaunchListener(ctx kernel.Ctx) {
 				ctx := cMsg.Ctx
 				go func() {
 					if err := sem.Acquire(ctx, 1); err != nil {
-						slog.Error("internal semaphore error", slog.String("err", err.Error()))
+						//slog.Error("processing: internal semaphore error", slog.String("err", err.Error()))
+						slog.Error("processing",
+							slog.String("msg", "internal semaphore error"),
+							slog.String("err", err.Error()),
+						)
 						return
 					}
 					defer sem.Release(1)
@@ -132,7 +136,8 @@ func (o *Orchestrator) CreateTask(
 	task := taskDomain.CreateNewTask(bucketID, objID)
 
 	taskID := task.ID.String()
-	slog.Info("creating new task",
+	slog.Info("processing",
+		slog.String("msg", "creating new task"),
 		slog.String("task-id", taskID),
 		slog.String("bucket", bucketID),
 		slog.String("file-path", objID),
@@ -150,7 +155,7 @@ func (o *Orchestrator) CreateTask(
 	)
 
 	if err := o.taskUC.PublishTaskToQueue(ctx, task); err != nil {
-		err = fmt.Errorf("pipeline error: %w", err)
+		err = fmt.Errorf("failed to publish task: %w", err)
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
 		return nil, err
@@ -168,7 +173,10 @@ func (o *Orchestrator) CreateTask(
 }
 
 func (o *Orchestrator) handleTask(ctx kernel.Ctx, task *taskDomain.Task) {
-	slog.Info("processing task event", slog.String("task-id", task.ID.String()))
+	slog.Info("processing",
+		slog.String("msg", "caught new task"),
+		slog.String("task-id", task.ID.String()),
+	)
 
 	ctx, span := otlp_go.GlobalTracer.Start(ctx, "handle-task-from-queue")
 	defer span.End()
@@ -184,16 +192,22 @@ func (o *Orchestrator) handleTask(ctx kernel.Ctx, task *taskDomain.Task) {
 
 	err := o.processTask(ctx, task)
 	if err != nil {
-		err = fmt.Errorf("pipeline error: %w", err)
+		err = fmt.Errorf("processing failed: %w", err)
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
-		slog.Error(err.Error(), slog.String("task-id", task.ID.String()))
+		slog.Error("processing",
+			slog.String("task-id", task.ID.String()),
+			slog.String("err", err.Error()),
+		)
 		return
 	}
 
 	msg := "task has been processed successful"
 	task.SetStatusAndText(taskDomain.Successful, msg)
-	slog.Info(msg, slog.String("task-id", task.ID.String()))
+	slog.Info("processing",
+		slog.String("msg", msg),
+		slog.String("task-id", task.ID.String()),
+	)
 }
 
 func (o *Orchestrator) processTask(ctx kernel.Ctx, task *taskDomain.Task) error {

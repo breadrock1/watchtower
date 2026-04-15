@@ -30,7 +30,7 @@ const (
 func main() {
 	servConfig := cmd.Execute()
 
-	logger := otlp_go.InitLocalLogger(servConfig.Otlp.Logger)
+	logger := otlp_go.InitLocalLogger(servConfig.Otlp)
 	slog.SetDefault(logger)
 
 	ctx := context.Background()

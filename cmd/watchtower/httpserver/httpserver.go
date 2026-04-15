@@ -61,7 +61,7 @@ type Server struct {
 }
 
 func SetupServer(otlpConfig otlp_go.OtlpConfig, state *process.Orchestrator) *Server {
-	tracer, err := otlp_go.InitTracer(otlpConfig.Tracer)
+	tracer, err := otlp_go.InitTracer(otlpConfig)
 	if err != nil {
 		slog.Warn("failed to init tracer", slog.String("err", err.Error()))
 	}
@@ -116,14 +116,14 @@ func (s *Server) initMiddlewares(otlpConfig otlp_go.OtlpConfig) {
 	s.Server.Use(cors.New(cors.Config{}))
 	s.Server.Use(recover.New())
 
-	s.Server.Use(otlppfiber.PrometheusMeterMiddleware(s.Server))
+	s.Server.Use(otlppfiber.PrometheusMeterMiddleware(s.Server, otlpConfig))
 	s.Server.Use(otlppfiber.OtlpJaegerTracerMiddleware())
 
-	logger := otlp_go.InitLocalLogger(otlpConfig.Logger)
+	logger := otlp_go.InitLocalLogger(otlpConfig)
 	slog.SetDefault(logger)
 
-	s.Server.Use(otlppfiber.StdoutLoggerMiddleware(otlpConfig.Logger))
+	s.Server.Use(otlppfiber.StdoutLoggerMiddleware(otlpConfig))
 	if otlpConfig.Logger.EnableLoki {
-		s.Server.Use(otlppfiber.RemoteLokiLoggerMiddleware(otlpConfig.Logger))
+		s.Server.Use(otlppfiber.RemoteLokiLoggerMiddleware(otlpConfig))
 	}
 }

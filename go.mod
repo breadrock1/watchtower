@@ -3,7 +3,7 @@ module watchtower
 go 1.25.7
 
 require (
-	github.com/breadrock1/otlp-go v0.0.2
+	github.com/breadrock1/otlp-go v0.0.4
 	github.com/gofiber/fiber/v2 v2.52.12
 	github.com/gofiber/swagger v1.1.1
 	github.com/google/uuid v1.6.0

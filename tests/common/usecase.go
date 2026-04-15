@@ -7,8 +7,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/breadrock1/otlp-go/otlp"
 	"watchtower/cmd"
+
+	"github.com/breadrock1/otlp-go/otlp"
 
 	"watchtower/internal/core/cloud/infrastructure/s3"
 	"watchtower/internal/process"
@@ -43,7 +44,7 @@ func InitTestEnvironment(configFilePath string) (*TestEnvironment, error) {
 		return nil, fmt.Errorf("failed to read config file %s: %w", configFilePath, err)
 	}
 
-	tracerProvider, _ := otlp_go.InitTracer(servConfig.Otlp.Tracer)
+	tracerProvider, _ := otlp_go.InitTracer(servConfig.Otlp)
 	otlp_go.GlobalTracer = tracerProvider
 
 	docParser := new(mocks.MockRecognizer)

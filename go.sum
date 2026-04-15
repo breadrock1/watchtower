@@ -10,8 +10,8 @@ github.com/ansrivas/fiberprometheus/v2 v2.17.0 h1:p0gqs5LsSCWGoSFF44fCJkyU+XcE6T
 github.com/ansrivas/fiberprometheus/v2 v2.17.0/go.mod h1:giWBvbFSHOHG8N2wjYhQG23oc/2pF9v1mN8CdZs5Z2g=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
 github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=
-github.com/breadrock1/otlp-go v0.0.2 h1:vys3XlLGHk6FO/PY0TFdAAqSSgETikGd5yLU+soYch8=
-github.com/breadrock1/otlp-go v0.0.2/go.mod h1:sFVCxvuE0dA+rTEPIxi0yzdBMs5zjdzGu8CjfcB4XQg=
+github.com/breadrock1/otlp-go v0.0.4 h1:nxySYYUb4uIKNkyl9wT+BAoqFRcbvVlL2V7Ak8PERfw=
+github.com/breadrock1/otlp-go v0.0.4/go.mod h1:sFVCxvuE0dA+rTEPIxi0yzdBMs5zjdzGu8CjfcB4XQg=
 github.com/bsm/ginkgo/v2 v2.12.0 h1:Ny8MWAHyOepLGlLKYmXG4IEkioBysk6GpaRTLC8zwWs=
 github.com/bsm/ginkgo/v2 v2.12.0/go.mod h1:SwYbGRRDovPVboqFv0tPTcG1sN61LM1Z4ARdbAV9g4c=
 github.com/bsm/gomega v1.27.10 h1:yeMWxP2pV2fG3FgAODIY8EiRE3dy0aeFYt4l7wh6yKA=

@@ -107,6 +107,7 @@ func setupEnv(viperInst *viper.Viper) {
 	//nolint
 	envMappings := map[string]string{
 		"orchestrator.semaphore_size":       "ORCHESTRATOR__SEMAPHORE_SIZE",
+		"otlp.app_name":                     "OTLP__APP_NAME",
 		"otlp.logger.level":                 "OTLP__LOGGER__LEVEL",
 		"otlp.logger.address":               "OTLP__LOGGER__ADDRESS",
 		"otlp.logger.enable_loki":           "OTLP__LOGGER__ENABLE_LOKI",

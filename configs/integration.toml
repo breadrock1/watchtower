@@ -1,6 +1,9 @@
 [orchestrator]
 semaphore_size = 10
 
+[otlp]
+app_name = "watchtower"
+
 [otlp.logger]
 level = "info"
 address = "http://loki:3100"
