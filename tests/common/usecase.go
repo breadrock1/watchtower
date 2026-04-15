@@ -26,8 +26,9 @@ import (
 const TestBucketName = "watchtower-test-bucket"
 
 type TestEnvironment struct {
-	Recognizer *mocks.MockRecognizer
-	DocStorage *mocks.MockDocStorage
+	ServiceConfig *cmd.Config
+	Recognizer    *mocks.MockRecognizer
+	DocStorage    *mocks.MockDocStorage
 
 	ObjStorage  cloudDomain.ICloudStorage
 	TaskQueue   taskDomain.ITaskQueue
@@ -70,12 +71,13 @@ func InitTestEnvironment(configFilePath string) (*TestEnvironment, error) {
 	orchestrator := process.NewOrchestrator(servConfig.Orchestrator, storageUseCase, taskUseCase)
 
 	testEnvironment := &TestEnvironment{
-		Recognizer:   docParser,
-		DocStorage:   docStorage,
-		ObjStorage:   objStorage,
-		TaskQueue:    taskQueue,
-		TaskManager:  taskStorage,
-		Orchestrator: orchestrator,
+		ServiceConfig: servConfig,
+		Recognizer:    docParser,
+		DocStorage:    docStorage,
+		ObjStorage:    objStorage,
+		TaskQueue:     taskQueue,
+		TaskManager:   taskStorage,
+		Orchestrator:  orchestrator,
 	}
 
 	return testEnvironment, nil
