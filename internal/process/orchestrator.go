@@ -49,7 +49,6 @@ func (o *Orchestrator) LaunchListener(ctx kernel.Ctx) {
 				ctx := cMsg.Ctx
 				go func() {
 					if err := sem.Acquire(ctx, 1); err != nil {
-						//slog.Error("processing: internal semaphore error", slog.String("err", err.Error()))
 						slog.Error("processing",
 							slog.String("msg", "internal semaphore error"),
 							slog.String("err", err.Error()),
