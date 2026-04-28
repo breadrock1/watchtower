@@ -21,17 +21,27 @@ import (
 )
 
 type Orchestrator struct {
-	config    Config
-	storageUC *cloudApp.StorageUseCase
-	taskUC    *taskUC.TaskUseCase
+	config      Config
+	taskUC      *taskUC.TaskUseCase
+	storagePool *cloudApp.StoragePool
 }
 
-func NewOrchestrator(config Config, storageUC *cloudApp.StorageUseCase, taskUC *taskUC.TaskUseCase) *Orchestrator {
-	return &Orchestrator{config: config, storageUC: storageUC, taskUC: taskUC}
+func NewOrchestrator(config Config, storagePool *cloudApp.StoragePool, taskUC *taskUC.TaskUseCase) *Orchestrator {
+	return &Orchestrator{config: config, storagePool: storagePool, taskUC: taskUC}
 }
 
-func (o *Orchestrator) GetObjectStorage() *cloudApp.StorageUseCase {
-	return o.storageUC
+func (o *Orchestrator) GetObjectStorage(orgID kernel.OrganizationID) (*cloudApp.StorageUseCase, error) {
+	key := "default"
+	if orgID != "" {
+		key = orgID
+	}
+
+	instance, err := o.storagePool.GetInstance(key)
+	if err != nil {
+		return nil, fmt.Errorf("could not get storage for orchestrator: %w", err)
+	}
+
+	return instance, nil
 }
 
 func (o *Orchestrator) GetTaskProcessor() *taskUC.TaskUseCase {
@@ -98,7 +108,15 @@ func (o *Orchestrator) UploadFile(
 		attribute.String("file-path", params.FilePath),
 	)
 
-	objID, err := o.storageUC.StoreObject(ctx, bucketID, params)
+	instance, err := o.GetObjectStorage(params.Organization)
+	if err != nil {
+		err = fmt.Errorf("could not get storage for orchestrator: %w", err)
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return nil, err
+	}
+
+	objID, err := instance.StoreObject(ctx, bucketID, params)
 
 	metrics.UploadedFilesCounter.
 		WithLabelValues(kernel.AppName, strconv.FormatBool(err != nil)).
@@ -111,7 +129,7 @@ func (o *Orchestrator) UploadFile(
 		return nil, err
 	}
 
-	task, err := o.CreateTask(ctx, bucketID, objID)
+	task, err := o.CreateTask(ctx, bucketID, objID, params.Organization)
 
 	metrics.CreatedProcessingTasksCounter.
 		WithLabelValues(kernel.AppName, strconv.FormatBool(err != nil)).
@@ -131,8 +149,9 @@ func (o *Orchestrator) CreateTask(
 	ctx kernel.Ctx,
 	bucketID kernel.BucketID,
 	objID kernel.ObjectID,
+	orgID kernel.OrganizationID,
 ) (*taskDomain.Task, error) {
-	task := taskDomain.CreateNewTask(bucketID, objID)
+	task := taskDomain.CreateNewTask(bucketID, objID, orgID)
 
 	taskID := task.ID.String()
 	slog.Info("processing",
@@ -219,7 +238,15 @@ func (o *Orchestrator) processTask(ctx kernel.Ctx, task *taskDomain.Task) error 
 		attribute.String("file-path", task.ObjectID),
 	)
 
-	fileData, err := o.storageUC.GetObjectData(ctx, task.BucketID, task.ObjectID)
+	instance, err := o.GetObjectStorage(task.Organization)
+	if err != nil {
+		err = fmt.Errorf("could not get storage for orchestrator: %w", err)
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return err
+	}
+
+	fileData, err := instance.GetObjectData(ctx, task.BucketID, task.ObjectID)
 	if err != nil {
 		err = fmt.Errorf("load object error: %w", err)
 		task.SetStatusAndText(taskDomain.Failed, err.Error())

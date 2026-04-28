@@ -2,14 +2,30 @@ package application
 
 import (
 	"fmt"
-
-	"github.com/breadrock1/otlp-go/otlp"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
+	"watchtower/internal/shared/kernel"
 
 	"watchtower/internal/core/cloud/domain"
-	"watchtower/internal/shared/kernel"
+
+	otlp_go "github.com/breadrock1/otlp-go/otlp"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 )
+
+type StoragePool struct {
+	pool map[string]*StorageUseCase
+}
+
+func NewStoragePool(instances map[string]*StorageUseCase) *StoragePool {
+	return &StoragePool{pool: instances}
+}
+
+func (p *StoragePool) GetInstance(orgID kernel.OrganizationID) (*StorageUseCase, error) {
+	instance, ok := p.pool[orgID]
+	if !ok {
+		return instance, fmt.Errorf("storage key not found: %s", orgID)
+	}
+	return instance, nil
+}
 
 type StorageUseCase struct {
 	cloudStorage domain.ICloudStorage
