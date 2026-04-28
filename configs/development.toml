@@ -16,8 +16,15 @@ enable_jaeger = false
 [server.http]
 address = "0.0.0.0:2893"
 
-[storage.s3]
+[[storage.s3]]
 address = "localhost:9000"
+access_id = "minio-root"
+secret_key = "minio-root"
+enable_ssl = false
+token = ""
+
+[[storage.s3]]
+address = "localhost:9002"
 access_id = "minio-root"
 secret_key = "minio-root"
 enable_ssl = false
