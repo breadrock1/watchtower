@@ -9,6 +9,7 @@ import (
 	"path"
 	"slices"
 	"time"
+	"watchtower/cmd/watchtower/httpserver/mw"
 
 	"github.com/gofiber/fiber/v2"
 	"go.opentelemetry.io/otel/attribute"
@@ -63,8 +64,15 @@ func (s *Server) CreateFolder(eCtx *fiber.Ctx) error {
 
 	span.SetAttributes(attribute.String("bucket", bucket))
 
-	objectStorage := s.state.GetObjectStorage()
-	exist, err := objectStorage.IsBucketExists(ctx, bucket)
+	orgID := eCtx.Locals(mw.OrganizationIDHeader).(string)
+	objStorage, err := s.state.GetObjectStorage(orgID)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return eCtx.Status(fiber.StatusNotFound).SendString(err.Error())
+	}
+
+	exist, err := objStorage.IsBucketExists(ctx, bucket)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
@@ -93,7 +101,7 @@ func (s *Server) CreateFolder(eCtx *fiber.Ctx) error {
 		Expired:  nil,
 	}
 
-	_, err = objectStorage.StoreObject(ctx, bucket, params)
+	_, err = objStorage.StoreObject(ctx, bucket, params)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
@@ -132,8 +140,15 @@ func (s *Server) DeleteFolder(eCtx *fiber.Ctx) error {
 
 	span.SetAttributes(attribute.String("bucket", bucket))
 
-	objectStorage := s.state.GetObjectStorage()
-	exist, err := objectStorage.IsBucketExists(ctx, bucket)
+	orgID := eCtx.Locals(mw.OrganizationIDHeader).(string)
+	objStorage, err := s.state.GetObjectStorage(orgID)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return eCtx.Status(fiber.StatusNotFound).SendString(err.Error())
+	}
+
+	exist, err := objStorage.IsBucketExists(ctx, bucket)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
@@ -155,7 +170,7 @@ func (s *Server) DeleteFolder(eCtx *fiber.Ctx) error {
 		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
 	}
 
-	err = objectStorage.DeleteObjects(ctx, bucket, jsonForm.Prefix)
+	err = objStorage.DeleteObjects(ctx, bucket, jsonForm.Prefix)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
@@ -196,8 +211,15 @@ func (s *Server) UploadFile(eCtx *fiber.Ctx) error {
 
 	span.SetAttributes(attribute.String("bucket", bucket))
 
-	objectStorage := s.state.GetObjectStorage()
-	exist, err := objectStorage.IsBucketExists(ctx, bucket)
+	orgID := eCtx.Locals(mw.OrganizationIDHeader).(string)
+	objStorage, err := s.state.GetObjectStorage(orgID)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return eCtx.Status(fiber.StatusNotFound).SendString(err.Error())
+	}
+
+	exist, err := objStorage.IsBucketExists(ctx, bucket)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
@@ -273,9 +295,10 @@ func (s *Server) UploadFile(eCtx *fiber.Ctx) error {
 		}
 
 		params := &domain.UploadObjectParams{
-			FilePath: filePath,
-			FileData: &fileData,
-			Expired:  expiredDatetime,
+			Organization: orgID,
+			FilePath:     filePath,
+			FileData:     &fileData,
+			Expired:      expiredDatetime,
 		}
 
 		task, err := s.state.UploadFile(ctx, bucket, params)
@@ -334,8 +357,15 @@ func (s *Server) DownloadFile(eCtx *fiber.Ctx) error {
 		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
 	}
 
-	objectStorage := s.state.GetObjectStorage()
-	fileData, err := objectStorage.GetObjectData(ctx, bucket, jsonForm.FileName)
+	orgID := eCtx.Locals(mw.OrganizationIDHeader).(string)
+	objStorage, err := s.state.GetObjectStorage(orgID)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return eCtx.Status(fiber.StatusNotFound).SendString(err.Error())
+	}
+
+	fileData, err := objStorage.GetObjectData(ctx, bucket, jsonForm.FileName)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
@@ -382,8 +412,15 @@ func (s *Server) RemoveFile(eCtx *fiber.Ctx) error {
 		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
 	}
 
-	objectStorage := s.state.GetObjectStorage()
-	if err = objectStorage.DeleteObject(ctx, bucket, jsonForm.FileName); err != nil {
+	orgID := eCtx.Locals(mw.OrganizationIDHeader).(string)
+	objStorage, err := s.state.GetObjectStorage(orgID)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return eCtx.Status(fiber.StatusNotFound).SendString(err.Error())
+	}
+
+	if err = objStorage.DeleteObject(ctx, bucket, jsonForm.FileName); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
 		return eCtx.Status(fiber.StatusInternalServerError).SendString(err.Error())
@@ -429,8 +466,15 @@ func (s *Server) RemoveFile2(eCtx *fiber.Ctx) error {
 
 	span.SetAttributes(attribute.String("file_name", fileName))
 
-	objectStorage := s.state.GetObjectStorage()
-	if err = objectStorage.DeleteObject(ctx, bucket, fileName); err != nil {
+	orgID := eCtx.Locals(mw.OrganizationIDHeader).(string)
+	objStorage, err := s.state.GetObjectStorage(orgID)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return eCtx.Status(fiber.StatusNotFound).SendString(err.Error())
+	}
+
+	if err = objStorage.DeleteObject(ctx, bucket, fileName); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
 		return eCtx.Status(fiber.StatusInternalServerError).SendString(err.Error())
@@ -466,8 +510,15 @@ func (s *Server) CopyFile(eCtx *fiber.Ctx) error {
 		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
 	}
 
-	objectStorage := s.state.GetObjectStorage()
-	exist, err := objectStorage.IsBucketExists(ctx, bucket)
+	orgID := eCtx.Locals(mw.OrganizationIDHeader).(string)
+	objStorage, err := s.state.GetObjectStorage(orgID)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return eCtx.Status(fiber.StatusNotFound).SendString(err.Error())
+	}
+
+	exist, err := objStorage.IsBucketExists(ctx, bucket)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
@@ -494,7 +545,7 @@ func (s *Server) CopyFile(eCtx *fiber.Ctx) error {
 		DestinationPath: jsonForm.DstPath,
 	}
 
-	err = objectStorage.CopyObject(ctx, bucket, params)
+	err = objStorage.CopyObject(ctx, bucket, params)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
@@ -502,7 +553,7 @@ func (s *Server) CopyFile(eCtx *fiber.Ctx) error {
 	}
 
 	if jsonForm.WithRemove {
-		err = objectStorage.DeleteObject(ctx, bucket, params.SourcePath)
+		err = objStorage.DeleteObject(ctx, bucket, params.SourcePath)
 		if err != nil {
 			err = fmt.Errorf("failed to delete object: %w", err)
 			span.SetStatus(codes.Error, err.Error())
@@ -557,8 +608,15 @@ func (s *Server) GetFiles(eCtx *fiber.Ctx) error {
 		Offset:     jsonForm.Offset,
 	}
 
-	objectStorage := s.state.GetObjectStorage()
-	listObjects, err := objectStorage.LoadBucketObjects(ctx, bucket, params)
+	orgID := eCtx.Locals(mw.OrganizationIDHeader).(string)
+	objStorage, err := s.state.GetObjectStorage(orgID)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return eCtx.Status(fiber.StatusNotFound).SendString(err.Error())
+	}
+
+	listObjects, err := objStorage.LoadBucketObjects(ctx, bucket, params)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
@@ -615,8 +673,15 @@ func (s *Server) GetFileInfo(eCtx *fiber.Ctx) error {
 		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
 	}
 
-	objectStorage := s.state.GetObjectStorage()
-	object, err := objectStorage.GetObjectInfo(ctx, bucket, jsonForm.FilePath)
+	orgID := eCtx.Locals(mw.OrganizationIDHeader).(string)
+	objStorage, err := s.state.GetObjectStorage(orgID)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return eCtx.Status(fiber.StatusNotFound).SendString(err.Error())
+	}
+
+	object, err := objStorage.GetObjectInfo(ctx, bucket, jsonForm.FilePath)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
@@ -667,8 +732,15 @@ func (s *Server) ShareFile(eCtx *fiber.Ctx) error {
 	expired := time.Second * time.Duration(jsonForm.ExpiredSecs)
 	params := &domain.ShareObjectParams{FilePath: jsonForm.FilePath, Expired: expired}
 
-	objectStorage := s.state.GetObjectStorage()
-	url, err := objectStorage.GenShareURL(ctx, bucket, params)
+	orgID := eCtx.Locals(mw.OrganizationIDHeader).(string)
+	objStorage, err := s.state.GetObjectStorage(orgID)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return eCtx.Status(fiber.StatusNotFound).SendString(err.Error())
+	}
+
+	url, err := objStorage.GenShareURL(ctx, bucket, params)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)

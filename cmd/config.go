@@ -31,7 +31,7 @@ type ServerConfig struct {
 }
 
 type StorageConfig struct {
-	S3 s3.Config `mapstructure:"s3"`
+	S3 []s3.Config `mapstructure:"s3"`
 }
 
 type TaskConfig struct {
