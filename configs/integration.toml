@@ -16,13 +16,6 @@ enable_jaeger = false
 [server.http]
 address = "0.0.0.0:2893"
 
-[storage.s3]
-address = "minio:9000"
-access_id = "minio-root"
-secret_key = "minio-root"
-enable_ssl = false
-token = ""
-
 [task.storage.redis]
 address = "redis:6379"
 username = "redis"
@@ -42,3 +35,17 @@ timeout = 300
 [task.processor.docstorage]
 address = "http://doc-searcher:2892"
 timeout = 300
+
+[[storage.s3]]
+address = "minio:9000"
+access_id = "minio-root"
+secret_key = "minio-root"
+enable_ssl = false
+token = ""
+
+[[storage.s3]]
+address = "minio:9002"
+access_id = "minio-root"
+secret_key = "minio-root"
+enable_ssl = false
+token = ""
