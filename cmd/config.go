@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	otlp_go "github.com/breadrock1/otlp-go/otlp"
+	"github.com/iamolegga/enviper"
 	"github.com/spf13/viper"
 
 	"watchtower/cmd/watchtower/httpserver"
@@ -16,6 +17,12 @@ import (
 	"watchtower/internal/support/task/infrastructure/docsearch"
 	"watchtower/internal/support/task/infrastructure/redis"
 	"watchtower/internal/support/task/infrastructure/rmq"
+)
+
+const (
+	launchModeEnvKey  = "WATCHTOWER__RUN_MODE"
+	defaultLaunchMode = "development"
+	serviceEnvPrefix  = "WATCHTOWER"
 )
 
 type Config struct {
@@ -53,19 +60,13 @@ type ProcessorConfig struct {
 	DocStorage docsearch.Config `mapstructure:"docstorage"`
 }
 
-const (
-	launchModeEnvKey  = "WATCHTOWER__RUN_MODE"
-	defaultLaunchMode = "development"
-	serviceEnvPrefix  = "WATCHTOWER"
-)
-
 func InitConfig() (*Config, error) {
 	launchMode := os.Getenv(launchModeEnvKey)
 	if launchMode == "" {
 		launchMode = defaultLaunchMode
 	}
 
-	viperInst := viper.New()
+	viperInst := enviper.New(viper.New())
 
 	viperInst.SetConfigName(launchMode)
 	viperInst.SetConfigType("toml")
@@ -99,7 +100,7 @@ func InitConfig() (*Config, error) {
 	return config, nil
 }
 
-func setupEnv(viperInst *viper.Viper) {
+func setupEnv(viperInst *enviper.Enviper) {
 	viperInst.AutomaticEnv()
 	viperInst.SetEnvPrefix(serviceEnvPrefix)
 	viperInst.SetEnvKeyReplacer(strings.NewReplacer(".", "__"))
