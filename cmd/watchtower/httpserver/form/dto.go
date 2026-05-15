@@ -12,8 +12,8 @@ type TaskSchema struct {
 	ID             string    `json:"id"`
 	BucketID       string    `json:"bucket_id"`
 	ObjectID       string    `json:"object_id"`
-	ObjectDataSize int       `json:"object_data_size"`
 	StatusText     string    `json:"status_text"`
+	ObjectDataSize int       `json:"object_data_size"`
 	Status         int       `json:"status"`
 	CreatedAt      time.Time `json:"created_at"`
 	ModifiedAt     time.Time `json:"modified_at"`
