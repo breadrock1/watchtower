@@ -14,11 +14,6 @@ func OrganizationContext() fiber.Handler {
 		authHeaderValue := eCtx.Get(OrganizationIDHeader)
 
 		if authHeaderValue == "" {
-			//err := fmt.Errorf("missing x-organization-id header key")
-			//span.SetStatus(codes.Error, err.Error())
-			//span.RecordError(err)
-			//return eCtx.Status(fiber.StatusUnauthorized).SendString(err.Error())
-
 			authHeaderValue = DefaultOrganizationIDHeader
 		}
 

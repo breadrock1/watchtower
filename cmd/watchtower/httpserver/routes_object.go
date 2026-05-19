@@ -23,16 +23,16 @@ import (
 const FolderFileKeeper = ".keeper"
 
 func (s *Server) CreateStorageObjectsGroup(group fiber.Router) {
-	group.Post("/cloud/:bucket/files", s.GetFiles)
-	group.Patch("/cloud/:bucket/file", s.CopyFile)
-	group.Put("/cloud/:bucket/file/upload", s.UploadFile)
-	group.Post("/cloud/:bucket/file/download", s.DownloadFile)
-	group.Post("/cloud/:bucket/folder", s.CreateFolder)
-	group.Delete("/cloud/:bucket/folder", s.DeleteFolder)
-	group.Delete("/cloud/:bucket/file", s.RemoveFile2)
-	group.Delete("/cloud/:bucket/file/remove", s.RemoveFile)
-	group.Post("/cloud/:bucket/file/attributes", s.GetFileInfo)
-	group.Post("/cloud/:bucket/file/share", s.ShareFile)
+	group.Post("/cloud/:bucket/files", mw.OrganizationContext(), s.GetFiles)
+	group.Patch("/cloud/:bucket/file", mw.OrganizationContext(), s.CopyFile)
+	group.Put("/cloud/:bucket/file/upload", mw.OrganizationContext(), s.UploadFile)
+	group.Post("/cloud/:bucket/file/download", mw.OrganizationContext(), s.DownloadFile)
+	group.Post("/cloud/:bucket/folder", mw.OrganizationContext(), s.CreateFolder)
+	group.Delete("/cloud/:bucket/folder", mw.OrganizationContext(), s.DeleteFolder)
+	group.Delete("/cloud/:bucket/file", mw.OrganizationContext(), s.RemoveFile2)
+	group.Delete("/cloud/:bucket/file/remove", mw.OrganizationContext(), s.RemoveFile)
+	group.Post("/cloud/:bucket/file/attributes", mw.OrganizationContext(), s.GetFileInfo)
+	group.Post("/cloud/:bucket/file/share", mw.OrganizationContext(), s.ShareFile)
 }
 
 // CreateFolder
