@@ -10,6 +10,8 @@ var (
 	UploadedFilesCounter          *prometheus.CounterVec
 	CreatedProcessingTasksCounter *prometheus.CounterVec
 	OrchestratorProcessingCounter *prometheus.CounterVec
+	ProcessingTasksStatusCounter  *prometheus.CounterVec
+	PublishedTasksQueueCounter    *prometheus.CounterVec
 
 	OrchestratorProcessingDurationSeconds *prometheus.HistogramVec
 	RecognizerDurationSeconds             *prometheus.HistogramVec
@@ -39,6 +41,22 @@ func init() {
 			Help: "Total number of created tasks of processing",
 		},
 		[]string{"service", "is_failed"},
+	)
+
+	ProcessingTasksStatusCounter = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "watchtower_processing_tasks_status_total",
+			Help: "Total number of processing tasks with status",
+		},
+		[]string{"service", "status"},
+	)
+
+	PublishedTasksQueueCounter = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "watchtower_published_tasks_queue_total",
+			Help: "Total number of published tasks to queue",
+		},
+		[]string{"service", "is_failed", "retries"},
 	)
 
 	OrchestratorProcessingCounter = promauto.NewCounterVec(

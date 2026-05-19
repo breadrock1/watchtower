@@ -78,9 +78,14 @@ func (o *Orchestrator) LaunchListener(ctx kernel.Ctx) {
 						WithLabelValues(kernel.AppName, statusInt).
 						Observe(elapsedTime.Seconds())
 
+					task.SetProcessingDuration(elapsedTime)
 					o.taskUC.UpdateTaskStatus(ctx, task)
 
 					metrics.OrchestratorProcessingCounter.
+						WithLabelValues(kernel.AppName, statusInt).
+						Inc()
+
+					metrics.ProcessingTasksStatusCounter.
 						WithLabelValues(kernel.AppName, statusInt).
 						Inc()
 

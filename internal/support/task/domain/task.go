@@ -113,6 +113,14 @@ func (t *Task) SetStatusAndText(status TaskStatus, msg string) {
 	t.StatusText = msg
 }
 
+func (t *Task) SetProcessingDuration(duration time.Duration) {
+	t.ProcessingDuration = duration
+}
+
+func (t *Task) IncRetryCount() {
+	t.RetryCount++
+}
+
 func GenerateTaskID() uuid.UUID {
 	return uuid.New()
 }
