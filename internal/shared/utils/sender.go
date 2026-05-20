@@ -50,6 +50,7 @@ func sendRequest(ctx kernel.Ctx, client *http.Client, req *http.Request) ([]byte
 	)
 
 	injectSpanContext(ctx, req)
+
 	//nolint
 	response, err := client.Do(req)
 	if err != nil {

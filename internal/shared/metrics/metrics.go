@@ -18,13 +18,19 @@ var (
 	StoreProcessedDocumentDurationSeconds *prometheus.HistogramVec
 )
 
+const (
+	SERVICE_LABEL_NAME   = "service"
+	IS_FAILED_LABEL_NAME = "is_failed"
+	STATUS_LABEL_NAME    = "status"
+)
+
 func init() {
 	RmqReconnectCounter = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "watchtower_rmq_reconnect_total",
 			Help: "Total number of rmq reconnects",
 		},
-		[]string{"service", "is_failed"},
+		[]string{SERVICE_LABEL_NAME, IS_FAILED_LABEL_NAME},
 	)
 
 	UploadedFilesCounter = promauto.NewCounterVec(
@@ -32,7 +38,7 @@ func init() {
 			Name: "watchtower_upload_files_total",
 			Help: "Total number of uploaded files to storage",
 		},
-		[]string{"service", "is_failed"},
+		[]string{SERVICE_LABEL_NAME, IS_FAILED_LABEL_NAME},
 	)
 
 	CreatedProcessingTasksCounter = promauto.NewCounterVec(
@@ -40,7 +46,7 @@ func init() {
 			Name: "watchtower_created_tasks_total",
 			Help: "Total number of created tasks of processing",
 		},
-		[]string{"service", "is_failed"},
+		[]string{SERVICE_LABEL_NAME, IS_FAILED_LABEL_NAME},
 	)
 
 	ProcessingTasksStatusCounter = promauto.NewCounterVec(
@@ -48,7 +54,7 @@ func init() {
 			Name: "watchtower_processing_tasks_status_total",
 			Help: "Total number of processing tasks with status",
 		},
-		[]string{"service", "status"},
+		[]string{SERVICE_LABEL_NAME, STATUS_LABEL_NAME},
 	)
 
 	PublishedTasksQueueCounter = promauto.NewCounterVec(
@@ -56,7 +62,7 @@ func init() {
 			Name: "watchtower_published_tasks_queue_total",
 			Help: "Total number of published tasks to queue",
 		},
-		[]string{"service", "is_failed", "retries"},
+		[]string{SERVICE_LABEL_NAME, "is_failed", "retries"},
 	)
 
 	OrchestratorProcessingCounter = promauto.NewCounterVec(
@@ -64,7 +70,7 @@ func init() {
 			Name: "watchtower_orchestrator_processed_total",
 			Help: "Total processed documents into orchestrator",
 		},
-		[]string{"service", "status"},
+		[]string{SERVICE_LABEL_NAME, STATUS_LABEL_NAME},
 	)
 
 	OrchestratorProcessingDurationSeconds = promauto.NewHistogramVec(
@@ -72,7 +78,7 @@ func init() {
 			Name: "watchtower_orchestrator_processing_duration_seconds",
 			Help: "Latency of full document processing time in seconds",
 		},
-		[]string{"service", "status"},
+		[]string{SERVICE_LABEL_NAME, STATUS_LABEL_NAME},
 	)
 
 	RecognizerDurationSeconds = promauto.NewHistogramVec(
@@ -80,7 +86,7 @@ func init() {
 			Name: "watchtower_recognizer_duration_seconds",
 			Help: "Latency of recognizing text from document file",
 		},
-		[]string{"service", "is_failed"},
+		[]string{SERVICE_LABEL_NAME, IS_FAILED_LABEL_NAME},
 	)
 
 	StoreProcessedDocumentDurationSeconds = promauto.NewHistogramVec(
@@ -88,6 +94,6 @@ func init() {
 			Name: "watchtower_store_document_duration_seconds",
 			Help: "Latency of storing processed document",
 		},
-		[]string{"service", "is_failed"},
+		[]string{SERVICE_LABEL_NAME, IS_FAILED_LABEL_NAME},
 	)
 }
