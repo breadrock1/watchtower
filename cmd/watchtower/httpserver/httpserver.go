@@ -83,7 +83,7 @@ func SetupServer(otlpConfig otlp_go.OtlpConfig, state *process.Orchestrator) *Se
 
 	serverApp.Server.Get("/", serverApp.Home)
 	serverApp.Server.Get("/monitor", monitor.New())
-	serverApp.Server.Get("/processing/metrics", adaptor.HTTPHandler(promhttp.Handler()))
+	serverApp.Server.Get("/api/metrics", adaptor.HTTPHandler(promhttp.Handler()))
 
 	api := serverApp.Server.Group("/api")
 
