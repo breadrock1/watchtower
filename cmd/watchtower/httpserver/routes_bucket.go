@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"encoding/json"
+	"watchtower/cmd/watchtower/httpserver/mw"
 
 	"github.com/gofiber/fiber/v2"
 	"go.opentelemetry.io/otel/attribute"
@@ -12,9 +13,9 @@ import (
 )
 
 func (s *Server) CreateStorageBucketsGroup(group fiber.Router) {
-	group.Get("/cloud/buckets", s.GetBuckets)
-	group.Put("/cloud/bucket", s.CreateBucket)
-	group.Delete("/cloud/:bucket", s.RemoveBucket)
+	group.Get("/cloud/buckets", mw.OrganizationContext(), s.GetBuckets)
+	group.Put("/cloud/bucket", mw.OrganizationContext(), s.CreateBucket)
+	group.Delete("/cloud/:bucket", mw.OrganizationContext(), s.RemoveBucket)
 }
 
 // GetBuckets
@@ -32,7 +33,14 @@ func (s *Server) GetBuckets(eCtx *fiber.Ctx) error {
 
 	span := trace.SpanFromContext(ctx)
 
-	objStorage := s.state.GetObjectStorage()
+	orgID := eCtx.Locals(mw.OrganizationIDHeader).(string)
+	objStorage, err := s.state.GetObjectStorage(orgID)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return eCtx.Status(fiber.StatusNotFound).SendString(err.Error())
+	}
+
 	buckets, err := objStorage.GetAllBuckets(ctx)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
@@ -74,7 +82,14 @@ func (s *Server) CreateBucket(eCtx *fiber.Ctx) error {
 		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
 	}
 
-	objStorage := s.state.GetObjectStorage()
+	orgID := eCtx.Locals(mw.OrganizationIDHeader).(string)
+	objStorage, err := s.state.GetObjectStorage(orgID)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return eCtx.Status(fiber.StatusNotFound).SendString(err.Error())
+	}
+
 	exists, err := objStorage.IsBucketExists(ctx, jsonForm.BucketName)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
@@ -127,7 +142,14 @@ func (s *Server) RemoveBucket(eCtx *fiber.Ctx) error {
 
 	span.SetAttributes(attribute.String("bucket", bucket))
 
-	objStorage := s.state.GetObjectStorage()
+	orgID := eCtx.Locals(mw.OrganizationIDHeader).(string)
+	objStorage, err := s.state.GetObjectStorage(orgID)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return eCtx.Status(fiber.StatusNotFound).SendString(err.Error())
+	}
+
 	exists, err := objStorage.IsBucketExists(ctx, bucket)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())

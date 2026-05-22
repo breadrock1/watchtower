@@ -65,6 +65,7 @@ func (s *Server) LoadTasks(eCtx *fiber.Ctx) error {
 	}
 
 	taskStatus := task.TaskStatus(status)
+	//nolint
 	foundedTasks := slices.DeleteFunc(tasks, func(task *task.Task) bool {
 		return task.Status != taskStatus
 	})

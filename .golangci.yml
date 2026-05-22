@@ -35,7 +35,6 @@ linters:
     - nilerr
     - nilnil
     - noctx
-    - nolintlint
     - nonamedreturns
     - nosprintfhostport
     - paralleltest
@@ -73,6 +72,7 @@ linters:
     - gochecknoglobals
     - godot
     - nlreturn
+    - nolintlint
     - tagliatelle
     - wrapcheck
     - wsl
