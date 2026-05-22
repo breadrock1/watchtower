@@ -7,9 +7,6 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
-
-	"github.com/breadrock1/otlp-go/otlp"
-
 	"watchtower/cmd"
 	"watchtower/cmd/watchtower/httpserver"
 	"watchtower/internal/core/cloud/infrastructure/s3"
@@ -18,6 +15,8 @@ import (
 	"watchtower/internal/support/task/infrastructure/docsearch"
 	"watchtower/internal/support/task/infrastructure/redis"
 	"watchtower/internal/support/task/infrastructure/rmq"
+
+	"github.com/breadrock1/otlp-go/otlp"
 
 	cloudApp "watchtower/internal/core/cloud/application"
 	taskApp "watchtower/internal/support/task/application"
@@ -50,16 +49,23 @@ func main() {
 
 	docParser := docparser.New(servConfig.Task.Processor.DocParser)
 	docStorage := docsearch.New(servConfig.Task.Processor.DocStorage)
-	objStorage, err := s3.New(servConfig.Storage.S3)
-	if err != nil {
-		slog.Error("object storage connection failed", slog.String("err", err.Error()))
-		os.Exit(1)
+
+	instances := make(map[string]*cloudApp.StorageUseCase, len(servConfig.Storage.S3))
+	for _, storageConfig := range servConfig.Storage.S3 {
+		objStorage, err := s3.New(storageConfig)
+		if err != nil {
+			slog.Error("object storage connection failed", slog.String("err", err.Error()))
+			os.Exit(1)
+		}
+
+		storageUseCase := cloudApp.NewStorageUseCase(objStorage)
+		instances[storageConfig.Address] = storageUseCase
 	}
 
-	storageUseCase := cloudApp.NewStorageUseCase(objStorage)
+	storagePool := cloudApp.NewStoragePool(instances)
 	taskUseCase := taskApp.NewTaskUseCase(taskStorage, taskQueue, docParser, docStorage)
 
-	orchestrator := process.NewOrchestrator(servConfig.Orchestrator, storageUseCase, taskUseCase)
+	orchestrator := process.NewOrchestrator(servConfig.Orchestrator, storagePool, taskUseCase)
 	orchestrator.LaunchListener(cCtx)
 
 	httpServer := httpserver.SetupServer(servConfig.Otlp, orchestrator)

@@ -26,8 +26,9 @@ import (
 const TestBucketName = "watchtower-test-bucket"
 
 type TestEnvironment struct {
-	Recognizer *mocks.MockRecognizer
-	DocStorage *mocks.MockDocStorage
+	ServiceConfig *cmd.Config
+	Recognizer    *mocks.MockRecognizer
+	DocStorage    *mocks.MockDocStorage
 
 	ObjStorage  cloudDomain.ICloudStorage
 	TaskQueue   taskDomain.ITaskQueue
@@ -49,7 +50,15 @@ func InitTestEnvironment(configFilePath string) (*TestEnvironment, error) {
 
 	docParser := new(mocks.MockRecognizer)
 	docStorage := new(mocks.MockDocStorage)
-	objStorage, err := s3.New(servConfig.Storage.S3)
+
+	storageConfig := servConfig.Storage.S3[0]
+	objStorage, err := s3.New(storageConfig)
+	storageUseCase := cloudApp.NewStorageUseCase(objStorage)
+
+	cloudInstances := make(map[string]*cloudApp.StorageUseCase)
+	cloudInstances[TestInstanceKey] = storageUseCase
+	storagePool := cloudApp.NewStoragePool(cloudInstances)
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to init object storage: %w", err)
 	}
@@ -65,17 +74,17 @@ func InitTestEnvironment(configFilePath string) (*TestEnvironment, error) {
 		return nil, fmt.Errorf("failed to launch task queue consumer: %w", err)
 	}
 
-	storageUseCase := cloudApp.NewStorageUseCase(objStorage)
 	taskUseCase := taskApp.NewTaskUseCase(taskStorage, taskQueue, docParser, docStorage)
-	orchestrator := process.NewOrchestrator(servConfig.Orchestrator, storageUseCase, taskUseCase)
+	orchestrator := process.NewOrchestrator(servConfig.Orchestrator, storagePool, taskUseCase)
 
 	testEnvironment := &TestEnvironment{
-		Recognizer:   docParser,
-		DocStorage:   docStorage,
-		ObjStorage:   objStorage,
-		TaskQueue:    taskQueue,
-		TaskManager:  taskStorage,
-		Orchestrator: orchestrator,
+		ServiceConfig: servConfig,
+		Recognizer:    docParser,
+		DocStorage:    docStorage,
+		ObjStorage:    objStorage,
+		TaskQueue:     taskQueue,
+		TaskManager:   taskStorage,
+		Orchestrator:  orchestrator,
 	}
 
 	return testEnvironment, nil

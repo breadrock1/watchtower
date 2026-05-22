@@ -38,7 +38,7 @@ func TestStorage(t *testing.T) {
 
 		sharedUrl, err := testEnv.ObjStorage.GenShareURL(ctx, TestBucketName, &shareParams)
 		assert.NoError(t, err, "failed to generate shared url from storage")
-		assert.Equal(t, sharedUrl.Host, "localhost:9000")
+		assert.Equal(t, sharedUrl.Host, testEnv.ServiceConfig.Storage.S3[0].Address)
 		assert.Equal(t, sharedUrl.Path, fmt.Sprintf("/%s/%s.txt", TestBucketName, fileName))
 	})
 
@@ -59,7 +59,7 @@ func TestStorage(t *testing.T) {
 
 		sharedUrl, err := testEnv.ObjStorage.GenShareURL(ctx, TestBucketName, &shareParams)
 		assert.NoError(t, err, "failed to generate shared url from storage")
-		assert.Equal(t, sharedUrl.Host, "localhost:9000")
+		assert.Equal(t, sharedUrl.Host, testEnv.ServiceConfig.Storage.S3[0].Address)
 		assert.Equal(t, sharedUrl.Path, fmt.Sprintf("/%s/any-directory/%s.txt", TestBucketName, fileName))
 	})
 }

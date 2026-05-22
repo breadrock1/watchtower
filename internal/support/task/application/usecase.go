@@ -115,6 +115,11 @@ func (p *TaskUseCase) IsTaskAlreadyExists(ctx kernel.Ctx, task *domain.Task) boo
 		return false
 	}
 
+	task.IncRetryCount()
+	if err = p.taskStorage.UpdateTask(ctx, task); err != nil {
+		slog.Warn("failed to update task in cache", slog.String("err", err.Error()))
+	}
+
 	if task == nil {
 		return false
 	}
@@ -138,6 +143,11 @@ func (p *TaskUseCase) IsTaskAlreadyExists(ctx kernel.Ctx, task *domain.Task) boo
 func (p *TaskUseCase) PublishTaskToQueue(ctx kernel.Ctx, task *domain.Task) error {
 	msg := mapping.MessageFromTask(task)
 	err := p.taskQueue.Publish(ctx, msg)
+
+	metrics.PublishedTasksQueueCounter.
+		WithLabelValues(kernel.AppName, strconv.FormatBool(err != nil), strconv.Itoa(task.RetryCount)).
+		Inc()
+
 	return err
 }
 
