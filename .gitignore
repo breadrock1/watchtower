@@ -27,6 +27,8 @@ Thumbs.db
 .vscode/
 *.bak
 
+.github/workflows
+
 .env
 .env.production
 
