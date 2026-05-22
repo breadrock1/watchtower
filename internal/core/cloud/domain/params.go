@@ -3,6 +3,7 @@ package domain
 import (
 	"bytes"
 	"time"
+	"watchtower/internal/shared/kernel"
 )
 
 // CopyObjectParams defines parameters for copying an object from one location to another
@@ -53,6 +54,9 @@ type GetObjectsParams struct {
 
 // UploadObjectParams defines parameters for uploading a new object to storage.
 type UploadObjectParams struct {
+	// Organization is identifier of cloud connections pool to upload file.
+	Organization kernel.OrganizationID
+
 	// FilePath is the destination path for the uploaded object
 	// Example: "uploads/images/profile.jpg"
 	FilePath string

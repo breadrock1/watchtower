@@ -2,6 +2,9 @@ package kernel
 
 import "github.com/google/uuid"
 
+// OrganizationID is a unique identifier for a external organization cloud.
+type OrganizationID = string
+
 // BucketID is a unique identifier for a storage bucket.
 // Buckets are top-level containers that hold objects (files).
 type BucketID = string

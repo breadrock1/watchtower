@@ -1,11 +1,14 @@
 <mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/26.1.1 Chrome/132.0.6834.210 Electron/34.3.3 Safari/537.36" version="26.1.1">
   <diagram name="Page-1" id="-H_mtQnk-PTXWXPvYvuk">
-    <mxGraphModel dx="2411" dy="1734" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+    <mxGraphModel dx="2041" dy="1363" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
         <mxCell id="buNy8_pUZ31k1adDsSU7-52" value="" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
           <mxGeometry x="-1070" y="-800" width="870" height="530" as="geometry" />
+        </mxCell>
+        <mxCell id="Il_vVbmO9j5oYMhf7393-1" value="" style="dashed=0;outlineConnect=0;html=1;align=center;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;shape=mxgraph.webicons.aws_s3;gradientColor=#DFDEDE" vertex="1" parent="1">
+          <mxGeometry x="-843.5" y="-772" width="73" height="72" as="geometry" />
         </mxCell>
         <mxCell id="buNy8_pUZ31k1adDsSU7-35" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" parent="1" vertex="1">
           <mxGeometry x="-450" y="-700" width="240" height="410" as="geometry" />
@@ -13,11 +16,11 @@
         <mxCell id="buNy8_pUZ31k1adDsSU7-4" value="Queue Storage&lt;div&gt;(RabbitMQ)&lt;/div&gt;" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/general/Storage_Queue.svg;" parent="1" vertex="1">
           <mxGeometry x="-640" y="-700" width="73.85" height="60" as="geometry" />
         </mxCell>
+        <mxCell id="buNy8_pUZ31k1adDsSU7-6" value="File Storage&lt;br&gt;(S3 Pool)" style="dashed=0;outlineConnect=0;html=1;align=center;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;shape=mxgraph.webicons.aws_s3;gradientColor=#DFDEDE" parent="1" vertex="1">
+          <mxGeometry x="-849.5" y="-762" width="73" height="72" as="geometry" />
+        </mxCell>
         <mxCell id="buNy8_pUZ31k1adDsSU7-5" value="Cache Storage&lt;div&gt;(Redis)&lt;/div&gt;" style="image;sketch=0;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/mscae/Cache_Redis_Product.svg;" parent="1" vertex="1">
           <mxGeometry x="-629.9999999999999" y="-540" width="71.43" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="buNy8_pUZ31k1adDsSU7-6" value="File Storage&lt;br&gt;(S3)" style="dashed=0;outlineConnect=0;html=1;align=center;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;shape=mxgraph.webicons.aws_s3;gradientColor=#DFDEDE" parent="1" vertex="1">
-          <mxGeometry x="-849.5" y="-762" width="73" height="72" as="geometry" />
         </mxCell>
         <mxCell id="buNy8_pUZ31k1adDsSU7-10" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;startArrow=classic;startFill=1;entryX=-0.043;entryY=0.565;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="buNy8_pUZ31k1adDsSU7-8" target="buNy8_pUZ31k1adDsSU7-4" edge="1">
           <mxGeometry relative="1" as="geometry">

@@ -10,6 +10,10 @@ import (
 	taskApp "watchtower/internal/support/task/application"
 )
 
+const (
+	TestInstanceKey = "default"
+)
+
 type TestAppServerEnvironment struct {
 	ObjectStorage *mocks.MockObjectStorage
 	TaskStorage   *mocks.MockTaskStorage
@@ -35,8 +39,13 @@ func InitTestAppEnvironment() *TestAppServerEnvironment {
 
 func (e *TestAppServerEnvironment) BuildAppServer(servConfig *cmd.Config) (*httpserver.Server, error) {
 	storageUseCase := cloudApp.NewStorageUseCase(e.ObjectStorage)
+
+	cloudInstances := make(map[string]*cloudApp.StorageUseCase)
+	cloudInstances[TestInstanceKey] = storageUseCase
+	storagePool := cloudApp.NewStoragePool(cloudInstances)
+
 	taskUseCase := taskApp.NewTaskUseCase(e.TaskStorage, e.TaskQueue, e.Recognizer, e.DocStorage)
-	orchestrator := process.NewOrchestrator(servConfig.Orchestrator, storageUseCase, taskUseCase)
+	orchestrator := process.NewOrchestrator(servConfig.Orchestrator, storagePool, taskUseCase)
 	appServer := httpserver.SetupServer(servConfig.Otlp, orchestrator)
 	return appServer, nil
 }

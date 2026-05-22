@@ -47,6 +47,9 @@ type Task struct {
 	// ID uniquely identifies the task across the entire system
 	ID kernel.TaskID
 
+	// Organization is identifier of cloud connections pool to upload file.
+	Organization kernel.OrganizationID
+
 	// BucketID identifies which storage bucket contains the input data
 	BucketID kernel.BucketID
 
@@ -80,7 +83,7 @@ type Task struct {
 	ProcessingDuration time.Duration
 }
 
-func CreateNewTask(bucketID kernel.BucketID, objectID kernel.ObjectID) *Task {
+func CreateNewTask(bucketID kernel.BucketID, objectID kernel.ObjectID, orgID kernel.OrganizationID) *Task {
 	// TODO: Disabled for TechDebt
 	// taskID := GenerateUniqID(form.ID, form.FilePath)
 	taskID := GenerateTaskID()
@@ -88,6 +91,7 @@ func CreateNewTask(bucketID kernel.BucketID, objectID kernel.ObjectID) *Task {
 	currTime := time.Now()
 	task := &Task{
 		ID:             taskID,
+		Organization:   orgID,
 		BucketID:       bucketID,
 		ObjectID:       objectID,
 		ObjectDataSize: 0,
@@ -107,6 +111,14 @@ func (t *Task) SetObjectDataSize(size int) {
 func (t *Task) SetStatusAndText(status TaskStatus, msg string) {
 	t.Status = status
 	t.StatusText = msg
+}
+
+func (t *Task) SetProcessingDuration(duration time.Duration) {
+	t.ProcessingDuration = duration
+}
+
+func (t *Task) IncRetryCount() {
+	t.RetryCount++
 }
 
 func GenerateTaskID() uuid.UUID {

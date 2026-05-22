@@ -93,7 +93,7 @@ func TestProcessing(t *testing.T) {
 		cCtx, cancel := context.WithCancel(ctx)
 		testEnv.Orchestrator.LaunchListener(cCtx)
 
-		task := taskDomain.CreateNewTask(TestBucketName, path.Base(TestInputFilePath))
+		task := taskDomain.CreateNewTask(TestBucketName, path.Base(TestInputFilePath), common.TestInstanceKey)
 
 		rmqMsg := mapping.MessageFromTask(task)
 		err := testEnv.TaskQueue.Publish(ctx, rmqMsg)
