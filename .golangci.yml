@@ -19,7 +19,7 @@ linters:
     - gocyclo
     - goheader
     - gomoddirectives
-    - gomodguard
+    - gomodguard_v2
     - goprintffuncname
     - gosec
     - grouper
@@ -46,7 +46,6 @@ linters:
     - rowserrcheck
     - sqlclosecheck
     - testableexamples
-    - testpackage
     - thelper
     - tparallel
     - unconvert
@@ -74,6 +73,7 @@ linters:
     - nlreturn
     - nolintlint
     - tagliatelle
+    - testpackage
     - wrapcheck
     - wsl
   exclusions:
