@@ -38,7 +38,8 @@ type ServerConfig struct {
 }
 
 type StorageConfig struct {
-	S3 []s3.Config `mapstructure:"s3"`
+	DefaultKey 	string 		`mapstructure:"default_key"`
+	S3 			[]s3.Config `mapstructure:"s3"`
 }
 
 type TaskConfig struct {
@@ -115,6 +116,7 @@ func setupEnv(viperInst *enviper.Enviper) {
 		"otlp.tracer.address":               "OTLP__TRACER__ADDRESS",
 		"otlp.tracer.enable_jaeger":         "OTLP__TRACER__ENABLE_JAEGER",
 		"server.http.address":               "SERVER__HTTP__ADDRESS",
+		"storage.default_key":               "STORAGE__DEFAULT_KEY",
 		"storage.s3.address":                "STORAGE__S3__ADDRESS",
 		"storage.s3.access_id":              "STORAGE__S3__ACCESS_ID",
 		"storage.s3.secret_key":             "STORAGE__S3__SECRET_KEY",
