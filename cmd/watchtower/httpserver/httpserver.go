@@ -14,9 +14,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/otel/trace"
 
-	_ "watchtower/docs"
+	"watchtower/cmd/watchtower/httpserver/mw"
 	"watchtower/internal/process"
 	"watchtower/internal/shared/kernel"
+
+	_ "watchtower/docs"
 
 	otlppfiber "github.com/breadrock1/otlp-go/pkg/fiber"
 )
@@ -92,8 +94,8 @@ func SetupServer(otlpConfig otlp_go.OtlpConfig, state *process.Orchestrator) *Se
 	v1Api := api.Group("/v1")
 	serverApp.CreateSystemGroup(v1Api)
 	serverApp.CreateTasksGroup(v1Api)
-	serverApp.CreateStorageBucketsGroup(v1Api)
-	serverApp.CreateStorageObjectsGroup(v1Api)
+	serverApp.CreateStorageBucketsGroup(v1Api, mw.OrganizationContext())
+	serverApp.CreateStorageObjectsGroup(v1Api, mw.OrganizationContext())
 
 	return serverApp
 }

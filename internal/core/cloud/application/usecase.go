@@ -2,29 +2,44 @@ package application
 
 import (
 	"fmt"
-	"watchtower/internal/shared/kernel"
-
-	"watchtower/internal/core/cloud/domain"
 
 	otlp_go "github.com/breadrock1/otlp-go/otlp"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+
+	"watchtower/internal/core/cloud/domain"
+	"watchtower/internal/shared/kernel"
+)
+
+const (
+	DefaultInstancePoolKey = "default"
 )
 
 type StoragePool struct {
-	pool map[string]*StorageUseCase
+	pool map[kernel.CloudInstanceKey]*StorageUseCase
 }
 
-func NewStoragePool(instances map[string]*StorageUseCase) *StoragePool {
+func NewStoragePool(instances map[kernel.CloudInstanceKey]*StorageUseCase) *StoragePool {
 	return &StoragePool{pool: instances}
 }
 
-func (p *StoragePool) GetInstance(orgID kernel.OrganizationID) (*StorageUseCase, error) {
-	instance, ok := p.pool[orgID]
+func (p *StoragePool) GetInstance(key kernel.CloudInstanceKey) (*StorageUseCase, error) {
+	instance, ok := p.pool[key]
 	if !ok {
-		return instance, fmt.Errorf("storage key not found: %s", orgID)
+		return instance, fmt.Errorf("storage key not found: %s", key)
 	}
 	return instance, nil
+}
+
+func (p *StoragePool) SetDefaultInstanceByKey(key kernel.CloudInstanceKey) error {
+	instance, err := p.GetInstance(key)
+	if err != nil {
+		return err
+	}
+
+	p.pool[DefaultInstancePoolKey] = instance
+
+	return nil
 }
 
 type StorageUseCase struct {

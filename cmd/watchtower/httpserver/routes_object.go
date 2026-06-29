@@ -9,7 +9,6 @@ import (
 	"path"
 	"slices"
 	"time"
-	"watchtower/cmd/watchtower/httpserver/mw"
 
 	"github.com/gofiber/fiber/v2"
 	"go.opentelemetry.io/otel/attribute"
@@ -17,22 +16,23 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"watchtower/cmd/watchtower/httpserver/form"
+	"watchtower/cmd/watchtower/httpserver/mw"
 	"watchtower/internal/core/cloud/domain"
 )
 
 const FolderFileKeeper = ".keeper"
 
-func (s *Server) CreateStorageObjectsGroup(group fiber.Router) {
-	group.Post("/cloud/:bucket/files", mw.OrganizationContext(), s.GetFiles)
-	group.Patch("/cloud/:bucket/file", mw.OrganizationContext(), s.CopyFile)
-	group.Put("/cloud/:bucket/file/upload", mw.OrganizationContext(), s.UploadFile)
-	group.Post("/cloud/:bucket/file/download", mw.OrganizationContext(), s.DownloadFile)
-	group.Post("/cloud/:bucket/folder", mw.OrganizationContext(), s.CreateFolder)
-	group.Delete("/cloud/:bucket/folder", mw.OrganizationContext(), s.DeleteFolder)
-	group.Delete("/cloud/:bucket/file", mw.OrganizationContext(), s.RemoveFile2)
-	group.Delete("/cloud/:bucket/file/remove", mw.OrganizationContext(), s.RemoveFile)
-	group.Post("/cloud/:bucket/file/attributes", mw.OrganizationContext(), s.GetFileInfo)
-	group.Post("/cloud/:bucket/file/share", mw.OrganizationContext(), s.ShareFile)
+func (s *Server) CreateStorageObjectsGroup(group fiber.Router, orgContextHandler fiber.Handler) {
+	group.Post("/cloud/:bucket/files", orgContextHandler, s.GetFiles)
+	group.Patch("/cloud/:bucket/file", orgContextHandler, s.CopyFile)
+	group.Put("/cloud/:bucket/file/upload", orgContextHandler, s.UploadFile)
+	group.Post("/cloud/:bucket/file/download", orgContextHandler, s.DownloadFile)
+	group.Post("/cloud/:bucket/folder", orgContextHandler, s.CreateFolder)
+	group.Delete("/cloud/:bucket/folder", orgContextHandler, s.DeleteFolder)
+	group.Delete("/cloud/:bucket/file", orgContextHandler, s.RemoveFile2)
+	group.Delete("/cloud/:bucket/file/remove", orgContextHandler, s.RemoveFile)
+	group.Post("/cloud/:bucket/file/attributes", orgContextHandler, s.GetFileInfo)
+	group.Post("/cloud/:bucket/file/share", orgContextHandler, s.ShareFile)
 }
 
 // CreateFolder
@@ -42,6 +42,7 @@ func (s *Server) CreateStorageObjectsGroup(group fiber.Router) {
 // @Tags files
 // @Accept  application/json
 // @Produce  json
+// @Param X-Organization-Id header string false "Unique Organization ID to choose s3 instance"
 // @Param bucket path string true "Bucket name to create folder"
 // @Param jsonQuery body form.FolderForm true "Params to create folder"
 // @Success 200 {object} form.Success "Ok"
@@ -118,6 +119,7 @@ func (s *Server) CreateFolder(eCtx *fiber.Ctx) error {
 // @Tags files
 // @Accept  application/json
 // @Produce  json
+// @Param X-Organization-Id header string false "Unique Organization ID to choose s3 instance"
 // @Param bucket path string true "Bucket name to delete folder"
 // @Param jsonQuery body form.FolderForm true "Params to delete folder"
 // @Success 200 {object} form.Success "Ok"
@@ -187,6 +189,7 @@ func (s *Server) DeleteFolder(eCtx *fiber.Ctx) error {
 // @Tags files
 // @Accept  multipart/form
 // @Produce  json
+// @Param X-Organization-Id header string false "Unique Organization ID to choose s3 instance"
 // @Param bucket path string true "Bucket name to upload files"
 // @Param prefix formData string false "Prefix to load files"
 // @Param files formData file true "Files multipart form"
@@ -327,6 +330,7 @@ func (s *Server) UploadFile(eCtx *fiber.Ctx) error {
 // @Tags files
 // @Accept  json
 // @Produce json
+// @Param X-Organization-Id header string false "Unique Organization ID to choose s3 instance"
 // @Param bucket path string true "Bucket name to download file"
 // @Param jsonQuery body form.DownloadFileForm true "Parameters to download file"
 // @Success 200 {file} io.Writer "Returned file bytes"
@@ -382,6 +386,7 @@ func (s *Server) DownloadFile(eCtx *fiber.Ctx) error {
 // @ID remove-file
 // @Tags files
 // @Produce  json
+// @Param X-Organization-Id header string false "Unique Organization ID to choose s3 instance"
 // @Param bucket path string true "Bucket name to remove file"
 // @Param jsonQuery body form.RemoveFileForm true "Parameters to remove file"
 // @Success 200 {object} form.Success "Ok"
@@ -435,6 +440,7 @@ func (s *Server) RemoveFile(eCtx *fiber.Ctx) error {
 // @ID remove-file-2
 // @Tags files
 // @Produce  json
+// @Param X-Organization-Id header string false "Unique Organization ID to choose s3 instance"
 // @Param bucket path string true "Bucket name to remove file"
 // @Param file_name query string true "Parameters to remove file"
 // @Success 200 {object} form.Success "Ok"
@@ -490,6 +496,7 @@ func (s *Server) RemoveFile2(eCtx *fiber.Ctx) error {
 // @Tags files
 // @Accept  json
 // @Produce json
+// @Param X-Organization-Id header string false "Unique Organization ID to choose s3 instance"
 // @Param bucket path string true "Bucket name of src file"
 // @Param jsonQuery body form.CopyFileForm true "Params to copy file"
 // @Success 200 {object} form.Success "Ok"
@@ -572,6 +579,7 @@ func (s *Server) CopyFile(eCtx *fiber.Ctx) error {
 // @Tags files
 // @Accept  json
 // @Produce json
+// @Param X-Organization-Id header string false "Unique Organization ID to choose s3 instance"
 // @Param bucket path string true "Bucket name to get list files"
 // @Param jsonQuery body form.GetFilesForm true "Parameters to get list files"
 // @Success 200 {object} form.Success "Ok"
@@ -643,6 +651,7 @@ func (s *Server) GetFiles(eCtx *fiber.Ctx) error {
 // @Tags files
 // @Accept  json
 // @Produce json
+// @Param X-Organization-Id header string false "Unique Organization ID to choose s3 instance"
 // @Param bucket path string true "Bucket name to get list files"
 // @Param jsonQuery body form.GetFileAttributesForm true "Parameters to get list files"
 // @Success 200 {object} form.Success "Ok"
@@ -699,6 +708,7 @@ func (s *Server) GetFileInfo(eCtx *fiber.Ctx) error {
 // @Tags share
 // @Accept  json
 // @Produce json
+// @Param X-Organization-Id header string false "Unique Organization ID to choose s3 instance"
 // @Param bucket path string true "Bucket name to share file"
 // @Param jsonQuery body form.ShareFileForm true "Parameters to share file"
 // @Success 200 {object} form.Success "URL with shared file"

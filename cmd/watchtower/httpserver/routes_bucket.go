@@ -2,7 +2,6 @@ package httpserver
 
 import (
 	"encoding/json"
-	"watchtower/cmd/watchtower/httpserver/mw"
 
 	"github.com/gofiber/fiber/v2"
 	"go.opentelemetry.io/otel/attribute"
@@ -10,12 +9,13 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"watchtower/cmd/watchtower/httpserver/form"
+	"watchtower/cmd/watchtower/httpserver/mw"
 )
 
-func (s *Server) CreateStorageBucketsGroup(group fiber.Router) {
-	group.Get("/cloud/buckets", mw.OrganizationContext(), s.GetBuckets)
-	group.Put("/cloud/bucket", mw.OrganizationContext(), s.CreateBucket)
-	group.Delete("/cloud/:bucket", mw.OrganizationContext(), s.RemoveBucket)
+func (s *Server) CreateStorageBucketsGroup(group fiber.Router, orgContextHandler fiber.Handler) {
+	group.Get("/cloud/buckets", orgContextHandler, s.GetBuckets)
+	group.Put("/cloud/bucket", orgContextHandler, s.CreateBucket)
+	group.Delete("/cloud/:bucket", orgContextHandler, s.RemoveBucket)
 }
 
 // GetBuckets
@@ -24,6 +24,7 @@ func (s *Server) CreateStorageBucketsGroup(group fiber.Router) {
 // @ID get-buckets
 // @Tags buckets
 // @Produce  json
+// @Param X-Organization-Id header string false "Unique Organization ID to choose s3 instance"
 // @Success 200 {object} []form.BucketSchema "Loaded buckets info"
 // @Failure	500 {object} form.InternalServerError "Internal server error"
 // @Failure	503 {object} form.ServerUnavailableError "Server does not available"
@@ -63,6 +64,7 @@ func (s *Server) GetBuckets(eCtx *fiber.Ctx) error {
 // @Tags buckets
 // @Accept  json
 // @Produce json
+// @Param X-Organization-Id header string false "Unique Organization ID to choose s3 instance"
 // @Param jsonQuery body form.CreateBucketForm true "Bucket name to create"
 // @Success 200 {object} form.Success "Ok"
 // @Failure	400 {object} form.BadRequestError "Bad Request error"
@@ -121,6 +123,7 @@ func (s *Server) CreateBucket(eCtx *fiber.Ctx) error {
 // @ID remove-bucket
 // @Tags buckets
 // @Produce  json
+// @Param X-Organization-Id header string false "Unique Organization ID to choose s3 instance"
 // @Param bucket path string true "Bucket name to remove"
 // @Success 200 {object} form.Success "Ok"
 // @Failure	400 {object} form.BadRequestError "Bad Request error"
