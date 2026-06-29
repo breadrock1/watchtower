@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	otlp_go "github.com/breadrock1/otlp-go/otlp"
+	"github.com/breadrock1/otlp-go/otlp"
 	"github.com/iamolegga/enviper"
 	"github.com/spf13/viper"
 
@@ -38,8 +38,8 @@ type ServerConfig struct {
 }
 
 type StorageConfig struct {
-	DefaultKey 	string 		`mapstructure:"default_key"`
-	S3 			[]s3.Config `mapstructure:"s3"`
+	DefaultKey string      `mapstructure:"default_key"`
+	S3         []s3.Config `mapstructure:"s3"`
 }
 
 type TaskConfig struct {
