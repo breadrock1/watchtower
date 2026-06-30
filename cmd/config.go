@@ -91,6 +91,7 @@ func InitConfig() (*Config, error) {
 	}
 
 	setupEnv(viperInst)
+	injectCloudConfigs(viperInst)
 
 	config := &Config{}
 	if err := viperInst.Unmarshal(config); err != nil {
@@ -117,6 +118,7 @@ func setupEnv(viperInst *enviper.Enviper) {
 		"otlp.tracer.enable_jaeger":         "OTLP__TRACER__ENABLE_JAEGER",
 		"server.http.address":               "SERVER__HTTP__ADDRESS",
 		"storage.default_key":               "STORAGE__DEFAULT_KEY",
+		"storage.s3.pool_key":               "STORAGE__S3__POOL_KEY",
 		"storage.s3.address":                "STORAGE__S3__ADDRESS",
 		"storage.s3.access_id":              "STORAGE__S3__ACCESS_ID",
 		"storage.s3.secret_key":             "STORAGE__S3__SECRET_KEY",
@@ -136,11 +138,35 @@ func setupEnv(viperInst *enviper.Enviper) {
 		"task.processor.docparser.timeout":  "TASK__PROCESSOR__DOCPARSER__TIMEOUT",
 	}
 
+	servicePrefix := viperInst.GetEnvPrefix()
+
 	var bindErr error
 	for key, value := range envMappings {
-		bindErr = viperInst.BindEnv(key, fmt.Sprintf("%s__%s", serviceEnvPrefix, value))
+		bindErr = viperInst.BindEnv(key, fmt.Sprintf("%s__%s", servicePrefix, value))
 		if bindErr != nil {
 			slog.Warn("failed to bind env var", slog.String("err", bindErr.Error()))
 		}
+	}
+}
+
+func injectCloudConfigs(viperInst *enviper.Enviper) {
+	obj := viperInst.Get("storage.s3").([]interface{})
+
+	var configs []s3.Config
+	for index := 0; index < len(obj); index++ {
+		s3Config := s3.Config{
+			PoolKey:   viperInst.GetString(fmt.Sprintf("storage.s3.%d.pool_key", index)),
+			Address:   viperInst.GetString(fmt.Sprintf("storage.s3.%d.address", index)),
+			AccessID:  viperInst.GetString(fmt.Sprintf("storage.s3.%d.access_id", index)),
+			SecretKey: viperInst.GetString(fmt.Sprintf("storage.s3.%d.secret_key", index)),
+			EnableSSL: viperInst.GetBool(fmt.Sprintf("storage.s3.%d.enable_ssl", index)),
+			Token:     viperInst.GetString(fmt.Sprintf("storage.s3.%d.token", index)),
+		}
+
+		configs = append(configs, s3Config)
+	}
+
+	if len(configs) > 0 {
+		viperInst.Set("storage.pg", configs)
 	}
 }
