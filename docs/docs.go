@@ -31,6 +31,12 @@ const docTemplate = `{
                 "operationId": "create-bucket",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "Unique Organization ID to choose s3 instance",
+                        "name": "X-Organization-Id",
+                        "in": "header"
+                    },
+                    {
                         "description": "Bucket name to create",
                         "name": "jsonQuery",
                         "in": "body",
@@ -79,6 +85,14 @@ const docTemplate = `{
                 ],
                 "summary": "Get watched bucket list",
                 "operationId": "get-buckets",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Unique Organization ID to choose s3 instance",
+                        "name": "X-Organization-Id",
+                        "in": "header"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Loaded buckets info",
@@ -116,6 +130,12 @@ const docTemplate = `{
                 "summary": "Remove bucket from cloud",
                 "operationId": "remove-bucket",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Unique Organization ID to choose s3 instance",
+                        "name": "X-Organization-Id",
+                        "in": "header"
+                    },
                     {
                         "type": "string",
                         "description": "Bucket name to remove",
@@ -170,6 +190,12 @@ const docTemplate = `{
                 "summary": "Remove file from cloud",
                 "operationId": "remove-file-2",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Unique Organization ID to choose s3 instance",
+                        "name": "X-Organization-Id",
+                        "in": "header"
+                    },
                     {
                         "type": "string",
                         "description": "Bucket name to remove file",
@@ -232,6 +258,12 @@ const docTemplate = `{
                 "summary": "Copy file to another location into bucket",
                 "operationId": "copy-file",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Unique Organization ID to choose s3 instance",
+                        "name": "X-Organization-Id",
+                        "in": "header"
+                    },
                     {
                         "type": "string",
                         "description": "Bucket name of src file",
@@ -300,6 +332,12 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
+                        "description": "Unique Organization ID to choose s3 instance",
+                        "name": "X-Organization-Id",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
                         "description": "Bucket name to get list files",
                         "name": "bucket",
                         "in": "path",
@@ -366,6 +404,12 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
+                        "description": "Unique Organization ID to choose s3 instance",
+                        "name": "X-Organization-Id",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
                         "description": "Bucket name to download file",
                         "name": "bucket",
                         "in": "path",
@@ -427,6 +471,12 @@ const docTemplate = `{
                 "summary": "Remove file from cloud",
                 "operationId": "remove-file",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Unique Organization ID to choose s3 instance",
+                        "name": "X-Organization-Id",
+                        "in": "header"
+                    },
                     {
                         "type": "string",
                         "description": "Bucket name to remove file",
@@ -495,6 +545,12 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
+                        "description": "Unique Organization ID to choose s3 instance",
+                        "name": "X-Organization-Id",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
                         "description": "Bucket name to share file",
                         "name": "bucket",
                         "in": "path",
@@ -559,6 +615,12 @@ const docTemplate = `{
                 "summary": "Upload files to cloud",
                 "operationId": "upload-files",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Unique Organization ID to choose s3 instance",
+                        "name": "X-Organization-Id",
+                        "in": "header"
+                    },
                     {
                         "type": "string",
                         "description": "Bucket name to upload files",
@@ -637,6 +699,12 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
+                        "description": "Unique Organization ID to choose s3 instance",
+                        "name": "X-Organization-Id",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
                         "description": "Bucket name to get list files",
                         "name": "bucket",
                         "in": "path",
@@ -703,6 +771,12 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
+                        "description": "Unique Organization ID to choose s3 instance",
+                        "name": "X-Organization-Id",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
                         "description": "Bucket name to create folder",
                         "name": "bucket",
                         "in": "path",
@@ -765,6 +839,12 @@ const docTemplate = `{
                 "summary": "Delete folder into cloud storage",
                 "operationId": "delete-folder",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Unique Organization ID to choose s3 instance",
+                        "name": "X-Organization-Id",
+                        "in": "header"
+                    },
                     {
                         "type": "string",
                         "description": "Bucket name to delete folder",
