@@ -33,9 +33,9 @@ services:
       - '5672:5672'
       - '15672:15672'
     volumes:
-      - ./rabbitmq-data:/var/lib/rabbitmq
-      - ./tests/config/rmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
-      - ./tests/config/rmq/definitions.json:/etc/rabbitmq/definitions.json:ro
+      - './rabbitmq-data:/var/lib/rabbitmq'
+      - './tests/config/rmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro'
+      - './tests/config/rmq/definitions.json:/etc/rabbitmq/definitions.json:ro'
 
   redis:
     image: redis:8.6.1-trixie
