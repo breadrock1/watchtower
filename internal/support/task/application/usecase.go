@@ -135,6 +135,8 @@ func (p *TaskUseCase) IsTaskAlreadyExists(ctx kernel.Ctx, task *domain.Task) boo
 		fallthrough
 	case domain.Successful:
 		return false
+	case domain.Excluded:
+		fallthrough
 	default:
 		return false
 	}

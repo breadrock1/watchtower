@@ -47,6 +47,21 @@ func ExtractTaskStatusParameter(eCtx *fiber.Ctx) (int, error) {
 	return status, nil
 }
 
+func ExtractTaskProcessingFlagParameter(eCtx *fiber.Ctx) (bool, error) {
+	processingParam := eCtx.Query("processing")
+	if processingParam == "" {
+		return false, nil
+	}
+
+	processingFlag, err := strconv.ParseBool(processingParam)
+	if err != nil {
+		err = fmt.Errorf("unknown processing flag: %w", err)
+		return false, err
+	}
+
+	return processingFlag, nil
+}
+
 func ExtractFileNameParameter(eCtx *fiber.Ctx) (string, error) {
 	fileNameQuery := eCtx.Query("file_name")
 	if fileNameQuery == "" {

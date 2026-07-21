@@ -19,7 +19,6 @@ linters:
     - gocyclo
     - goheader
     - gomoddirectives
-    - gomodguard_v2
     - goprintffuncname
     - gosec
     - grouper

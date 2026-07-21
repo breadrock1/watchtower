@@ -646,6 +646,12 @@ const docTemplate = `{
                         "description": "File datetime expired like 2025-01-01T12:01:01Z",
                         "name": "expired",
                         "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Allow uploaded file processing",
+                        "name": "processing",
+                        "in": "query"
                     }
                 ],
                 "responses": {

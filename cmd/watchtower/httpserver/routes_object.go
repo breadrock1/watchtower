@@ -194,6 +194,7 @@ func (s *Server) DeleteFolder(eCtx *fiber.Ctx) error {
 // @Param prefix formData string false "Prefix to load files"
 // @Param files formData file true "Files multipart form"
 // @Param expired query string false "File datetime expired like 2025-01-01T12:01:01Z"
+// @Param processing query bool false "Allow uploaded file processing"
 // @Success 200 {object} form.Success "Ok"
 // @Failure	400 {object} form.BadRequestError "Bad Request error"
 // @Failure	404 {object} form.NotFoundError "Bucket not found"
@@ -212,7 +213,12 @@ func (s *Server) UploadFile(eCtx *fiber.Ctx) error {
 		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
 	}
 
-	span.SetAttributes(attribute.String("bucket", bucket))
+	processingFlag, err := ExtractTaskProcessingFlagParameter(eCtx)
+	if err != nil {
+		slog.Warn("incorrect query parameter", slog.String("err", err.Error()))
+	}
+
+	span.SetAttributes(attribute.String("bucket", bucket), attribute.Bool("processing", processingFlag))
 
 	orgID := eCtx.Locals(mw.OrganizationIDHeader).(string)
 	objStorage, err := s.state.GetObjectStorage(orgID)
@@ -298,10 +304,11 @@ func (s *Server) UploadFile(eCtx *fiber.Ctx) error {
 		}
 
 		params := &domain.UploadObjectParams{
-			Organization: orgID,
-			FilePath:     filePath,
-			FileData:     &fileData,
-			Expired:      expiredDatetime,
+			Organization:         orgID,
+			FilePath:             filePath,
+			FileData:             &fileData,
+			Expired:              expiredDatetime,
+			CreateProcessingTask: processingFlag,
 		}
 
 		task, err := s.state.UploadFile(ctx, bucket, params)
