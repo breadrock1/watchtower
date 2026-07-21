@@ -489,6 +489,10 @@ paths:
         in: query
         name: expired
         type: string
+      - description: Allow uploaded file processing
+        in: query
+        name: processing
+        type: boolean
       produces:
       - application/json
       responses:
