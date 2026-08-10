@@ -8,6 +8,7 @@ app_name = "watchtower"
 level = "info"
 address = "http://loki:3100"
 enable_loki = false
+attributes = ["user_id", "organization_id", "file_path"]
 
 [otlp.tracer]
 address = "jaeger:4317"

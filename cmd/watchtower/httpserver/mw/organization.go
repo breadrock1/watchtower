@@ -6,18 +6,19 @@ import (
 
 const (
 	DefaultOrganizationIDHeader = "default"
-	OrganizationIDHeader        = "X-Organization-Id"
+	OrganizationIDKey           = "organization_id"
+	organizationIDHeader        = "X-Organization-Id"
 )
 
 func OrganizationContext() fiber.Handler {
 	return func(eCtx *fiber.Ctx) error {
-		authHeaderValue := eCtx.Get(OrganizationIDHeader)
+		authHeaderValue := eCtx.Get(organizationIDHeader)
 
 		if authHeaderValue == "" {
 			authHeaderValue = DefaultOrganizationIDHeader
 		}
 
-		eCtx.Locals(OrganizationIDHeader, authHeaderValue)
+		eCtx.Locals(OrganizationIDKey, authHeaderValue)
 
 		return eCtx.Next()
 	}
