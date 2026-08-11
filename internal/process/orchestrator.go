@@ -9,6 +9,7 @@ import (
 	"github.com/breadrock1/otlp-go/otlp"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
 
 	"watchtower/internal/core/cloud/domain"
@@ -49,12 +50,19 @@ func (o *Orchestrator) GetTaskProcessor() *taskUC.TaskUseCase {
 }
 
 func (o *Orchestrator) Health(ctx kernel.Ctx) error {
-	if err := o.taskUC.Health(ctx); err != nil {
-		return fmt.Errorf("task use case: %w", err)
+	instances := append(o.taskUC.GetHealthInstances(), o.storagePool.GetHealthInstances()...)
+
+	group, gCtx := errgroup.WithContext(ctx)
+	for _, instance := range instances {
+		instance := instance
+		group.Go(func() error {
+			return instance.Health(gCtx)
+		})
 	}
 
-	if err := o.storagePool.Health(ctx); err != nil {
-		return fmt.Errorf("storage pool: %w", err)
+	err := group.Wait()
+	if err != nil {
+		return err
 	}
 
 	return nil

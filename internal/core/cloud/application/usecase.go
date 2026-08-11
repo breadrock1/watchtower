@@ -3,8 +3,6 @@ package application
 import (
 	"fmt"
 
-	"golang.org/x/sync/errgroup"
-
 	otlp_go "github.com/breadrock1/otlp-go/otlp"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -29,26 +27,12 @@ func (p *StoragePool) GetInstance(orgID kernel.OrganizationID) (*StorageUseCase,
 	return instance, nil
 }
 
-func (p *StoragePool) Health(ctx kernel.Ctx) error {
-	group, ctx := errgroup.WithContext(ctx)
-	for key, instance := range p.pool {
-		key := key
-		group.Go(func() error {
-			err := instance.Health(ctx)
-			if err != nil {
-				return fmt.Errorf("storage pool %s: %w", key, err)
-			}
-
-			return nil
-		})
+func (p *StoragePool) GetHealthInstances() []kernel.IHealth {
+	instances := make([]kernel.IHealth, 0, len(p.pool))
+	for _, instance := range p.pool {
+		instances = append(instances, instance)
 	}
-
-	err := group.Wait()
-	if err != nil {
-		return fmt.Errorf("object storage health: %w", err)
-	}
-
-	return nil
+	return instances
 }
 
 type StorageUseCase struct {
