@@ -81,7 +81,8 @@ func SetupServer(otlpConfig otlp_go.OtlpConfig, state *process.Orchestrator) *Se
 
 	serverApp.initMiddlewares(otlpConfig)
 
-	serverApp.Server.Get("/", serverApp.Home)
+	serverApp.CreateSystemGroup(serverApp.Server)
+
 	serverApp.Server.Get("/monitor", monitor.New())
 	serverApp.Server.Get("/api/metrics", adaptor.HTTPHandler(promhttp.Handler()))
 
@@ -90,7 +91,6 @@ func SetupServer(otlpConfig otlp_go.OtlpConfig, state *process.Orchestrator) *Se
 	api.Get("/swagger/*", swagger.HandlerDefault)
 
 	v1Api := api.Group("/v1")
-	serverApp.CreateSystemGroup(v1Api)
 	serverApp.CreateTasksGroup(v1Api)
 	serverApp.CreateStorageBucketsGroup(v1Api)
 	serverApp.CreateStorageObjectsGroup(v1Api)
