@@ -8,6 +8,7 @@ import (
 // It combines publishing and consuming capabilities for a complete
 // producer-consumer pattern implementation.
 type ITaskQueue interface {
+	kernel.IHealth
 	IConsumer
 	IPublisher
 }

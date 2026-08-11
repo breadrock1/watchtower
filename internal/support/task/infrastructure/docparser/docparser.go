@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"mime/multipart"
+	"net/http"
 	"time"
 
 	"watchtower/internal/shared/kernel"
@@ -16,6 +17,26 @@ const RecognitionURL = "/api/v1/parser/parse/text"
 
 type DocParser struct {
 	config Config
+}
+
+func (dc *DocParser) Health(ctx kernel.Ctx) error {
+	targetURL := utils.BuildTargetURL(dc.config.Address, "/health")
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, targetURL, nil)
+	if err != nil {
+		return fmt.Errorf("docparser health check: %w", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("docparser health check: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= http.StatusInternalServerError {
+		return fmt.Errorf("docparser health check: unexpected status %d", resp.StatusCode)
+	}
+
+	return nil
 }
 
 func New(config Config) recognizer.IRecognizer {

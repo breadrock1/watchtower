@@ -5,5 +5,7 @@ import (
 )
 
 type IRecognizer interface {
+	kernel.IHealth
+
 	Recognize(ctx kernel.Ctx, params *RecognizeParams) (*Recognized, error)
 }

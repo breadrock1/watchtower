@@ -48,6 +48,18 @@ func (o *Orchestrator) GetTaskProcessor() *taskUC.TaskUseCase {
 	return o.taskUC
 }
 
+func (o *Orchestrator) Health(ctx kernel.Ctx) error {
+	if err := o.taskUC.Health(ctx); err != nil {
+		return fmt.Errorf("task use case: %w", err)
+	}
+
+	if err := o.storagePool.Health(ctx); err != nil {
+		return fmt.Errorf("storage pool: %w", err)
+	}
+
+	return nil
+}
+
 func (o *Orchestrator) LaunchListener(ctx kernel.Ctx) {
 	slog.Info("starting orchestrator processing")
 	go func() {

@@ -2,13 +2,15 @@ package application
 
 import (
 	"fmt"
-	"watchtower/internal/shared/kernel"
 
-	"watchtower/internal/core/cloud/domain"
+	"golang.org/x/sync/errgroup"
 
 	otlp_go "github.com/breadrock1/otlp-go/otlp"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+
+	"watchtower/internal/core/cloud/domain"
+	"watchtower/internal/shared/kernel"
 )
 
 type StoragePool struct {
@@ -27,12 +29,38 @@ func (p *StoragePool) GetInstance(orgID kernel.OrganizationID) (*StorageUseCase,
 	return instance, nil
 }
 
+func (p *StoragePool) Health(ctx kernel.Ctx) error {
+	group, ctx := errgroup.WithContext(ctx)
+	for key, instance := range p.pool {
+		key := key
+		group.Go(func() error {
+			err := instance.Health(ctx)
+			if err != nil {
+				return fmt.Errorf("storage pool %s: %w", key, err)
+			}
+
+			return nil
+		})
+	}
+
+	err := group.Wait()
+	if err != nil {
+		return fmt.Errorf("object storage health: %w", err)
+	}
+
+	return nil
+}
+
 type StorageUseCase struct {
 	cloudStorage domain.ICloudStorage
 }
 
 func NewStorageUseCase(cloudStorage domain.ICloudStorage) *StorageUseCase {
 	return &StorageUseCase{cloudStorage: cloudStorage}
+}
+
+func (s *StorageUseCase) Health(ctx kernel.Ctx) error {
+	return s.cloudStorage.Health(ctx)
 }
 
 func (s *StorageUseCase) GetAllBuckets(ctx kernel.Ctx) ([]domain.Bucket, error) {

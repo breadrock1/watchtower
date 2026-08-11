@@ -13,6 +13,11 @@ type MockTaskQueue struct {
 	Ch chan domain.Message
 }
 
+func (m *MockTaskQueue) Health(_ kernel.Ctx) error {
+	args := m.Called()
+	return args.Error(0)
+}
+
 func (m *MockTaskQueue) Publish(_ kernel.Ctx, msg domain.Message) error {
 	args := m.Called(msg)
 	return args.Error(0)

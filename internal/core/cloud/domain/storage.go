@@ -10,6 +10,7 @@ import (
 // It combines bucket management, object operations, and sharing capabilities
 // into a unified API.
 type ICloudStorage interface {
+	kernel.IHealth
 	IBucketManager
 	IObjectManager
 	IObjectWalker

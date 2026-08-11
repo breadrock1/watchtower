@@ -61,6 +61,13 @@ func New(config Config) (domain.ITaskQueue, error) {
 	return &rmqClient, nil
 }
 
+func (r *RabbitMQClient) Health(_ kernel.Ctx) error {
+	if r.conn.IsClosed() {
+		return fmt.Errorf("rmq connection is closed")
+	}
+	return nil
+}
+
 func (r *RabbitMQClient) GetConsumerChannel() chan domain.Message {
 	return r.redirect
 }

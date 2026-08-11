@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"strings"
 	"time"
 
@@ -17,6 +18,26 @@ const DocumentJsonMime = "application/json"
 
 type DocSearch struct {
 	config Config
+}
+
+func (ds *DocSearch) Health(ctx kernel.Ctx) error {
+	targetURL := ds.config.Address + "/health"
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, targetURL, nil)
+	if err != nil {
+		return fmt.Errorf("docsearch health check: %w", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("docsearch health check: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= http.StatusInternalServerError {
+		return fmt.Errorf("docsearch health check: unexpected status %d", resp.StatusCode)
+	}
+
+	return nil
 }
 
 func New(config Config) docstorage.IDocumentStorage {

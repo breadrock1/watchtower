@@ -111,6 +111,10 @@ func (rs *RedisClient) UpdateTask(ctx kernel.Ctx, task *domain.Task) error {
 	return nil
 }
 
+func (rs *RedisClient) Health(ctx kernel.Ctx) error {
+	return rs.rsConn.Ping(ctx).Err()
+}
+
 func (rs *RedisClient) generateUniqID(bucketID kernel.BucketID, taskID string) string {
 	return fmt.Sprintf("%s:%s:%s", kernel.AppName, bucketID, taskID)
 }

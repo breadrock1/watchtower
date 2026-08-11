@@ -8,7 +8,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/breadrock1/otlp-go/otlp"
+	"golang.org/x/sync/errgroup"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 
@@ -39,6 +40,24 @@ func NewTaskUseCase(
 		recognizer:  recognizer,
 		docStorage:  docStorage,
 	}
+}
+
+func (p *TaskUseCase) Health(ctx kernel.Ctx) error {
+	checkers := []kernel.IHealth{p.taskStorage, p.taskQueue, p.recognizer, p.docStorage}
+
+	group, ctx := errgroup.WithContext(ctx)
+	for _, checker := range checkers {
+		group.Go(func() error {
+			return checker.Health(ctx)
+		})
+	}
+
+	err := group.Wait()
+	if err != nil {
+		return fmt.Errorf("task storage health: %w", err)
+	}
+
+	return nil
 }
 
 func (p *TaskUseCase) GetBucketTasks(ctx kernel.Ctx, bucketID kernel.BucketID) ([]*domain.Task, error) {

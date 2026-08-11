@@ -39,6 +39,14 @@ func New(config Config) (domain.ICloudStorage, error) {
 	return client, nil
 }
 
+func (s *S3Client) Health(ctx kernel.Ctx) error {
+	_, err := s.mc.ListBuckets(ctx)
+	if err != nil {
+		return fmt.Errorf("s3 health check: %w", err)
+	}
+	return nil
+}
+
 func (s *S3Client) GetAllBuckets(ctx kernel.Ctx) ([]domain.Bucket, error) {
 	buckets, err := s.mc.ListBuckets(ctx)
 	if err != nil {
