@@ -1,0 +1,1066 @@
+{
+  "title": "Watchtower / Service Overview",
+  "uid": "watchtower-overview",
+  "description": "Grafana dashboard for Watchtower — S3 event monitoring and AI processing service",
+  "tags": ["watchtower", "go", "s3", "processing"],
+  "timezone": "browser",
+  "editable": true,
+  "hideControls": false,
+  "sharedCrosshair": true,
+  "refresh": "30s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {
+          "type": "datasource",
+          "selected": true
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "label": "Data Source"
+      },
+      {
+        "name": "service",
+        "type": "query",
+        "query": "label_values(up{job=~\"watchtower.*\"}, service)",
+        "current": {},
+        "hide": 0,
+        "includeAll": true,
+        "multi": true,
+        "sort": 1,
+        "allValue": ".*",
+        "label": "Service",
+        "refresh": 1
+      },
+      {
+        "name": "status",
+        "type": "query",
+        "query": "label_values(watchtower_orchestrator_processed_total{service=~\"$service\"}, status)",
+        "current": {},
+        "hide": 0,
+        "includeAll": true,
+        "multi": true,
+        "allValue": ".*",
+        "label": "Status",
+        "refresh": 2
+      }
+    ]
+  },
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "collapsed": false,
+      "title": "HTTP API",
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "type": "row"
+    },
+    {
+      "id": 1,
+      "title": "HTTP Requests per Second",
+      "description": "Rate of all HTTP requests, split by status code class",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "cps",
+          "custom": {
+            "showPoints": "never",
+            "lineInterpolation": "smooth",
+            "spanNulls": false,
+            "fillOpacity": 10
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": ["max", "mean"],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (status_code) (rate(http_requests_total{service=~\"$service\"}[$__rate_interval]))",
+          "legendFormat": "{{ status_code }}",
+          "intervalFactor": 1
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "HTTP Request Duration (p50 / p90 / p99)",
+      "description": "Histogram quantiles — overall request latency across all paths",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "showPoints": "never",
+            "lineInterpolation": "smooth",
+            "spanNulls": false,
+            "fillOpacity": 10
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": ["max", "mean"],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{service=~\"$service\"}[$__rate_interval])) by (le))",
+          "legendFormat": "p50",
+          "intervalFactor": 1
+        },
+        {
+          "expr": "histogram_quantile(0.90, sum(rate(http_request_duration_seconds_bucket{service=~\"$service\"}[$__rate_interval])) by (le))",
+          "legendFormat": "p90",
+          "intervalFactor": 1
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{service=~\"$service\"}[$__rate_interval])) by (le))",
+          "legendFormat": "p99",
+          "intervalFactor": 1
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "HTTP Requests In Progress",
+      "description": "Number of requests currently being handled",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 9
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "showPoints": "never",
+            "lineInterpolation": "smooth",
+            "spanNulls": false,
+            "fillOpacity": 20
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": ["max", "mean"],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum(http_requests_in_progress_total{service=~\"$service\"})",
+          "legendFormat": "In Progress",
+          "intervalFactor": 1
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "HTTP Requests by Method & Path",
+      "description": "Top-N request rate broken down by method and route",
+      "type": "table",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 9
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
+      "transformations": [
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "method": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "path": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "Value": {
+                "aggregations": [
+                  {
+                    "id": "sum",
+                    "type": "sum"
+                  }
+                ],
+                "operation": "aggregate"
+              }
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "desc": true,
+                "field": "Value (sum)"
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "cps",
+          "custom": {
+            "align": "auto"
+          },
+          "displayName": "RPS"
+        },
+        "overrides": []
+      },
+      "options": {
+        "sortBy": [
+          {
+            "displayName": "Value (sum)"
+          }
+        ]
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{service=~\"$service\"}[$__rate_interval])) by (method, path)",
+          "legendFormat": "{{ method }} {{ path }}",
+          "intervalFactor": 1
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "title": "RabbitMQ / Queue",
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 17
+      },
+      "type": "row"
+    },
+    {
+      "id": 5,
+      "title": "RMQ Reconnects",
+      "description": "Total RabbitMQ reconnection events, split by success/failure",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 18
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "cps",
+          "custom": {
+            "showPoints": "never",
+            "lineInterpolation": "stepBefore",
+            "spanNulls": false,
+            "fillOpacity": 20
+          },
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "/.*failed.*/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "/.*success.*/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": ["max", "mean", "last"],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "rate(watchtower_rmq_reconnect_total{service=~\"$service\"}[$__rate_interval])",
+          "legendFormat": "{{ is_failed }}",
+          "intervalFactor": 1
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Published Tasks to Queue",
+      "description": "Rate of tasks published to RabbitMQ, split by success/failure and retries",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 18
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "cps",
+          "custom": {
+            "showPoints": "never",
+            "lineInterpolation": "smooth",
+            "spanNulls": false,
+            "fillOpacity": 10
+          },
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "/.*failed.*/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": ["max", "mean", "last"],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "rate(watchtower_published_tasks_queue_total{service=~\"$service\"}[$__rate_interval])",
+          "legendFormat": "{{ is_failed }} retries={{ retries }}",
+          "intervalFactor": 1
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "title": "Orchestrator / Processing Pipeline",
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 26
+      },
+      "type": "row"
+    },
+    {
+      "id": 7,
+      "title": "Orchestrator: Processed Documents",
+      "description": "Rate of documents processed by the orchestrator, split by status",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 27
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "cps",
+          "custom": {
+            "showPoints": "never",
+            "lineInterpolation": "smooth",
+            "spanNulls": false,
+            "fillOpacity": 10
+          },
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "/.*successful.*/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "/.*failed.*/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": ["max", "mean", "last"],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "rate(watchtower_orchestrator_processed_total{service=~\"$service\"}[$__rate_interval])",
+          "legendFormat": "{{ status }}",
+          "intervalFactor": 1
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Orchestrator: Processing Duration",
+      "description": "Full document processing latency — p50 / p90 / p99 by status",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 27
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "showPoints": "never",
+            "lineInterpolation": "smooth",
+            "spanNulls": false,
+            "fillOpacity": 10
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": ["max", "mean"],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(watchtower_orchestrator_processing_duration_seconds_bucket{service=~\"$service\", status=~\"$status\"}[$__rate_interval])) by (le, status))",
+          "legendFormat": "p50 — {{ status }}",
+          "intervalFactor": 1
+        },
+        {
+          "expr": "histogram_quantile(0.90, sum(rate(watchtower_orchestrator_processing_duration_seconds_bucket{service=~\"$service\", status=~\"$status\"}[$__rate_interval])) by (le, status))",
+          "legendFormat": "p90 — {{ status }}",
+          "intervalFactor": 1
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(watchtower_orchestrator_processing_duration_seconds_bucket{service=~\"$service\", status=~\"$status\"}[$__rate_interval])) by (le, status))",
+          "legendFormat": "p99 — {{ status }}",
+          "intervalFactor": 1
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "title": "Document Recognition & Storage",
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 35
+      },
+      "type": "row"
+    },
+    {
+      "id": 9,
+      "title": "Recognizer: Duration",
+      "description": "Text recognition latency (OCR / LLM) — p50 / p90 / p99",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 36
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "showPoints": "never",
+            "lineInterpolation": "smooth",
+            "spanNulls": false,
+            "fillOpacity": 10
+          },
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "/.*false.*/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "/.*true.*/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": ["max", "mean"],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(watchtower_recognizer_duration_seconds_bucket{service=~\"$service\"}[$__rate_interval])) by (le, is_failed))",
+          "legendFormat": "p50 — is_failed={{ is_failed }}",
+          "intervalFactor": 1
+        },
+        {
+          "expr": "histogram_quantile(0.90, sum(rate(watchtower_recognizer_duration_seconds_bucket{service=~\"$service\"}[$__rate_interval])) by (le, is_failed))",
+          "legendFormat": "p90 — is_failed={{ is_failed }}",
+          "intervalFactor": 1
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(watchtower_recognizer_duration_seconds_bucket{service=~\"$service\"}[$__rate_interval])) by (le, is_failed))",
+          "legendFormat": "p99 — is_failed={{ is_failed }}",
+          "intervalFactor": 1
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Store Document: Duration",
+      "description": "Document storage (Doc-Search) latency — p50 / p90 / p99",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 36
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "showPoints": "never",
+            "lineInterpolation": "smooth",
+            "spanNulls": false,
+            "fillOpacity": 10
+          },
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "/.*false.*/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "/.*true.*/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": ["max", "mean"],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(watchtower_store_document_duration_seconds_bucket{service=~\"$service\"}[$__rate_interval])) by (le, is_failed))",
+          "legendFormat": "p50 — is_failed={{ is_failed }}",
+          "intervalFactor": 1
+        },
+        {
+          "expr": "histogram_quantile(0.90, sum(rate(watchtower_store_document_duration_seconds_bucket{service=~\"$service\"}[$__rate_interval])) by (le, is_failed))",
+          "legendFormat": "p90 — is_failed={{ is_failed }}",
+          "intervalFactor": 1
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(watchtower_store_document_duration_seconds_bucket{service=~\"$service\"}[$__rate_interval])) by (le, is_failed))",
+          "legendFormat": "p99 — is_failed={{ is_failed }}",
+          "intervalFactor": 1
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "title": "Tasks & Uploads",
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 44
+      },
+      "type": "row"
+    },
+    {
+      "id": 11,
+      "title": "Uploaded Files to S3",
+      "description": "Rate of files uploaded to storage, split by success/failure",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 45
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "cps",
+          "custom": {
+            "showPoints": "never",
+            "lineInterpolation": "smooth",
+            "spanNulls": false,
+            "fillOpacity": 20
+          },
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "/.*false.*/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "/.*true.*/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": ["max", "mean", "last"],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "rate(watchtower_upload_files_total{service=~\"$service\"}[$__rate_interval])",
+          "legendFormat": "{{ is_failed }}",
+          "intervalFactor": 1
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "title": "Created Processing Tasks",
+      "description": "Rate of processing tasks created, split by success/failure",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 45
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "cps",
+          "custom": {
+            "showPoints": "never",
+            "lineInterpolation": "smooth",
+            "spanNulls": false,
+            "fillOpacity": 20
+          },
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "/.*false.*/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "/.*true.*/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": ["max", "mean", "last"],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "rate(watchtower_created_tasks_total{service=~\"$service\"}[$__rate_interval])",
+          "legendFormat": "{{ is_failed }}",
+          "intervalFactor": 1
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "title": "Processing Tasks by Status",
+      "description": "Current count of processing tasks by their terminal/active status",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 45
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "cps",
+          "custom": {
+            "showPoints": "never",
+            "lineInterpolation": "smooth",
+            "spanNulls": false,
+            "fillOpacity": 10
+          },
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "/.*successful.*/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "/.*failed.*/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": ["max", "mean", "last"],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "rate(watchtower_processing_tasks_status_total{service=~\"$service\"}[$__rate_interval])",
+          "legendFormat": "{{ status }}",
+          "intervalFactor": 1
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 36,
+  "version": 1,
+  "graphTooltip": 1,
+  "links": []
+}
