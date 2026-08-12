@@ -7,16 +7,18 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/breadrock1/otlp-go/otlp"
+
 	"watchtower/cmd"
 	"watchtower/cmd/watchtower/httpserver"
 	"watchtower/internal/core/cloud/infrastructure/s3"
 	"watchtower/internal/process"
+	"watchtower/internal/shared/kernel"
 	"watchtower/internal/support/task/infrastructure/docparser"
 	"watchtower/internal/support/task/infrastructure/docsearch"
 	"watchtower/internal/support/task/infrastructure/redis"
 	"watchtower/internal/support/task/infrastructure/rmq"
-
-	"github.com/breadrock1/otlp-go/otlp"
 
 	cloudApp "watchtower/internal/core/cloud/application"
 	taskApp "watchtower/internal/support/task/application"
@@ -50,7 +52,7 @@ func main() {
 	docParser := docparser.New(servConfig.Task.Processor.DocParser)
 	docStorage := docsearch.New(servConfig.Task.Processor.DocStorage)
 
-	instances := make(map[string]*cloudApp.StorageUseCase, len(servConfig.Storage.S3))
+	instances := make(map[kernel.CloudInstanceKey]*cloudApp.StorageUseCase, len(servConfig.Storage.S3))
 	for _, storageConfig := range servConfig.Storage.S3 {
 		objStorage, err := s3.New(storageConfig)
 		if err != nil {
@@ -59,10 +61,19 @@ func main() {
 		}
 
 		storageUseCase := cloudApp.NewStorageUseCase(objStorage)
-		instances[storageConfig.Address] = storageUseCase
+		instances[storageConfig.PoolKey] = storageUseCase
 	}
 
 	storagePool := cloudApp.NewStoragePool(instances)
+
+	// setting up default instance routing to s3 cloud 
+	defaultInstanceKey := servConfig.Storage.DefaultKey
+	err = storagePool.SetDefaultInstanceByKey(defaultInstanceKey)
+	if err != nil {
+		slog.Error("failed to setup default routing s3 instance", slog.String("err", err.Error()))
+		os.Exit(1)
+	}
+
 	taskUseCase := taskApp.NewTaskUseCase(taskStorage, taskQueue, docParser, docStorage)
 
 	orchestrator := process.NewOrchestrator(servConfig.Orchestrator, storagePool, taskUseCase)

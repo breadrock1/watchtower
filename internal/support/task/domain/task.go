@@ -39,8 +39,11 @@ const (
 	// This is a terminal state.
 	Successful // 3
 
+	// Excluded indicates that the task has been excluded from processing.
+	Excluded // 4
+
 	// Canceled indicates the task has been canceled by user or system.
-	Canceled
+	Canceled // 5
 )
 
 // Task represents a unit of work to be processed asynchronously.
@@ -114,6 +117,10 @@ func (t *Task) SetObjectDataSize(size int) {
 func (t *Task) SetStatusAndText(status TaskStatus, msg string) {
 	t.Status = status
 	t.StatusText = msg
+}
+
+func (t *Task) MarkAsExcludedStatus() {
+	t.Status = Excluded
 }
 
 func (t *Task) SetStatus(status TaskStatus) {

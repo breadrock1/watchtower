@@ -20,3 +20,6 @@ type MessageID = uuid.UUID
 // TaskID is a unique identifier for a task using UUID v4.
 // This ensures globally unique task identifiers across distributed systems.
 type TaskID = uuid.UUID
+
+// CloudInstanceKey is a unique identifier string value for a cloud instance.
+type CloudInstanceKey = string
