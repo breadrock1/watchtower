@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"watchtower/internal/shared/metrics"
 
 	"watchtower/internal/shared/kernel"
 	"watchtower/internal/shared/utils"
@@ -76,7 +77,15 @@ func (ds *DocSearch) StoreDocument(ctx kernel.Ctx, doc *docstorage.Document) (do
 
 	reqBody := bytes.NewBuffer(jsonData)
 	timeoutReq := ds.config.Timeout * time.Second
+
+	start := time.Now()
+
 	respData, err := utils.PUT(ctx, reqBody, targetURL, DocumentJsonMime, timeoutReq)
+
+	metrics.OutgoingHTTPRequestDurationSeconds.
+		WithLabelValues(kernel.AppName, "store-document", "PUT").
+		Observe(time.Since(start).Seconds())
+
 	if err != nil {
 		err = fmt.Errorf("http-request error: %w", err)
 		return "", err

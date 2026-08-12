@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"strconv"
 	"time"
 
 	"github.com/breadrock1/otlp-go/otlp"
@@ -229,13 +228,9 @@ func (r *RabbitMQClient) handleReconnect(ctx kernel.Ctx) {
 				time.Sleep(time.Duration(reconnectDelay) * time.Second)
 
 				metrics.RmqReconnectCounter.
-					WithLabelValues(kernel.AppName, strconv.FormatBool(err != nil)).
+					WithLabelValues(kernel.AppName).
 					Inc()
 			}
-
-			metrics.RmqReconnectCounter.
-				WithLabelValues(kernel.AppName, strconv.FormatBool(err != nil)).
-				Inc()
 
 			if err != nil {
 				slog.Error("rmq: failed to restore connection", slog.String("err", err.Error()))

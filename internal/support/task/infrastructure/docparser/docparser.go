@@ -7,6 +7,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"time"
+	"watchtower/internal/shared/metrics"
 
 	"watchtower/internal/shared/kernel"
 	"watchtower/internal/shared/utils"
@@ -66,7 +67,14 @@ func (dc *DocParser) Recognize(ctx kernel.Ctx, params *recognizer.RecognizeParam
 	timeoutReq := dc.config.Timeout * time.Second
 	targetURL := utils.BuildTargetURL(dc.config.Address, RecognitionURL)
 
+	start := time.Now()
+
 	respData, err := utils.POST(ctx, &buf, targetURL, mimeType, timeoutReq)
+
+	metrics.OutgoingHTTPRequestDurationSeconds.
+		WithLabelValues(kernel.AppName, "recognize-document", "POST").
+		Observe(time.Since(start).Seconds())
+
 	if err != nil {
 		return nil, err
 	}

@@ -6,12 +6,15 @@ import (
 	"log/slog"
 	"net/url"
 	"path"
+	"strconv"
+	"time"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 
 	"watchtower/internal/core/cloud/domain"
 	"watchtower/internal/shared/kernel"
+	"watchtower/internal/shared/metrics"
 )
 
 type S3Client struct {
@@ -48,7 +51,14 @@ func (s *S3Client) Health(ctx kernel.Ctx) error {
 }
 
 func (s *S3Client) GetAllBuckets(ctx kernel.Ctx) ([]domain.Bucket, error) {
+	start := time.Now()
+
 	buckets, err := s.mc.ListBuckets(ctx)
+
+	metrics.S3OperationDurationSeconds.
+		WithLabelValues(kernel.AppName, "list-buckets", strconv.FormatBool(err == nil)).
+		Observe(time.Since(start).Seconds())
+
 	if err != nil {
 		err = fmt.Errorf("s3 error: %w", err)
 		return nil, err
@@ -67,28 +77,54 @@ func (s *S3Client) GetAllBuckets(ctx kernel.Ctx) ([]domain.Bucket, error) {
 }
 
 func (s *S3Client) IsBucketExist(ctx kernel.Ctx, bucketID kernel.BucketID) (bool, error) {
+	start := time.Now()
+
 	result, err := s.mc.BucketExists(ctx, bucketID)
+
+	metrics.S3OperationDurationSeconds.
+		WithLabelValues(kernel.AppName, "is-bucket-exists", strconv.FormatBool(err == nil)).
+		Observe(time.Since(start).Seconds())
+
 	if err != nil {
 		err = fmt.Errorf("s3 error: %w", err)
 		return false, err
 	}
+
 	return result, nil
 }
 
 func (s *S3Client) CreateBucket(ctx kernel.Ctx, bucketID kernel.BucketID) error {
+	start := time.Now()
+
 	opts := minio.MakeBucketOptions{}
-	if err := s.mc.MakeBucket(ctx, bucketID, opts); err != nil {
+	err := s.mc.MakeBucket(ctx, bucketID, opts)
+
+	metrics.S3OperationDurationSeconds.
+		WithLabelValues(kernel.AppName, "create-bucket", strconv.FormatBool(err == nil)).
+		Observe(time.Since(start).Seconds())
+
+	if err != nil {
 		err = fmt.Errorf("s3 error: %w", err)
 		return err
 	}
+
 	return nil
 }
 
 func (s *S3Client) DeleteBucket(ctx kernel.Ctx, bucketID kernel.BucketID) error {
-	if err := s.mc.RemoveBucket(ctx, bucketID); err != nil {
+	start := time.Now()
+
+	err := s.mc.RemoveBucket(ctx, bucketID)
+
+	metrics.S3OperationDurationSeconds.
+		WithLabelValues(kernel.AppName, "delete-bucket", strconv.FormatBool(err == nil)).
+		Observe(time.Since(start).Seconds())
+
+	if err != nil {
 		err = fmt.Errorf("s3 error: %w", err)
 		return err
 	}
+
 	return nil
 }
 
@@ -100,7 +136,15 @@ func (s *S3Client) GetObjectInfo(
 	var objectAttrs domain.Object
 	opts := minio.StatObjectOptions{}
 	filePath := path.Clean(objID)
+
+	start := time.Now()
+
 	stats, err := s.mc.StatObject(ctx, bucketID, filePath, opts)
+
+	metrics.S3OperationDurationSeconds.
+		WithLabelValues(kernel.AppName, "get-object", strconv.FormatBool(err == nil)).
+		Observe(time.Since(start).Seconds())
+
 	if err != nil {
 		err = fmt.Errorf("s3 error: %w", err)
 		return objectAttrs, err
@@ -127,7 +171,15 @@ func (s *S3Client) GetObjectData(
 ) (domain.ObjectData, error) {
 	opts := minio.GetObjectOptions{}
 	filePath := path.Clean(objID)
+
+	start := time.Now()
+
 	obj, err := s.mc.GetObject(ctx, bucketID, filePath, opts)
+
+	metrics.S3OperationDurationSeconds.
+		WithLabelValues(kernel.AppName, "get-object-data", strconv.FormatBool(err == nil)).
+		Observe(time.Since(start).Seconds())
+
 	if err != nil {
 		err = fmt.Errorf("s3 error: %w", err)
 		return nil, err
@@ -155,11 +207,20 @@ func (s *S3Client) StoreObject(
 
 	dataSize := int64(params.FileData.Len())
 	filePath := path.Clean(params.FilePath)
+
+	start := time.Now()
+
 	_, err := s.mc.PutObject(ctx, bucketID, filePath, params.FileData, dataSize, opts)
+
+	metrics.S3OperationDurationSeconds.
+		WithLabelValues(kernel.AppName, "store-object", strconv.FormatBool(err == nil)).
+		Observe(time.Since(start).Seconds())
+
 	if err != nil {
 		err = fmt.Errorf("s3 error: %w", err)
 		return "", err
 	}
+
 	return filePath, nil
 }
 
@@ -169,7 +230,15 @@ func (s *S3Client) CopyObject(ctx kernel.Ctx, bucketID kernel.BucketID, params *
 
 	srcOpts := minio.CopySrcOptions{Bucket: bucketID, Object: srcPath}
 	dstOpts := minio.CopyDestOptions{Bucket: bucketID, Object: dstPath}
+
+	start := time.Now()
+
 	_, err := s.mc.CopyObject(ctx, dstOpts, srcOpts)
+
+	metrics.S3OperationDurationSeconds.
+		WithLabelValues(kernel.AppName, "copy-object", strconv.FormatBool(err == nil)).
+		Observe(time.Since(start).Seconds())
+
 	if err != nil {
 		err = fmt.Errorf("s3 error: %w", err)
 		return err
@@ -189,9 +258,19 @@ func (s *S3Client) DeleteObjects(ctx kernel.Ctx, bucketID kernel.BucketID, prefi
 	removeObjOpts := minio.RemoveObjectsOptions{
 		GovernanceBypass: true,
 	}
+
+	start := time.Now()
+
 	errCh := s.mc.RemoveObjects(ctx, bucketID, objInfoCh, removeObjOpts)
+
+	duration := time.Since(start)
+
 	for err := range errCh {
 		if err.Err != nil {
+			metrics.S3OperationDurationSeconds.
+				WithLabelValues(kernel.AppName, "remove-object", strconv.FormatBool(err.Err == nil)).
+				Observe(duration.Seconds())
+
 			slog.Warn("failed to delete object",
 				slog.String("bucket", bucketID),
 				slog.String("prefix", prefix),
@@ -207,10 +286,20 @@ func (s *S3Client) DeleteObjects(ctx kernel.Ctx, bucketID kernel.BucketID, prefi
 func (s *S3Client) DeleteObject(ctx kernel.Ctx, bucketID kernel.BucketID, objID kernel.ObjectID) error {
 	opts := minio.RemoveObjectOptions{}
 	filePath := path.Clean(objID)
-	if err := s.mc.RemoveObject(ctx, bucketID, filePath, opts); err != nil {
+
+	start := time.Now()
+
+	err := s.mc.RemoveObject(ctx, bucketID, filePath, opts)
+
+	metrics.S3OperationDurationSeconds.
+		WithLabelValues(kernel.AppName, "remove-object", strconv.FormatBool(err == nil)).
+		Observe(time.Since(start).Seconds())
+
+	if err != nil {
 		err = fmt.Errorf("s3 error: %w", err)
 		return err
 	}
+
 	return nil
 }
 
@@ -231,8 +320,16 @@ func (s *S3Client) GetBucketObjects(
 	}
 
 	dirObjects := make([]domain.Object, 0)
-	for obj := range s.mc.ListObjects(ctx, bucketID, opts) {
+
+	start := time.Now()
+
+	objectInfoCh := s.mc.ListObjects(ctx, bucketID, opts)
+	for obj := range objectInfoCh {
 		if obj.Err != nil {
+			metrics.S3OperationDurationSeconds.
+				WithLabelValues(kernel.AppName, "list-objects", strconv.FormatBool(obj.Err == nil)).
+				Observe(time.Since(start).Seconds())
+
 			slog.Warn("s3: failed to get object",
 				slog.String("bucket", bucketID),
 				slog.String("err", obj.Err.Error()),
@@ -261,7 +358,15 @@ func (s *S3Client) GenShareURL(
 	params *domain.ShareObjectParams,
 ) (*url.URL, error) {
 	filePath := path.Clean(params.FilePath)
+
+	start := time.Now()
+
 	urlPath, err := s.mc.PresignedGetObject(ctx, bucketID, filePath, params.Expired, map[string][]string{})
+
+	metrics.S3OperationDurationSeconds.
+		WithLabelValues(kernel.AppName, "share-url", strconv.FormatBool(err == nil)).
+		Observe(time.Since(start).Seconds())
+
 	if err != nil {
 		err = fmt.Errorf("s3 error: %w", err)
 		return nil, err

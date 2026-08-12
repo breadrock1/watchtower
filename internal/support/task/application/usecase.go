@@ -130,15 +130,9 @@ func (p *TaskUseCase) IsTaskAlreadyExists(ctx kernel.Ctx, task *domain.Task) boo
 	}
 
 	switch task.Status {
-	case domain.Received:
-		fallthrough
-	case domain.Pending:
-		fallthrough
-	case domain.Processing:
+	case domain.Received, domain.Pending, domain.Processing:
 		return true
-	case domain.Failed:
-		fallthrough
-	case domain.Successful:
+	case domain.Failed, domain.Successful, domain.Canceled:
 		return false
 	default:
 		return false

@@ -3,7 +3,9 @@ package process
 import (
 	"fmt"
 	"log/slog"
+	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/breadrock1/otlp-go/otlp"
@@ -78,6 +80,8 @@ func (o *Orchestrator) LaunchListener(ctx kernel.Ctx) {
 			case cMsg := <-consumeCh:
 				ctx := cMsg.Ctx
 				go func() {
+					acquireStart := time.Now()
+
 					if err := sem.Acquire(ctx, 1); err != nil {
 						slog.Error("processing",
 							slog.String("msg", "internal semaphore error"),
@@ -85,6 +89,11 @@ func (o *Orchestrator) LaunchListener(ctx kernel.Ctx) {
 						)
 						return
 					}
+
+					metrics.OrchestratorAcquireWaitDurationSeconds.
+						WithLabelValues(kernel.AppName).
+						Observe(time.Since(acquireStart).Seconds())
+
 					defer sem.Release(1)
 
 					task := &cMsg.Body
@@ -139,6 +148,14 @@ func (o *Orchestrator) UploadFile(
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
 		return nil, err
+	}
+
+	// Track upload file size
+	fileSize := params.FileData.Len()
+	if fileSize > 0 {
+		metrics.UploadFileSizeBytes.
+			WithLabelValues(kernel.AppName).
+			Observe(float64(fileSize))
 	}
 
 	objID, err := instance.StoreObject(ctx, bucketID, params)
@@ -205,12 +222,6 @@ func (o *Orchestrator) CreateTask(
 	}
 
 	o.taskUC.UpdateTaskStatus(ctx, task)
-	// TODO: Disabled for TechDebt
-	// _ = p.taskMangerUC.IsTaskAlreadyExists(ctx, &taskDomain)
-	// if p.isTaskAlreadyProcessed(ctx, &taskDomain) {
-	//	 log.Printf("task has been already processed: %s", taskDomain.ID)
-	//	 continue
-	// }
 
 	return task, nil
 }
@@ -230,10 +241,21 @@ func (o *Orchestrator) handleTask(ctx kernel.Ctx, task *taskDomain.Task) {
 		attribute.String("file-path", task.ObjectID),
 	)
 
+	cTask, err := o.taskUC.GetTask(ctx, task.BucketID, task.ID)
+	if cTask != nil {
+		span.SetAttributes(attribute.Int("status", int(task.Status)))
+		if cTask.Status == taskDomain.Canceled {
+			slog.Info("processing",
+				slog.String("msg", "task has been canceled"),
+				slog.String("task-id", task.ID.String()),
+			)
+		}
+	}
+
 	task.SetStatusAndText(taskDomain.Processing, taskDomain.ProcessingStatusText)
 	o.taskUC.UpdateTaskStatus(ctx, task)
 
-	err := o.processTask(ctx, task)
+	err = o.processTask(ctx, task)
 	if err != nil {
 		err = fmt.Errorf("processing failed: %w", err)
 		span.SetStatus(codes.Error, err.Error())
@@ -300,4 +322,14 @@ func (o *Orchestrator) processTask(ctx kernel.Ctx, task *taskDomain.Task) error 
 	}
 
 	return nil
+}
+
+// extractFileExtension extracts the file extension without the dot,
+// returning "unknown" if no extension is found.
+func extractFileExtension(objID kernel.ObjectID) string {
+	ext := strings.ToLower(path.Ext(objID))
+	if ext == "" {
+		return "unknown"
+	}
+	return strings.TrimPrefix(ext, ".")
 }
