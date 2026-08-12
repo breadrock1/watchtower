@@ -91,11 +91,11 @@ func SetupServer(otlpConfig otlp_go.OtlpConfig, state *process.Orchestrator) *Se
 
 	api.Get("/swagger/*", swagger.HandlerDefault)
 
-	v1Api := api.Group("/v1")
+	v1Api := api.Group("/v1", mw.OrganizationContext(), mw.UserContext())
 	serverApp.CreateSystemGroup(v1Api)
 	serverApp.CreateTasksGroup(v1Api)
-	serverApp.CreateStorageBucketsGroup(v1Api, mw.OrganizationContext())
-	serverApp.CreateStorageObjectsGroup(v1Api, mw.OrganizationContext())
+	serverApp.CreateStorageBucketsGroup(v1Api)
+	serverApp.CreateStorageObjectsGroup(v1Api)
 
 	return serverApp
 }

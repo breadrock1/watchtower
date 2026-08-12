@@ -12,10 +12,10 @@ import (
 	"watchtower/cmd/watchtower/httpserver/mw"
 )
 
-func (s *Server) CreateStorageBucketsGroup(group fiber.Router, orgContextHandler fiber.Handler) {
-	group.Get("/cloud/buckets", orgContextHandler, s.GetBuckets)
-	group.Put("/cloud/bucket", orgContextHandler, s.CreateBucket)
-	group.Delete("/cloud/:bucket", orgContextHandler, s.RemoveBucket)
+func (s *Server) CreateStorageBucketsGroup(group fiber.Router) {
+	group.Get("/cloud/buckets", s.GetBuckets)
+	group.Put("/cloud/bucket", s.CreateBucket)
+	group.Delete("/cloud/:bucket", s.RemoveBucket)
 }
 
 // GetBuckets
@@ -34,7 +34,7 @@ func (s *Server) GetBuckets(eCtx *fiber.Ctx) error {
 
 	span := trace.SpanFromContext(ctx)
 
-	orgID := eCtx.Locals(mw.OrganizationIDHeader).(string)
+	orgID := eCtx.Locals(mw.OrganizationIDKey).(string)
 	objStorage, err := s.state.GetObjectStorage(orgID)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
@@ -84,7 +84,7 @@ func (s *Server) CreateBucket(eCtx *fiber.Ctx) error {
 		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
 	}
 
-	orgID := eCtx.Locals(mw.OrganizationIDHeader).(string)
+	orgID := eCtx.Locals(mw.OrganizationIDKey).(string)
 	objStorage, err := s.state.GetObjectStorage(orgID)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
@@ -145,7 +145,7 @@ func (s *Server) RemoveBucket(eCtx *fiber.Ctx) error {
 
 	span.SetAttributes(attribute.String("bucket", bucket))
 
-	orgID := eCtx.Locals(mw.OrganizationIDHeader).(string)
+	orgID := eCtx.Locals(mw.OrganizationIDKey).(string)
 	objStorage, err := s.state.GetObjectStorage(orgID)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())

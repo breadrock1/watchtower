@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"path"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -22,17 +23,17 @@ import (
 
 const FolderFileKeeper = ".keeper"
 
-func (s *Server) CreateStorageObjectsGroup(group fiber.Router, orgContextHandler fiber.Handler) {
-	group.Post("/cloud/:bucket/files", orgContextHandler, s.GetFiles)
-	group.Patch("/cloud/:bucket/file", orgContextHandler, s.CopyFile)
-	group.Put("/cloud/:bucket/file/upload", orgContextHandler, s.UploadFile)
-	group.Post("/cloud/:bucket/file/download", orgContextHandler, s.DownloadFile)
-	group.Post("/cloud/:bucket/folder", orgContextHandler, s.CreateFolder)
-	group.Delete("/cloud/:bucket/folder", orgContextHandler, s.DeleteFolder)
-	group.Delete("/cloud/:bucket/file", orgContextHandler, s.RemoveFile2)
-	group.Delete("/cloud/:bucket/file/remove", orgContextHandler, s.RemoveFile)
-	group.Post("/cloud/:bucket/file/attributes", orgContextHandler, s.GetFileInfo)
-	group.Post("/cloud/:bucket/file/share", orgContextHandler, s.ShareFile)
+func (s *Server) CreateStorageObjectsGroup(group fiber.Router) {
+	group.Post("/cloud/:bucket/files", s.GetFiles)
+	group.Patch("/cloud/:bucket/file", s.CopyFile)
+	group.Put("/cloud/:bucket/file/upload", s.UploadFile)
+	group.Post("/cloud/:bucket/file/download", s.DownloadFile)
+	group.Post("/cloud/:bucket/folder", s.CreateFolder)
+	group.Delete("/cloud/:bucket/folder", s.DeleteFolder)
+	group.Delete("/cloud/:bucket/file", s.RemoveFile2)
+	group.Delete("/cloud/:bucket/file/remove", s.RemoveFile)
+	group.Post("/cloud/:bucket/file/attributes", s.GetFileInfo)
+	group.Post("/cloud/:bucket/file/share", s.ShareFile)
 }
 
 // CreateFolder
@@ -65,7 +66,7 @@ func (s *Server) CreateFolder(eCtx *fiber.Ctx) error {
 
 	span.SetAttributes(attribute.String("bucket", bucket))
 
-	orgID := eCtx.Locals(mw.OrganizationIDHeader).(string)
+	orgID := eCtx.Locals(mw.OrganizationIDKey).(string)
 	objStorage, err := s.state.GetObjectStorage(orgID)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
@@ -142,7 +143,7 @@ func (s *Server) DeleteFolder(eCtx *fiber.Ctx) error {
 
 	span.SetAttributes(attribute.String("bucket", bucket))
 
-	orgID := eCtx.Locals(mw.OrganizationIDHeader).(string)
+	orgID := eCtx.Locals(mw.OrganizationIDKey).(string)
 	objStorage, err := s.state.GetObjectStorage(orgID)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
@@ -220,7 +221,7 @@ func (s *Server) UploadFile(eCtx *fiber.Ctx) error {
 
 	span.SetAttributes(attribute.String("bucket", bucket), attribute.Bool("processing", processingFlag))
 
-	orgID := eCtx.Locals(mw.OrganizationIDHeader).(string)
+	orgID := eCtx.Locals(mw.OrganizationIDKey).(string)
 	objStorage, err := s.state.GetObjectStorage(orgID)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
@@ -256,6 +257,12 @@ func (s *Server) UploadFile(eCtx *fiber.Ctx) error {
 		span.RecordError(err)
 		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
 	}
+
+	uploadedFileNames := make([]string, 0, len(multipartForm.File["files"]))
+	for _, fileForm := range multipartForm.File["files"] {
+		uploadedFileNames = append(uploadedFileNames, fileForm.Filename)
+	}
+	eCtx.Locals("file_path", strings.Join(uploadedFileNames, ","))
 
 	var fileData bytes.Buffer
 	uploadedFiles := make([]form.TaskSchema, len(multipartForm.File["files"]))
@@ -368,7 +375,9 @@ func (s *Server) DownloadFile(eCtx *fiber.Ctx) error {
 		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
 	}
 
-	orgID := eCtx.Locals(mw.OrganizationIDHeader).(string)
+	eCtx.Locals("file_path", jsonForm.FileName)
+
+	orgID := eCtx.Locals(mw.OrganizationIDKey).(string)
 	objStorage, err := s.state.GetObjectStorage(orgID)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
@@ -424,7 +433,9 @@ func (s *Server) RemoveFile(eCtx *fiber.Ctx) error {
 		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
 	}
 
-	orgID := eCtx.Locals(mw.OrganizationIDHeader).(string)
+	eCtx.Locals("file_path", jsonForm.FileName)
+
+	orgID := eCtx.Locals(mw.OrganizationIDKey).(string)
 	objStorage, err := s.state.GetObjectStorage(orgID)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
@@ -478,8 +489,9 @@ func (s *Server) RemoveFile2(eCtx *fiber.Ctx) error {
 	}
 
 	span.SetAttributes(attribute.String("file_name", fileName))
+	eCtx.Locals("file_path", fileName)
 
-	orgID := eCtx.Locals(mw.OrganizationIDHeader).(string)
+	orgID := eCtx.Locals(mw.OrganizationIDKey).(string)
 	objStorage, err := s.state.GetObjectStorage(orgID)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
@@ -524,7 +536,7 @@ func (s *Server) CopyFile(eCtx *fiber.Ctx) error {
 		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
 	}
 
-	orgID := eCtx.Locals(mw.OrganizationIDHeader).(string)
+	orgID := eCtx.Locals(mw.OrganizationIDKey).(string)
 	objStorage, err := s.state.GetObjectStorage(orgID)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
@@ -554,6 +566,7 @@ func (s *Server) CopyFile(eCtx *fiber.Ctx) error {
 		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
 	}
 
+	eCtx.Locals("file_path", jsonForm.SrcPath)
 	params := &domain.CopyObjectParams{
 		SourcePath:      jsonForm.SrcPath,
 		DestinationPath: jsonForm.DstPath,
@@ -623,7 +636,7 @@ func (s *Server) GetFiles(eCtx *fiber.Ctx) error {
 		Offset:     jsonForm.Offset,
 	}
 
-	orgID := eCtx.Locals(mw.OrganizationIDHeader).(string)
+	orgID := eCtx.Locals(mw.OrganizationIDKey).(string)
 	objStorage, err := s.state.GetObjectStorage(orgID)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
@@ -689,7 +702,9 @@ func (s *Server) GetFileInfo(eCtx *fiber.Ctx) error {
 		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
 	}
 
-	orgID := eCtx.Locals(mw.OrganizationIDHeader).(string)
+	eCtx.Locals("file_path", jsonForm.FilePath)
+
+	orgID := eCtx.Locals(mw.OrganizationIDKey).(string)
 	objStorage, err := s.state.GetObjectStorage(orgID)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
@@ -749,7 +764,9 @@ func (s *Server) ShareFile(eCtx *fiber.Ctx) error {
 	expired := time.Second * time.Duration(jsonForm.ExpiredSecs)
 	params := &domain.ShareObjectParams{FilePath: jsonForm.FilePath, Expired: expired}
 
-	orgID := eCtx.Locals(mw.OrganizationIDHeader).(string)
+	eCtx.Locals("file_path", jsonForm.FilePath)
+
+	orgID := eCtx.Locals(mw.OrganizationIDKey).(string)
 	objStorage, err := s.state.GetObjectStorage(orgID)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
