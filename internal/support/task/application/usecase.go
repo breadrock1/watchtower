@@ -180,10 +180,9 @@ func (p *TaskUseCase) Recognize(
 	// TODO: impled retry pattern
 	recData, err := p.recognizer.Recognize(ctx, inputFile)
 
-	elapsedTime := time.Since(instant)
 	metrics.RecognizerDurationSeconds.
 		WithLabelValues(kernel.AppName, strconv.FormatBool(err != nil)).
-		Observe(elapsedTime.Seconds())
+		Observe(time.Since(instant).Seconds())
 
 	if err != nil {
 		task.SetStatusAndText(domain.Failed, "failed to recognize file")
@@ -224,10 +223,9 @@ func (p *TaskUseCase) StoreDocument(
 
 	docID, err := p.docStorage.StoreDocument(ctx, doc)
 
-	elapsedTime := time.Since(instant)
 	metrics.StoreProcessedDocumentDurationSeconds.
 		WithLabelValues(kernel.AppName, strconv.FormatBool(err != nil)).
-		Observe(elapsedTime.Seconds())
+		Observe(time.Since(instant).Seconds())
 
 	if err != nil {
 		err = fmt.Errorf("failed to store document: %w", err)

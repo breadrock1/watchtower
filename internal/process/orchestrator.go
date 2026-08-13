@@ -80,7 +80,7 @@ func (o *Orchestrator) LaunchListener(ctx kernel.Ctx) {
 			case cMsg := <-consumeCh:
 				ctx := cMsg.Ctx
 				go func() {
-					acquireStart := time.Now()
+					start := time.Now()
 
 					if err := sem.Acquire(ctx, 1); err != nil {
 						slog.Error("processing",
@@ -89,25 +89,24 @@ func (o *Orchestrator) LaunchListener(ctx kernel.Ctx) {
 						)
 						return
 					}
+					defer func() {
+						sem.Release(1)
 
-					metrics.OrchestratorAcquireWaitDurationSeconds.
-						WithLabelValues(kernel.AppName).
-						Observe(time.Since(acquireStart).Seconds())
-
-					defer sem.Release(1)
+						metrics.OrchestratorAcquireWaitDurationSeconds.
+							WithLabelValues(kernel.AppName).
+							Observe(time.Since(start).Seconds())
+					}()
 
 					task := &cMsg.Body
-
-					instant := time.Now()
 					o.handleTask(ctx, task)
 
-					elapsedTime := time.Since(instant)
+					elapsed := time.Since(start)
 					statusInt := strconv.Itoa(int(task.Status))
 					metrics.OrchestratorProcessingDurationSeconds.
 						WithLabelValues(kernel.AppName, statusInt).
-						Observe(elapsedTime.Seconds())
+						Observe(elapsed.Seconds())
 
-					task.SetProcessingDuration(elapsedTime)
+					task.SetProcessingDuration(elapsed)
 					o.taskUC.UpdateTaskStatus(ctx, task)
 
 					metrics.OrchestratorProcessingCounter.

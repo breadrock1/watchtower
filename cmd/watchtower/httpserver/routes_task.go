@@ -16,6 +16,7 @@ func (s *Server) CreateTasksGroup(group fiber.Router) {
 	tasksGroup := group.Group("/tasks")
 	tasksGroup.Get("/:bucket", s.LoadTasks)
 	tasksGroup.Get("/:bucket/:task_id", s.LoadTaskByID)
+	tasksGroup.Patch("/:bucket/:task_id", s.ChangeTaskStatus)
 }
 
 // LoadTasks

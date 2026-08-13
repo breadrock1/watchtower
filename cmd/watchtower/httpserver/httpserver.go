@@ -3,6 +3,7 @@ package httpserver
 import (
 	"fmt"
 	"log/slog"
+	"watchtower/cmd/watchtower/httpserver/mw"
 
 	"github.com/ansrivas/fiberprometheus/v2"
 	"github.com/breadrock1/otlp-go/otlp"
@@ -87,7 +88,7 @@ func SetupServer(otlpConfig otlp_go.OtlpConfig, state *process.Orchestrator) *Se
 	api := serverApp.Server.Group("/api")
 	api.Get("/swagger/*", swagger.HandlerDefault)
 
-	v1Api := api.Group("/v1")
+	v1Api := api.Group("/v1", mw.OrganizationContext(), mw.UserContext())
 	serverApp.CreateTasksGroup(v1Api)
 	serverApp.CreateStorageBucketsGroup(v1Api)
 	serverApp.CreateStorageObjectsGroup(v1Api)
