@@ -13,7 +13,6 @@ import (
 	"github.com/gofiber/swagger"
 	"go.opentelemetry.io/otel/trace"
 
-	"watchtower/cmd/watchtower/httpserver/mw"
 	"watchtower/internal/process"
 	"watchtower/internal/shared/kernel"
 
