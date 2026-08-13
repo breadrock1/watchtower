@@ -131,7 +131,7 @@ func init() {
 			Help:    "Latency of Redis operations in seconds",
 			Buckets: prometheus.DefBuckets,
 		},
-		[]string{serviceLabel, operationLabelName},
+		[]string{serviceLabel, operationLabelName, statusLabel},
 	)
 
 	UploadFileSizeBytes = promauto.NewHistogramVec(
