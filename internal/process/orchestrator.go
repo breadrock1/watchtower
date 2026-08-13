@@ -3,9 +3,7 @@ package process
 import (
 	"fmt"
 	"log/slog"
-	"path"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/breadrock1/otlp-go/otlp"
@@ -244,6 +242,16 @@ func (o *Orchestrator) handleTask(ctx kernel.Ctx, task *taskDomain.Task) {
 	)
 
 	cTask, err := o.taskUC.GetTask(ctx, task.BucketID, task.ID)
+	if err != nil {
+		err = fmt.Errorf("failed to load pended task from storage: %w", err)
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		slog.Error("processing",
+			slog.String("task-id", task.ID.String()),
+			slog.String("err", err.Error()),
+		)
+	}
+
 	if cTask != nil {
 		span.SetAttributes(attribute.Int("status", int(task.Status)))
 		if cTask.Status == taskDomain.Canceled {
@@ -324,14 +332,4 @@ func (o *Orchestrator) processTask(ctx kernel.Ctx, task *taskDomain.Task) error 
 	}
 
 	return nil
-}
-
-// extractFileExtension extracts the file extension without the dot,
-// returning "unknown" if no extension is found.
-func extractFileExtension(objID kernel.ObjectID) string {
-	ext := strings.ToLower(path.Ext(objID))
-	if ext == "" {
-		return "unknown"
-	}
-	return strings.TrimPrefix(ext, ".")
 }
