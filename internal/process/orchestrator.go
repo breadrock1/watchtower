@@ -159,11 +159,6 @@ func (o *Orchestrator) UploadFile(
 	}
 
 	objID, err := instance.StoreObject(ctx, bucketID, params)
-
-	metrics.UploadedFilesCounter.
-		WithLabelValues(kernel.AppName, strconv.FormatBool(err != nil)).
-		Inc()
-
 	if err != nil {
 		err = fmt.Errorf("failed to upload file %s: %w", params.FilePath, err)
 		span.SetStatus(codes.Error, err.Error())
@@ -171,12 +166,11 @@ func (o *Orchestrator) UploadFile(
 		return nil, err
 	}
 
-	task, err := o.CreateTask(ctx, bucketID, objID, params.Organization)
-
-	metrics.CreatedProcessingTasksCounter.
+	metrics.UploadedFilesCounter.
 		WithLabelValues(kernel.AppName, strconv.FormatBool(err != nil)).
 		Inc()
 
+	task, err := o.CreateTask(ctx, bucketID, objID, params)
 	if err != nil {
 		err = fmt.Errorf("failed to create taskUC %s: %w", params.FilePath, err)
 		span.SetStatus(codes.Error, err.Error())
@@ -191,9 +185,13 @@ func (o *Orchestrator) CreateTask(
 	ctx kernel.Ctx,
 	bucketID kernel.BucketID,
 	objID kernel.ObjectID,
-	orgID kernel.OrganizationID,
+	params *domain.UploadObjectParams,
 ) (*taskDomain.Task, error) {
-	task := taskDomain.CreateNewTask(bucketID, objID, orgID)
+	task := taskDomain.CreateNewTask(bucketID, objID, params.Organization)
+	if !params.CreateProcessingTask {
+		task.MarkAsExcludedStatus()
+		return task, nil
+	}
 
 	taskID := task.ID.String()
 	slog.Info("processing",
@@ -214,12 +212,17 @@ func (o *Orchestrator) CreateTask(
 		attribute.Int("task-status", int(task.Status)),
 	)
 
-	if err := o.taskUC.PublishTaskToQueue(ctx, task); err != nil {
+	var err error
+	if err = o.taskUC.PublishTaskToQueue(ctx, task); err != nil {
 		err = fmt.Errorf("failed to publish task: %w", err)
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
 		return nil, err
 	}
+
+	metrics.CreatedProcessingTasksCounter.
+		WithLabelValues(kernel.AppName, strconv.FormatBool(err != nil)).
+		Inc()
 
 	o.taskUC.UpdateTaskStatus(ctx, task)
 

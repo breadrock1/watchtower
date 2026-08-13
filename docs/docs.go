@@ -31,6 +31,12 @@ const docTemplate = `{
                 "operationId": "create-bucket",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "Unique Organization ID to choose s3 instance",
+                        "name": "X-Organization-Id",
+                        "in": "header"
+                    },
+                    {
                         "description": "Bucket name to create",
                         "name": "jsonQuery",
                         "in": "body",
@@ -79,6 +85,14 @@ const docTemplate = `{
                 ],
                 "summary": "Get watched bucket list",
                 "operationId": "get-buckets",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Unique Organization ID to choose s3 instance",
+                        "name": "X-Organization-Id",
+                        "in": "header"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Loaded buckets info",
@@ -116,6 +130,12 @@ const docTemplate = `{
                 "summary": "Remove bucket from cloud",
                 "operationId": "remove-bucket",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Unique Organization ID to choose s3 instance",
+                        "name": "X-Organization-Id",
+                        "in": "header"
+                    },
                     {
                         "type": "string",
                         "description": "Bucket name to remove",
@@ -170,6 +190,12 @@ const docTemplate = `{
                 "summary": "Remove file from cloud",
                 "operationId": "remove-file-2",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Unique Organization ID to choose s3 instance",
+                        "name": "X-Organization-Id",
+                        "in": "header"
+                    },
                     {
                         "type": "string",
                         "description": "Bucket name to remove file",
@@ -232,6 +258,12 @@ const docTemplate = `{
                 "summary": "Copy file to another location into bucket",
                 "operationId": "copy-file",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Unique Organization ID to choose s3 instance",
+                        "name": "X-Organization-Id",
+                        "in": "header"
+                    },
                     {
                         "type": "string",
                         "description": "Bucket name of src file",
@@ -300,6 +332,12 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
+                        "description": "Unique Organization ID to choose s3 instance",
+                        "name": "X-Organization-Id",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
                         "description": "Bucket name to get list files",
                         "name": "bucket",
                         "in": "path",
@@ -366,6 +404,12 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
+                        "description": "Unique Organization ID to choose s3 instance",
+                        "name": "X-Organization-Id",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
                         "description": "Bucket name to download file",
                         "name": "bucket",
                         "in": "path",
@@ -427,6 +471,12 @@ const docTemplate = `{
                 "summary": "Remove file from cloud",
                 "operationId": "remove-file",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Unique Organization ID to choose s3 instance",
+                        "name": "X-Organization-Id",
+                        "in": "header"
+                    },
                     {
                         "type": "string",
                         "description": "Bucket name to remove file",
@@ -495,6 +545,12 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
+                        "description": "Unique Organization ID to choose s3 instance",
+                        "name": "X-Organization-Id",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
                         "description": "Bucket name to share file",
                         "name": "bucket",
                         "in": "path",
@@ -561,6 +617,12 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
+                        "description": "Unique Organization ID to choose s3 instance",
+                        "name": "X-Organization-Id",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
                         "description": "Bucket name to upload files",
                         "name": "bucket",
                         "in": "path",
@@ -583,6 +645,12 @@ const docTemplate = `{
                         "type": "string",
                         "description": "File datetime expired like 2025-01-01T12:01:01Z",
                         "name": "expired",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Allow uploaded file processing",
+                        "name": "processing",
                         "in": "query"
                     }
                 ],
@@ -635,6 +703,12 @@ const docTemplate = `{
                 "summary": "Get files list into bucket",
                 "operationId": "get-list-files",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Unique Organization ID to choose s3 instance",
+                        "name": "X-Organization-Id",
+                        "in": "header"
+                    },
                     {
                         "type": "string",
                         "description": "Bucket name to get list files",
@@ -703,6 +777,12 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
+                        "description": "Unique Organization ID to choose s3 instance",
+                        "name": "X-Organization-Id",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
                         "description": "Bucket name to create folder",
                         "name": "bucket",
                         "in": "path",
@@ -765,6 +845,12 @@ const docTemplate = `{
                 "summary": "Delete folder into cloud storage",
                 "operationId": "delete-folder",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Unique Organization ID to choose s3 instance",
+                        "name": "X-Organization-Id",
+                        "in": "header"
+                    },
                     {
                         "type": "string",
                         "description": "Bucket name to delete folder",
@@ -927,6 +1013,75 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Task not found",
+                        "schema": {
+                            "$ref": "#/definitions/form.NotFoundError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/form.InternalServerError"
+                        }
+                    },
+                    "503": {
+                        "description": "Server does not available",
+                        "schema": {
+                            "$ref": "#/definitions/form.ServerUnavailableError"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "description": "Change task status of uploaded file processing.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tasks"
+                ],
+                "summary": "Change task status",
+                "operationId": "change-task-by-id",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bucket id of processing task",
+                        "name": "bucket",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Task ID",
+                        "name": "task_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Task status to set",
+                        "name": "status",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Ok",
+                        "schema": {
+                            "$ref": "#/definitions/form.Success"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request error",
+                        "schema": {
+                            "$ref": "#/definitions/form.BadRequestError"
+                        }
+                    },
+                    "404": {
+                        "description": "Task or bucket not found",
                         "schema": {
                             "$ref": "#/definitions/form.NotFoundError"
                         }

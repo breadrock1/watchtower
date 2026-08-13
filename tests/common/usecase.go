@@ -101,9 +101,10 @@ func CreateUploadFileParams(filePath string) (*cloudDomain.UploadObjectParams, e
 	_ = expired.Add(10 * time.Second)
 
 	uploadParams := &cloudDomain.UploadObjectParams{
-		FilePath: filePath,
-		FileData: data,
-		Expired:  &expired,
+		FilePath:             filePath,
+		FileData:             data,
+		Expired:              &expired,
+		CreateProcessingTask: true,
 	}
 
 	return uploadParams, nil

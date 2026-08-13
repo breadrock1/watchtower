@@ -8,6 +8,7 @@ app_name = "watchtower"
 level = "info"
 address = "http://loki:3100"
 enable_loki = false
+attributes = ["user_id", "organization_id", "file_path"]
 
 [otlp.tracer]
 address = "jaeger:4317"
@@ -36,7 +37,11 @@ timeout = 300
 address = "http://doc-searcher:2892"
 timeout = 300
 
+[storage]
+default_key = "sova-default"
+
 [[storage.s3]]
+pool_key = "sova-default"
 address = "minio:9000"
 access_id = "minio-root"
 secret_key = "minio-root"
@@ -44,6 +49,7 @@ enable_ssl = false
 token = ""
 
 [[storage.s3]]
+pool_key = "sova-another"
 address = "minio:9002"
 access_id = "minio-root"
 secret_key = "minio-root"
