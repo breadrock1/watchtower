@@ -5,13 +5,14 @@ import (
 	"log/slog"
 	"watchtower/cmd/watchtower/httpserver/mw"
 
-	"github.com/ansrivas/fiberprometheus/v2"
 	"github.com/breadrock1/otlp-go/otlp"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/adaptor"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/monitor"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/swagger"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/otel/trace"
 
 	"watchtower/internal/process"
@@ -114,9 +115,7 @@ func (s *Server) initMiddlewares(otlpConfig otlp_go.OtlpConfig) {
 	s.Server.Use(cors.New(cors.Config{}))
 	s.Server.Use(recover.New())
 
-	prom := fiberprometheus.New(kernel.AppName)
-	prom.RegisterAt(s.Server, "/api/metrics")
-	s.Server.Use(prom.Middleware)
+	s.Server.Get("/metrics", adaptor.HTTPHandler(promhttp.Handler()))
 
 	s.Server.Use(otlppfiber.PrometheusMeterMiddleware(s.Server, otlpConfig))
 	s.Server.Use(otlppfiber.OtlpJaegerTracerMiddleware())

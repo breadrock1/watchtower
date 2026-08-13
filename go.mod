@@ -3,7 +3,6 @@ module watchtower
 go 1.25.7
 
 require (
-	github.com/ansrivas/fiberprometheus/v2 v2.17.0
 	github.com/breadrock1/otlp-go v0.0.6
 	github.com/gofiber/fiber/v2 v2.52.14
 	github.com/gofiber/swagger v1.1.1
@@ -30,6 +29,7 @@ require (
 	github.com/Marlliton/slogpretty v0.1.3 // indirect
 	github.com/afiskon/promtail-client v0.0.0-20190305142237-506f3f921e9c // indirect
 	github.com/andybalholm/brotli v1.2.2 // indirect
+	github.com/ansrivas/fiberprometheus/v2 v2.17.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
