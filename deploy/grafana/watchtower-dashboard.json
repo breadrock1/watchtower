@@ -125,7 +125,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum by (status_code) (rate(http_requests_total{service=~\"watchtower\"}[$__rate_interval]))",
+          "expr": "sum by (status_code) (rate(http_requests_total{service=~\"watchtower\"}[$interval]))",
           "intervalFactor": 1,
           "legendFormat": "{{ status_code }}",
           "range": true,
@@ -179,7 +179,6 @@
               "mode": "off"
             }
           },
-          "displayName": "RPS",
           "mappings": [],
           "min": 0,
           "thresholds": {
@@ -231,7 +230,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum by (method, path) (rate(http_requests_total{service=~\"watchtower\"}[$__rate_interval]))",
+          "expr": "sum by (method, path) (rate(http_requests_total{service=~\"watchtower\"}[$interval]))",
           "format": "time_series",
           "instant": true,
           "interval": "",
@@ -334,7 +333,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{service=~\"watchtower\"}[$__rate_interval])) by (le))",
+          "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{service=~\"watchtower\"}[$interval])) by (le))",
           "intervalFactor": 1,
           "legendFormat": "p50",
           "range": true,
@@ -342,7 +341,7 @@
         },
         {
           "editorMode": "code",
-          "expr": "histogram_quantile(0.90, sum(rate(http_request_duration_seconds_bucket{service=~\"watchtower\"}[$__rate_interval])) by (le))",
+          "expr": "histogram_quantile(0.90, sum(rate(http_request_duration_seconds_bucket{service=~\"watchtower\"}[$interval])) by (le))",
           "intervalFactor": 1,
           "legendFormat": "p90",
           "range": true,
@@ -350,7 +349,7 @@
         },
         {
           "editorMode": "code",
-          "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{service=~\"watchtower\"}[$__rate_interval])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{service=~\"watchtower\"}[$interval])) by (le))",
           "intervalFactor": 1,
           "legendFormat": "p99",
           "range": true,
@@ -386,6 +385,7 @@
           },
           "mappings": [],
           "min": 0,
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -516,7 +516,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "rate(watchtower_rmq_reconnect_total{service=~\"watchtower\"}[$__rate_interval])",
+          "expr": "rate(watchtower_rmq_reconnect_total{service=~\"watchtower\"}[$interval])",
           "intervalFactor": 1,
           "legendFormat": "Reconnects",
           "range": true,
@@ -589,7 +589,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum(increase(watchtower_rmq_reconnect_total{service=~\"watchtower\"}[$__range]))",
+          "expr": "sum(increase(watchtower_rmq_reconnect_total{service=~\"watchtower\"}[$interval]))",
           "intervalFactor": 1,
           "legendFormat": "Reconnects",
           "range": true,
@@ -611,6 +611,89 @@
       "panels": [],
       "title": "Orchestrator / Processing Pipeline",
       "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
+      "description": "Full document processing latency — p50 / p90 / p99 by status",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 33
+      },
+      "id": 8,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.2.0-16636675413",
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.50, sum by (le) (count_over_time(watchtower_orchestrator_processing_duration_seconds_bucket{service=~\"watchtower\"}[$interval])))",
+          "intervalFactor": 1,
+          "legendFormat": "p50",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.90, sum by (le) (count_over_time(watchtower_orchestrator_processing_duration_seconds_bucket{service=~\"watchtower\"}[$interval])))",
+          "intervalFactor": 1,
+          "legendFormat": "p90",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.99, sum by (le) (count_over_time(watchtower_orchestrator_processing_duration_seconds_bucket{service=~\"watchtower\"}[$interval])))",
+          "intervalFactor": 1,
+          "legendFormat": "p99",
+          "range": true,
+          "refId": "C"
+        }
+      ],
+      "title": "Orchestrator: Processing Duration",
+      "type": "stat"
     },
     {
       "datasource": {
@@ -710,7 +793,7 @@
         "h": 10,
         "w": 12,
         "x": 0,
-        "y": 33
+        "y": 38
       },
       "id": 7,
       "options": {
@@ -734,7 +817,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum by (status) (sum_over_time(watchtower_orchestrator_processed_total{service=~\"watchtower\"}[$__interval]))",
+          "expr": "sum by (status) (sum_over_time(watchtower_orchestrator_processed_total{service=~\"watchtower\"}[$interval]))",
           "intervalFactor": 1,
           "legendFormat": "{{ status }}",
           "range": true,
@@ -787,89 +870,6 @@
         }
       ],
       "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "$datasource"
-      },
-      "description": "Full document processing latency — p50 / p90 / p99 by status",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": 0
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 10,
-        "w": 12,
-        "x": 12,
-        "y": 33
-      },
-      "id": 8,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "percentChangeColorMode": "standard",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "textMode": "auto",
-        "wideLayout": true
-      },
-      "pluginVersion": "12.2.0-16636675413",
-      "targets": [
-        {
-          "editorMode": "code",
-          "expr": "histogram_quantile(0.50, sum by (le) (count_over_time(watchtower_orchestrator_processing_duration_seconds_bucket{service=~\"watchtower\"}[$__interval])))",
-          "intervalFactor": 1,
-          "legendFormat": "p50",
-          "range": true,
-          "refId": "A"
-        },
-        {
-          "editorMode": "code",
-          "expr": "histogram_quantile(0.90, sum by (le) (count_over_time(watchtower_orchestrator_processing_duration_seconds_bucket{service=~\"watchtower\"}[$__interval])))",
-          "intervalFactor": 1,
-          "legendFormat": "p90",
-          "range": true,
-          "refId": "B"
-        },
-        {
-          "editorMode": "code",
-          "expr": "histogram_quantile(0.99, sum by (le) (count_over_time(watchtower_orchestrator_processing_duration_seconds_bucket{service=~\"watchtower\"}[$__interval])))",
-          "intervalFactor": 1,
-          "legendFormat": "p99",
-          "range": true,
-          "refId": "C"
-        }
-      ],
-      "title": "Orchestrator: Processing Duration",
-      "type": "stat"
     },
     {
       "datasource": {
@@ -935,10 +935,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
+        "h": 10,
         "w": 12,
-        "x": 6,
-        "y": 43
+        "x": 12,
+        "y": 38
       },
       "id": 71,
       "options": {
@@ -961,27 +961,11 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "histogram_quantile(0.50, sum by (le) (rate(watchtower_semaphore_acquire_wait_seconds{service=~\"watchtower\"}[30m])))",
-          "intervalFactor": 1,
-          "legendFormat": "p50",
-          "range": true,
-          "refId": "A"
-        },
-        {
-          "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(watchtower_semaphore_acquire_wait_seconds{service=~\"watchtower\"}[30m])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(watchtower_semaphore_acquire_wait_seconds_bucket{service=~\"watchtower\"}[$interval])))",
           "intervalFactor": 1,
           "legendFormat": "p95",
           "range": true,
-          "refId": "B"
-        },
-        {
-          "editorMode": "code",
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(watchtower_semaphore_acquire_wait_seconds{service=~\"watchtower\"}[30m])))",
-          "intervalFactor": 1,
-          "legendFormat": "p99",
-          "range": true,
-          "refId": "C"
+          "refId": "A"
         }
       ],
       "title": "Semaphore Acquire Wait (p95)",
@@ -993,7 +977,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 51
+        "y": 48
       },
       "id": 75,
       "panels": [],
@@ -1095,10 +1079,10 @@
         ]
       },
       "gridPos": {
-        "h": 10,
-        "w": 12,
+        "h": 6,
+        "w": 17,
         "x": 0,
-        "y": 52
+        "y": 49
       },
       "id": 9,
       "options": {
@@ -1121,7 +1105,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "histogram_quantile(0.50, sum by (le) (rate(watchtower_recognizer_duration_seconds_bucket{service=~\"watchtower\"}[30m])))",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(watchtower_recognizer_duration_seconds_bucket{service=~\"watchtower\"}[$interval])))",
           "intervalFactor": 1,
           "legendFormat": "p50",
           "range": true,
@@ -1129,7 +1113,7 @@
         },
         {
           "editorMode": "code",
-          "expr": "histogram_quantile(0.90, sum by (le) (rate(watchtower_recognizer_duration_seconds_bucket{service=~\"watchtower\"}[30m])))",
+          "expr": "histogram_quantile(0.90, sum by (le) (rate(watchtower_recognizer_duration_seconds_bucket{service=~\"watchtower\"}[$interval])))",
           "intervalFactor": 1,
           "legendFormat": "p90",
           "range": true,
@@ -1137,7 +1121,7 @@
         },
         {
           "editorMode": "code",
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(watchtower_recognizer_duration_seconds_bucket{service=~\"watchtower\"}[30m])))",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(watchtower_recognizer_duration_seconds_bucket{service=~\"watchtower\"}[$interval])))",
           "intervalFactor": 1,
           "legendFormat": "p99",
           "range": true,
@@ -1242,10 +1226,10 @@
         ]
       },
       "gridPos": {
-        "h": 10,
-        "w": 12,
-        "x": 12,
-        "y": 52
+        "h": 7,
+        "w": 17,
+        "x": 0,
+        "y": 55
       },
       "id": 10,
       "options": {
@@ -1268,7 +1252,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "histogram_quantile(0.50, sum by (le) (rate(watchtower_store_document_duration_seconds_bucket{service=~\"watchtower\"}[30m])))",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(watchtower_store_document_duration_seconds_bucket{service=~\"watchtower\"}[$interval])))",
           "intervalFactor": 1,
           "legendFormat": "p50",
           "range": true,
@@ -1276,7 +1260,7 @@
         },
         {
           "editorMode": "code",
-          "expr": "histogram_quantile(0.90, sum by (le) (rate(watchtower_store_document_duration_seconds_bucket{service=~\"watchtower\"}[30m])))",
+          "expr": "histogram_quantile(0.90, sum by (le) (rate(watchtower_store_document_duration_seconds_bucket{service=~\"watchtower\"}[$interval])))",
           "intervalFactor": 1,
           "legendFormat": "p90",
           "range": true,
@@ -1284,7 +1268,7 @@
         },
         {
           "editorMode": "code",
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(watchtower_store_document_duration_seconds_bucket{service=~\"watchtower\"}[30m])))",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(watchtower_store_document_duration_seconds_bucket{service=~\"watchtower\"}[$interval])))",
           "intervalFactor": 1,
           "legendFormat": "p99",
           "range": true,
@@ -1397,7 +1381,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum(rate(watchtower_s3_operation_duration_seconds_count{service=~\"watchtower\"}[$__rate_interval])) by (operation)",
+          "expr": "sum(rate(watchtower_s3_operation_duration_seconds_count{service=~\"watchtower\"}[$interval])) by (operation)",
           "intervalFactor": 1,
           "legendFormat": "{{ operation }}",
           "range": true,
@@ -1471,8 +1455,8 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
-        "w": 12,
+        "h": 7,
+        "w": 16,
         "x": 0,
         "y": 74
       },
@@ -1497,7 +1481,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "histogram_quantile(0.50, sum(rate(watchtower_s3_operation_duration_seconds_bucket{service=~\"watchtower\"}[30m])) by (le))",
+          "expr": "histogram_quantile(0.50, sum(rate(watchtower_s3_operation_duration_seconds_bucket{service=~\"watchtower\"}[$interval])) by (le))",
           "intervalFactor": 1,
           "legendFormat": "p50 overall",
           "range": true,
@@ -1505,7 +1489,7 @@
         },
         {
           "editorMode": "code",
-          "expr": "histogram_quantile(0.90, sum(rate(watchtower_s3_operation_duration_seconds_bucket{service=~\"watchtower\"}[30m])) by (le))",
+          "expr": "histogram_quantile(0.90, sum(rate(watchtower_s3_operation_duration_seconds_bucket{service=~\"watchtower\"}[$interval])) by (le))",
           "intervalFactor": 1,
           "legendFormat": "p90 overall",
           "range": true,
@@ -1513,7 +1497,7 @@
         },
         {
           "editorMode": "code",
-          "expr": "histogram_quantile(0.99, sum(rate(watchtower_s3_operation_duration_seconds_bucket{service=~\"watchtower\"}[30m])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(rate(watchtower_s3_operation_duration_seconds_bucket{service=~\"watchtower\"}[$interval])) by (le))",
           "intervalFactor": 1,
           "legendFormat": "p99 overall",
           "range": true,
@@ -1521,6 +1505,106 @@
         }
       ],
       "title": "S3 Operations Latency (p50 / p90 / p99)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$datasource"
+      },
+      "description": "p99 latency per S3 operation type",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 16,
+        "x": 0,
+        "y": 81
+      },
+      "id": 22,
+      "options": {
+        "legend": {
+          "calcs": [
+            "max",
+            "mean"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "12.2.0-16636675413",
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.99, sum(rate(watchtower_s3_operation_duration_seconds_bucket{service=~\"watchtower\"}[$interval])) by (le, operation))",
+          "intervalFactor": 1,
+          "legendFormat": "p99 — {{ operation }}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "S3 Operations Latency by Type (p99)",
       "type": "timeseries"
     },
     {
@@ -1588,10 +1672,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 74
+        "h": 6,
+        "w": 16,
+        "x": 0,
+        "y": 88
       },
       "id": 23,
       "options": {
@@ -1615,7 +1699,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum(increase(watchtower_s3_operation_duration_seconds_count{service=~\"watchtower\", status=\"false\"}[30m])) by (operation)",
+          "expr": "sum(increase(watchtower_s3_operation_duration_seconds_count{service=~\"watchtower\", status=\"false\"}[$interval])) by (operation)",
           "intervalFactor": 1,
           "legendFormat": "{{ operation }}",
           "range": true,
@@ -1626,112 +1710,12 @@
       "type": "timeseries"
     },
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "$datasource"
-      },
-      "description": "p99 latency per S3 operation type",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "smooth",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": 0
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 82
-      },
-      "id": 22,
-      "options": {
-        "legend": {
-          "calcs": [
-            "max",
-            "mean"
-          ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "pluginVersion": "12.2.0-16636675413",
-      "targets": [
-        {
-          "editorMode": "code",
-          "expr": "histogram_quantile(0.99, sum(rate(watchtower_s3_operation_duration_seconds_bucket{service=~\"watchtower\"}[30m])) by (le, operation))",
-          "intervalFactor": 1,
-          "legendFormat": "p99 — {{ operation }}",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "S3 Operations Latency by Type (p99)",
-      "type": "timeseries"
-    },
-    {
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 90
+        "y": 94
       },
       "id": 77,
       "panels": [],
@@ -1805,7 +1789,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 91
+        "y": 95
       },
       "id": 30,
       "options": {
@@ -1828,7 +1812,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "histogram_quantile(0.50, sum(rate(watchtower_outgoing_http_request_duration_seconds_bucket{service=~\"watchtower\"}[30m])) by (le))",
+          "expr": "histogram_quantile(0.50, sum(rate(watchtower_outgoing_http_request_duration_seconds_bucket{service=~\"watchtower\"}[$interval])) by (le))",
           "intervalFactor": 1,
           "legendFormat": "p50",
           "range": true,
@@ -1836,7 +1820,7 @@
         },
         {
           "editorMode": "code",
-          "expr": "histogram_quantile(0.90, sum(rate(watchtower_outgoing_http_request_duration_seconds_bucket{service=~\"watchtower\"}[30m])) by (le))",
+          "expr": "histogram_quantile(0.90, sum(rate(watchtower_outgoing_http_request_duration_seconds_bucket{service=~\"watchtower\"}[$interval])) by (le))",
           "intervalFactor": 1,
           "legendFormat": "p90",
           "range": true,
@@ -1844,7 +1828,7 @@
         },
         {
           "editorMode": "code",
-          "expr": "histogram_quantile(0.99, sum(rate(watchtower_outgoing_http_request_duration_seconds_bucket{service=~\"watchtower\"}[30m])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(rate(watchtower_outgoing_http_request_duration_seconds_bucket{service=~\"watchtower\"}[$interval])) by (le))",
           "intervalFactor": 1,
           "legendFormat": "p99",
           "range": true,
@@ -1921,7 +1905,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 91
+        "y": 95
       },
       "id": 31,
       "options": {
@@ -1944,7 +1928,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "histogram_quantile(0.99, sum(rate(watchtower_outgoing_http_request_duration_seconds_bucket{service=~\"watchtower\"}[30m])) by (le, target, method))",
+          "expr": "histogram_quantile(0.99, sum(rate(watchtower_outgoing_http_request_duration_seconds_bucket{service=~\"watchtower\"}[$interval])) by (le, target, method))",
           "intervalFactor": 1,
           "legendFormat": "p99 — {{ target }} {{ method }}",
           "range": true,
@@ -1960,7 +1944,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 99
+        "y": 103
       },
       "id": 78,
       "panels": [],
@@ -2034,7 +2018,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 100
+        "y": 104
       },
       "id": 40,
       "options": {
@@ -2057,7 +2041,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "histogram_quantile(0.50, sum(rate(watchtower_redis_operation_duration_seconds_bucket{service=~\"watchtower\"}[30m])) by (le))",
+          "expr": "histogram_quantile(0.50, sum(rate(watchtower_redis_operation_duration_seconds_bucket{service=~\"watchtower\"}[$interval])) by (le))",
           "intervalFactor": 1,
           "legendFormat": "p50",
           "range": true,
@@ -2065,7 +2049,7 @@
         },
         {
           "editorMode": "code",
-          "expr": "histogram_quantile(0.90, sum(rate(watchtower_redis_operation_duration_seconds_bucket{service=~\"watchtower\"}[30m])) by (le))",
+          "expr": "histogram_quantile(0.90, sum(rate(watchtower_redis_operation_duration_seconds_bucket{service=~\"watchtower\"}[$interval])) by (le))",
           "intervalFactor": 1,
           "legendFormat": "p90",
           "range": true,
@@ -2073,7 +2057,7 @@
         },
         {
           "editorMode": "code",
-          "expr": "histogram_quantile(0.99, sum(rate(watchtower_redis_operation_duration_seconds_bucket{service=~\"watchtower\"}[30m])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(rate(watchtower_redis_operation_duration_seconds_bucket{service=~\"watchtower\"}[$interval])) by (le))",
           "intervalFactor": 1,
           "legendFormat": "p99",
           "range": true,
@@ -2150,7 +2134,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 100
+        "y": 104
       },
       "id": 41,
       "options": {
@@ -2173,7 +2157,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "histogram_quantile(0.99, sum(rate(watchtower_redis_operation_duration_seconds_bucket{service=~\"watchtower\"}[30m])) by (le, operation))",
+          "expr": "histogram_quantile(0.99, sum(rate(watchtower_redis_operation_duration_seconds_bucket{service=~\"watchtower\"}[$interval])) by (le, operation))",
           "intervalFactor": 1,
           "legendFormat": "p99 — {{ operation }}",
           "range": true,
@@ -2250,7 +2234,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 100
+        "y": 104
       },
       "id": 42,
       "options": {
@@ -2273,7 +2257,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum(rate(watchtower_redis_operation_duration_seconds_count{service=~\"watchtower\"}[$__rate_interval])) by (operation)",
+          "expr": "sum(rate(watchtower_redis_operation_duration_seconds_count{service=~\"watchtower\"}[$interval])) by (operation)",
           "intervalFactor": 1,
           "legendFormat": "{{ operation }}",
           "range": true,
@@ -2289,7 +2273,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 108
+        "y": 112
       },
       "id": 79,
       "panels": [],
@@ -2394,7 +2378,7 @@
         "h": 9,
         "w": 19,
         "x": 2,
-        "y": 109
+        "y": 113
       },
       "id": 11,
       "options": {
@@ -2418,7 +2402,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "rate(watchtower_upload_files_total{service=~\"watchtower\"}[$__rate_interval])",
+          "expr": "rate(watchtower_upload_files_total{service=~\"watchtower\"}[$interval])",
           "intervalFactor": 1,
           "legendFormat": "{{ instance }}",
           "range": true,
@@ -2526,7 +2510,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 118
+        "y": 122
       },
       "id": 13,
       "options": {
@@ -2550,7 +2534,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum by (status) (rate(watchtower_processing_tasks_status_total{service=~\"watchtower\"}[$__rate_interval]))",
+          "expr": "sum by (status) (rate(watchtower_processing_tasks_status_total{service=~\"watchtower\"}[$interval]))",
           "intervalFactor": 1,
           "legendFormat": "{{ status }}",
           "range": true,
@@ -2702,7 +2686,7 @@
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 118
+        "y": 122
       },
       "id": 12,
       "options": {
@@ -2726,7 +2710,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "rate(watchtower_created_tasks_total{service=~\"watchtower\"}[$__rate_interval])",
+          "expr": "rate(watchtower_created_tasks_total{service=~\"watchtower\"}[$interval])",
           "intervalFactor": 1,
           "legendFormat": "{{ instance }}",
           "range": true,
@@ -2762,24 +2746,70 @@
         "type": "datasource"
       },
       {
-        "allValue": ".*",
+        "auto": false,
+        "auto_count": 30,
+        "auto_min": "10s",
         "current": {
-          "text": [
-            "All"
-          ],
-          "value": [
-            "$__all"
-          ]
+          "text": "30m",
+          "value": "30m"
         },
-        "includeAll": true,
-        "label": "Service",
-        "multi": true,
-        "name": "service",
-        "options": [],
-        "query": "label_values(up{job=~\"watchtower.*\"}, service)",
-        "refresh": 1,
-        "sort": 1,
-        "type": "query"
+        "label": "interval",
+        "name": "interval",
+        "options": [
+          {
+            "selected": false,
+            "text": "1m",
+            "value": "1m"
+          },
+          {
+            "selected": false,
+            "text": "10m",
+            "value": "10m"
+          },
+          {
+            "selected": true,
+            "text": "30m",
+            "value": "30m"
+          },
+          {
+            "selected": false,
+            "text": "1h",
+            "value": "1h"
+          },
+          {
+            "selected": false,
+            "text": "6h",
+            "value": "6h"
+          },
+          {
+            "selected": false,
+            "text": "12h",
+            "value": "12h"
+          },
+          {
+            "selected": false,
+            "text": "1d",
+            "value": "1d"
+          },
+          {
+            "selected": false,
+            "text": "7d",
+            "value": "7d"
+          },
+          {
+            "selected": false,
+            "text": "14d",
+            "value": "14d"
+          },
+          {
+            "selected": false,
+            "text": "30d",
+            "value": "30d"
+          }
+        ],
+        "query": "1m,10m,30m,1h,6h,12h,1d,7d,14d,30d",
+        "refresh": 2,
+        "type": "interval"
       }
     ]
   },
@@ -2791,5 +2821,5 @@
   "timezone": "browser",
   "title": "Watchtower / Service Overview v3",
   "uid": "watchtower-overview-v3",
-  "version": 9
+  "version": 12
 }
