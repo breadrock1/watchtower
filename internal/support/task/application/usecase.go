@@ -8,9 +8,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/breadrock1/otlp-go/otlp"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+
+	"github.com/breadrock1/otlp-go/otlp"
 
 	"watchtower/internal/shared/kernel"
 	"watchtower/internal/shared/metrics"
@@ -39,6 +40,10 @@ func NewTaskUseCase(
 		recognizer:  recognizer,
 		docStorage:  docStorage,
 	}
+}
+
+func (p *TaskUseCase) GetHealthInstances() []kernel.IHealth {
+	return []kernel.IHealth{p.taskStorage, p.taskQueue, p.recognizer, p.docStorage}
 }
 
 func (p *TaskUseCase) GetBucketTasks(ctx kernel.Ctx, bucketID kernel.BucketID) ([]*domain.Task, error) {
@@ -125,16 +130,12 @@ func (p *TaskUseCase) IsTaskAlreadyExists(ctx kernel.Ctx, task *domain.Task) boo
 	}
 
 	switch task.Status {
-	case domain.Received:
-		fallthrough
-	case domain.Pending:
-		fallthrough
-	case domain.Processing:
+	case domain.Received, domain.Pending, domain.Processing:
 		return true
-	case domain.Failed:
-		fallthrough
-	case domain.Successful:
+	case domain.Failed, domain.Successful, domain.Canceled:
 		return false
+	case domain.Excluded:
+		fallthrough
 	default:
 		return false
 	}
@@ -179,10 +180,9 @@ func (p *TaskUseCase) Recognize(
 	// TODO: impled retry pattern
 	recData, err := p.recognizer.Recognize(ctx, inputFile)
 
-	elapsedTime := time.Since(instant)
 	metrics.RecognizerDurationSeconds.
 		WithLabelValues(kernel.AppName, strconv.FormatBool(err != nil)).
-		Observe(elapsedTime.Seconds())
+		Observe(time.Since(instant).Seconds())
 
 	if err != nil {
 		task.SetStatusAndText(domain.Failed, "failed to recognize file")
@@ -223,10 +223,9 @@ func (p *TaskUseCase) StoreDocument(
 
 	docID, err := p.docStorage.StoreDocument(ctx, doc)
 
-	elapsedTime := time.Since(instant)
 	metrics.StoreProcessedDocumentDurationSeconds.
 		WithLabelValues(kernel.AppName, strconv.FormatBool(err != nil)).
-		Observe(elapsedTime.Seconds())
+		Observe(time.Since(instant).Seconds())
 
 	if err != nil {
 		err = fmt.Errorf("failed to store document: %w", err)

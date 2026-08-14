@@ -4,11 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"time"
 
 	"github.com/redis/go-redis/v9"
 
 	"watchtower/internal/shared/kernel"
+	"watchtower/internal/shared/metrics"
 	"watchtower/internal/support/task/domain"
 )
 
@@ -29,9 +31,25 @@ func New(config Config) domain.ITaskStorage {
 	}
 }
 
+func (rs *RedisClient) Health(ctx kernel.Ctx) error {
+	err := rs.rsConn.Ping(ctx).Err()
+	if err != nil {
+		slog.Warn("redis ping error", slog.String("err", err.Error()))
+	}
+
+	return err
+}
+
 func (rs *RedisClient) GetAllBucketTasks(ctx kernel.Ctx, bucketID kernel.BucketID) ([]*domain.Task, error) {
 	key := rs.generateUniqID(bucketID, "*")
+
+	start := time.Now()
 	status := rs.rsConn.Scan(ctx, 0, key, -1)
+
+	metrics.RedisOperationDurationSeconds.
+		WithLabelValues(kernel.AppName, "get-bucket-tasks", strconv.FormatBool(status.Err() != nil)).
+		Observe(time.Since(start).Seconds())
+
 	if status.Err() != nil {
 		return nil, fmt.Errorf("redis error: %w", status.Err())
 	}
@@ -71,7 +89,14 @@ func (rs *RedisClient) GetTask(
 	taskID kernel.TaskID,
 ) (*domain.Task, error) {
 	key := rs.generateUniqID(bucketID, taskID.String())
+
+	start := time.Now()
 	cmd := rs.rsConn.Get(ctx, key)
+
+	metrics.RedisOperationDurationSeconds.
+		WithLabelValues(kernel.AppName, "get-task", strconv.FormatBool(cmd.Err() != nil)).
+		Observe(time.Since(start).Seconds())
+
 	if cmd.Err() != nil {
 		return nil, fmt.Errorf("redis error: %w: %w", domain.ErrExecution, cmd.Err())
 	}
@@ -103,7 +128,13 @@ func (rs *RedisClient) UpdateTask(ctx kernel.Ctx, task *domain.Task) error {
 		return fmt.Errorf("serialize error: %w: %w", domain.ErrInvalidTaskData, err)
 	}
 
+	start := time.Now()
 	status := rs.rsConn.Set(ctx, key, jsonData, rs.config.Expired*time.Second)
+
+	metrics.RedisOperationDurationSeconds.
+		WithLabelValues(kernel.AppName, "update-tasks", strconv.FormatBool(status.Err() != nil)).
+		Observe(time.Since(start).Seconds())
+
 	if status.Err() != nil {
 		return fmt.Errorf("redis error: %w: %w", domain.ErrExecution, status.Err())
 	}

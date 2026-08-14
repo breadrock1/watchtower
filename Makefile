@@ -12,4 +12,7 @@ run: build
 test:
 	go test -race ./tests/...
 
-.PHONY: build run test
+unit-tests:
+	go test -v ./internal/...
+
+.PHONY: build run test unit-tests

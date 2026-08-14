@@ -16,6 +16,7 @@ func (s *Server) CreateTasksGroup(group fiber.Router) {
 	tasksGroup := group.Group("/tasks")
 	tasksGroup.Get("/:bucket", s.LoadTasks)
 	tasksGroup.Get("/:bucket/:task_id", s.LoadTaskByID)
+	tasksGroup.Patch("/:bucket/:task_id", s.ChangeTaskStatus)
 }
 
 // LoadTasks
@@ -122,4 +123,67 @@ func (s *Server) LoadTaskByID(eCtx *fiber.Ctx) error {
 
 	taskSchema := form.TaskFromDomain(*foundedTask)
 	return eCtx.Status(fiber.StatusOK).JSON(taskSchema)
+}
+
+// ChangeTaskStatus
+// @Summary Change task status
+// @Description Change task status of uploaded file processing.
+// @ID change-task-by-id
+// @Tags tasks
+// @Accept  json
+// @Produce json
+// @Param bucket path string true "Bucket id of processing task"
+// @Param task_id path string true "Task ID"
+// @Param status query string true "Task status to set"
+// @Success 200 {object} form.Success "Ok"
+// @Failure	400 {object} form.BadRequestError "Bad Request error"
+// @Failure	404 {object} form.NotFoundError "Task or bucket not found"
+// @Failure	500 {object} form.InternalServerError "Internal server error"
+// @Failure	503 {object} form.ServerUnavailableError "Server does not available"
+// @Router /api/v1/tasks/{bucket}/{task_id} [patch]
+func (s *Server) ChangeTaskStatus(eCtx *fiber.Ctx) error {
+	ctx := eCtx.UserContext()
+
+	span := trace.SpanFromContext(ctx)
+
+	bucket, err := ExtractBucketParameter(eCtx)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
+	}
+
+	taskID, err := ExtractTaskIDParameter(eCtx)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
+	}
+
+	status, err := ExtractTaskStatusParameter(eCtx)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return eCtx.Status(fiber.StatusBadRequest).SendString(err.Error())
+	}
+	taskStatus := task.TaskStatus(status)
+
+	span.SetAttributes(
+		attribute.String("task_id", taskID.String()),
+		attribute.String("bucket", bucket),
+		attribute.Int("status", status),
+	)
+
+	taskStorage := s.state.GetTaskProcessor()
+	taskProcessing, err := taskStorage.GetTask(ctx, bucket, taskID)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		return eCtx.Status(fiber.StatusInternalServerError).SendString(err.Error())
+	}
+
+	taskProcessing.SetStatus(taskStatus)
+	taskStorage.UpdateTaskStatus(ctx, taskProcessing)
+
+	return eCtx.SendStatus(fiber.StatusOK)
 }

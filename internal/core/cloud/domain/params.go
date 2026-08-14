@@ -73,4 +73,7 @@ type UploadObjectParams struct {
 
 	// Metadata allows attaching custom key-value pairs to the object
 	Metadata map[string]string
+
+	// CreateProcessingTask allow to create new task of uploaded file processing
+	CreateProcessingTask bool
 }

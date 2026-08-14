@@ -14,6 +14,8 @@ type ITaskStorage interface {
 // Tasks are stored independently of the queue to maintain state across system restarts
 // and provide audit capabilities.
 type ITaskManager interface {
+	kernel.IHealth
+
 	// GetTask retrieves a task by its bucket and task IDs.
 	// This is useful for checking task status or retrieving results.
 	//

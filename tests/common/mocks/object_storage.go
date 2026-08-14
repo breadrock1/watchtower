@@ -13,6 +13,11 @@ type MockObjectStorage struct {
 	mock.Mock
 }
 
+func (m *MockObjectStorage) Health(_ kernel.Ctx) error {
+	args := m.Called()
+	return args.Error(0)
+}
+
 func (m *MockObjectStorage) GetAllBuckets(_ kernel.Ctx) ([]domain.Bucket, error) {
 	args := m.Called()
 	return args.Get(0).([]domain.Bucket), args.Error(1)

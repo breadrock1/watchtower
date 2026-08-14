@@ -12,6 +12,11 @@ type MockDocStorage struct {
 	mock.Mock
 }
 
+func (m *MockDocStorage) Health(_ kernel.Ctx) error {
+	args := m.Called()
+	return args.Error(0)
+}
+
 func (m *MockDocStorage) StoreDocument(_ kernel.Ctx, doc *docstorage.Document) (docstorage.DocumentID, error) {
 	args := m.Called(doc)
 	return args.Get(0).(string), args.Error(1)

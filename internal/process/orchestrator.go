@@ -9,6 +9,7 @@ import (
 	"github.com/breadrock1/otlp-go/otlp"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
 
 	"watchtower/internal/core/cloud/domain"
@@ -48,6 +49,25 @@ func (o *Orchestrator) GetTaskProcessor() *taskUC.TaskUseCase {
 	return o.taskUC
 }
 
+func (o *Orchestrator) Health(ctx kernel.Ctx) error {
+	instances := append(o.taskUC.GetHealthInstances(), o.storagePool.GetHealthInstances()...)
+
+	group, gCtx := errgroup.WithContext(ctx)
+	for _, instance := range instances {
+		instance := instance
+		group.Go(func() error {
+			return instance.Health(gCtx)
+		})
+	}
+
+	err := group.Wait()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (o *Orchestrator) LaunchListener(ctx kernel.Ctx) {
 	slog.Info("starting orchestrator processing")
 	go func() {
@@ -58,6 +78,8 @@ func (o *Orchestrator) LaunchListener(ctx kernel.Ctx) {
 			case cMsg := <-consumeCh:
 				ctx := cMsg.Ctx
 				go func() {
+					start := time.Now()
+
 					if err := sem.Acquire(ctx, 1); err != nil {
 						slog.Error("processing",
 							slog.String("msg", "internal semaphore error"),
@@ -65,20 +87,24 @@ func (o *Orchestrator) LaunchListener(ctx kernel.Ctx) {
 						)
 						return
 					}
-					defer sem.Release(1)
+					defer func() {
+						sem.Release(1)
+
+						metrics.OrchestratorAcquireWaitDurationSeconds.
+							WithLabelValues(kernel.AppName).
+							Observe(time.Since(start).Seconds())
+					}()
 
 					task := &cMsg.Body
-
-					instant := time.Now()
 					o.handleTask(ctx, task)
 
-					elapsedTime := time.Since(instant)
+					elapsed := time.Since(start)
 					statusInt := strconv.Itoa(int(task.Status))
 					metrics.OrchestratorProcessingDurationSeconds.
 						WithLabelValues(kernel.AppName, statusInt).
-						Observe(elapsedTime.Seconds())
+						Observe(elapsed.Seconds())
 
-					task.SetProcessingDuration(elapsedTime)
+					task.SetProcessingDuration(elapsed)
 					o.taskUC.UpdateTaskStatus(ctx, task)
 
 					metrics.OrchestratorProcessingCounter.
@@ -121,12 +147,15 @@ func (o *Orchestrator) UploadFile(
 		return nil, err
 	}
 
+	// Track upload file size
+	fileSize := params.FileData.Len()
+	if fileSize > 0 {
+		metrics.UploadFileSizeBytes.
+			WithLabelValues(kernel.AppName).
+			Observe(float64(fileSize))
+	}
+
 	objID, err := instance.StoreObject(ctx, bucketID, params)
-
-	metrics.UploadedFilesCounter.
-		WithLabelValues(kernel.AppName, strconv.FormatBool(err != nil)).
-		Inc()
-
 	if err != nil {
 		err = fmt.Errorf("failed to upload file %s: %w", params.FilePath, err)
 		span.SetStatus(codes.Error, err.Error())
@@ -134,12 +163,11 @@ func (o *Orchestrator) UploadFile(
 		return nil, err
 	}
 
-	task, err := o.CreateTask(ctx, bucketID, objID, params.Organization)
-
-	metrics.CreatedProcessingTasksCounter.
+	metrics.UploadedFilesCounter.
 		WithLabelValues(kernel.AppName, strconv.FormatBool(err != nil)).
 		Inc()
 
+	task, err := o.CreateTask(ctx, bucketID, objID, params)
 	if err != nil {
 		err = fmt.Errorf("failed to create taskUC %s: %w", params.FilePath, err)
 		span.SetStatus(codes.Error, err.Error())
@@ -154,9 +182,13 @@ func (o *Orchestrator) CreateTask(
 	ctx kernel.Ctx,
 	bucketID kernel.BucketID,
 	objID kernel.ObjectID,
-	orgID kernel.OrganizationID,
+	params *domain.UploadObjectParams,
 ) (*taskDomain.Task, error) {
-	task := taskDomain.CreateNewTask(bucketID, objID, orgID)
+	task := taskDomain.CreateNewTask(bucketID, objID, params.Organization)
+	if !params.CreateProcessingTask {
+		task.MarkAsExcludedStatus()
+		return task, nil
+	}
 
 	taskID := task.ID.String()
 	slog.Info("processing",
@@ -177,20 +209,19 @@ func (o *Orchestrator) CreateTask(
 		attribute.Int("task-status", int(task.Status)),
 	)
 
-	if err := o.taskUC.PublishTaskToQueue(ctx, task); err != nil {
+	var err error
+	if err = o.taskUC.PublishTaskToQueue(ctx, task); err != nil {
 		err = fmt.Errorf("failed to publish task: %w", err)
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
 		return nil, err
 	}
 
+	metrics.CreatedProcessingTasksCounter.
+		WithLabelValues(kernel.AppName, strconv.FormatBool(err != nil)).
+		Inc()
+
 	o.taskUC.UpdateTaskStatus(ctx, task)
-	// TODO: Disabled for TechDebt
-	// _ = p.taskMangerUC.IsTaskAlreadyExists(ctx, &taskDomain)
-	// if p.isTaskAlreadyProcessed(ctx, &taskDomain) {
-	//	 log.Printf("task has been already processed: %s", taskDomain.ID)
-	//	 continue
-	// }
 
 	return task, nil
 }
@@ -210,10 +241,31 @@ func (o *Orchestrator) handleTask(ctx kernel.Ctx, task *taskDomain.Task) {
 		attribute.String("file-path", task.ObjectID),
 	)
 
+	cTask, err := o.taskUC.GetTask(ctx, task.BucketID, task.ID)
+	if err != nil {
+		err = fmt.Errorf("failed to load pended task from storage: %w", err)
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+		slog.Error("processing",
+			slog.String("task-id", task.ID.String()),
+			slog.String("err", err.Error()),
+		)
+	}
+
+	if cTask != nil {
+		span.SetAttributes(attribute.Int("status", int(task.Status)))
+		if cTask.Status == taskDomain.Canceled {
+			slog.Info("processing",
+				slog.String("msg", "task has been canceled"),
+				slog.String("task-id", task.ID.String()),
+			)
+		}
+	}
+
 	task.SetStatusAndText(taskDomain.Processing, taskDomain.ProcessingStatusText)
 	o.taskUC.UpdateTaskStatus(ctx, task)
 
-	err := o.processTask(ctx, task)
+	err = o.processTask(ctx, task)
 	if err != nil {
 		err = fmt.Errorf("processing failed: %w", err)
 		span.SetStatus(codes.Error, err.Error())

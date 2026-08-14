@@ -5,5 +5,7 @@ import (
 )
 
 type IDocumentStorage interface {
+	kernel.IHealth
+
 	StoreDocument(ctx kernel.Ctx, document *Document) (DocumentID, error)
 }
