@@ -40,7 +40,10 @@ const (
 	Successful // 3
 
 	// Excluded indicates that the task has been excluded from processing.
-	Excluded
+	Excluded // 4
+
+	// Canceled indicates the task has been canceled by user or system.
+	Canceled // 5
 )
 
 // Task represents a unit of work to be processed asynchronously.
@@ -118,6 +121,10 @@ func (t *Task) SetStatusAndText(status TaskStatus, msg string) {
 
 func (t *Task) MarkAsExcludedStatus() {
 	t.Status = Excluded
+}
+
+func (t *Task) SetStatus(status TaskStatus) {
+	t.Status = status
 }
 
 func (t *Task) SetProcessingDuration(duration time.Duration) {

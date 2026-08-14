@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"mime/multipart"
+	"net/http"
 	"time"
+	"watchtower/internal/shared/metrics"
 
 	"watchtower/internal/shared/kernel"
 	"watchtower/internal/shared/utils"
@@ -16,6 +18,26 @@ const RecognitionURL = "/api/v1/parser/parse/text"
 
 type DocParser struct {
 	config Config
+}
+
+func (dc *DocParser) Health(ctx kernel.Ctx) error {
+	targetURL := utils.BuildTargetURL(dc.config.Address, "/health")
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, targetURL, nil)
+	if err != nil {
+		return fmt.Errorf("docparser health check: %w", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("docparser health check: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= http.StatusInternalServerError {
+		return fmt.Errorf("docparser health check: unexpected status %d", resp.StatusCode)
+	}
+
+	return nil
 }
 
 func New(config Config) recognizer.IRecognizer {
@@ -45,7 +67,14 @@ func (dc *DocParser) Recognize(ctx kernel.Ctx, params *recognizer.RecognizeParam
 	timeoutReq := dc.config.Timeout * time.Second
 	targetURL := utils.BuildTargetURL(dc.config.Address, RecognitionURL)
 
+	start := time.Now()
+
 	respData, err := utils.POST(ctx, &buf, targetURL, mimeType, timeoutReq)
+
+	metrics.OutgoingHTTPRequestDurationSeconds.
+		WithLabelValues(kernel.AppName, "recognize-document", "POST").
+		Observe(time.Since(start).Seconds())
+
 	if err != nil {
 		return nil, err
 	}

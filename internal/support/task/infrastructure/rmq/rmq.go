@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"strconv"
 	"time"
+	"watchtower/internal/shared/metrics"
 
 	"github.com/breadrock1/otlp-go/otlp"
 	"go.opentelemetry.io/otel/attribute"
@@ -15,13 +15,16 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"watchtower/internal/shared/kernel"
-	"watchtower/internal/shared/metrics"
 	"watchtower/internal/support/task/domain"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-const ConsumerName = "watchtower-consumer"
+const (
+	consumerName                = "watchtower-consumer"
+	maxConnectRetryDelaySeconds = 60
+	minConnectRetryDelaySeconds = 5
+)
 
 type RabbitMQClient struct {
 	redirect chan domain.Message
@@ -37,7 +40,7 @@ func New(config Config) (domain.ITaskQueue, error) {
 		Properties: amqp.NewConnectionProperties(),
 		Heartbeat:  10 * time.Second,
 	}
-	rmqConfig.Properties.SetClientConnectionName(ConsumerName)
+	rmqConfig.Properties.SetClientConnectionName(consumerName)
 
 	conn, err := amqp.DialConfig(config.Address, rmqConfig)
 	if err != nil {
@@ -59,6 +62,13 @@ func New(config Config) (domain.ITaskQueue, error) {
 	}
 
 	return &rmqClient, nil
+}
+
+func (r *RabbitMQClient) Health(_ kernel.Ctx) error {
+	if r.conn.IsClosed() {
+		return fmt.Errorf("rmq connection is closed")
+	}
+	return nil
 }
 
 func (r *RabbitMQClient) GetConsumerChannel() chan domain.Message {
@@ -112,7 +122,7 @@ func (r *RabbitMQClient) StartConsuming(ctx kernel.Ctx) error {
 
 	deliveries, err := r.channel.Consume(
 		r.config.QueueName, // name
-		ConsumerName,       // consumerTag,
+		consumerName,       // consumerTag,
 		true,               // autoAck
 		false,              // exclusive
 		false,              // noLocal
@@ -130,7 +140,7 @@ func (r *RabbitMQClient) StartConsuming(ctx kernel.Ctx) error {
 }
 
 func (r *RabbitMQClient) StopConsuming(_ kernel.Ctx) error {
-	if err := r.channel.Cancel(ConsumerName, true); err != nil {
+	if err := r.channel.Cancel(consumerName, true); err != nil {
 		return fmt.Errorf("rmq: consumer cancel failed: %w", err)
 	}
 
@@ -199,15 +209,23 @@ func (r *RabbitMQClient) handleReconnect(ctx kernel.Ctx) {
 				Heartbeat:  10 * time.Second,
 			}
 
-			rmqConfig.Properties.SetClientConnectionName(ConsumerName)
+			rmqConfig.Properties.SetClientConnectionName(consumerName)
 
 			var err error
-			var reconnectDelay int
-			for reconnectCounter := 0; reconnectCounter < 5; reconnectCounter++ {
+			var reconnectDelay = minConnectRetryDelaySeconds
+			for {
+				if reconnectDelay < maxConnectRetryDelaySeconds {
+					reconnectDelay++
+				}
+
+				metrics.RmqReconnectCounter.WithLabelValues(kernel.AppName).Inc()
+
+				time.Sleep(time.Duration(reconnectDelay) * time.Second)
+
 				r.conn, err = amqp.DialConfig(r.config.Address, rmqConfig)
 				if err != nil {
 					slog.Warn("rmq: failed while re-connecting", slog.String("err", err.Error()))
-					return
+					continue
 				}
 
 				r.channel, err = r.conn.Channel()
@@ -217,18 +235,7 @@ func (r *RabbitMQClient) handleReconnect(ctx kernel.Ctx) {
 				}
 
 				slog.Error("rmq: failed to create channel", slog.String("err", err.Error()))
-
-				reconnectDelay = reconnectCounter * reconnectCounter
-				time.Sleep(time.Duration(reconnectDelay) * time.Second)
-
-				metrics.RmqReconnectCounter.
-					WithLabelValues(kernel.AppName, strconv.FormatBool(err != nil)).
-					Inc()
 			}
-
-			metrics.RmqReconnectCounter.
-				WithLabelValues(kernel.AppName, strconv.FormatBool(err != nil)).
-				Inc()
 
 			if err != nil {
 				slog.Error("rmq: failed to restore connection", slog.String("err", err.Error()))

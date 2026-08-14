@@ -817,4 +817,51 @@ paths:
       summary: Load processing task by id
       tags:
       - tasks
+    patch:
+      consumes:
+      - application/json
+      description: Change task status of uploaded file processing.
+      operationId: change-task-by-id
+      parameters:
+      - description: Bucket id of processing task
+        in: path
+        name: bucket
+        required: true
+        type: string
+      - description: Task ID
+        in: path
+        name: task_id
+        required: true
+        type: string
+      - description: Task status to set
+        in: query
+        name: status
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ok
+          schema:
+            $ref: '#/definitions/form.Success'
+        "400":
+          description: Bad Request error
+          schema:
+            $ref: '#/definitions/form.BadRequestError'
+        "404":
+          description: Task or bucket not found
+          schema:
+            $ref: '#/definitions/form.NotFoundError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/form.InternalServerError'
+        "503":
+          description: Server does not available
+          schema:
+            $ref: '#/definitions/form.ServerUnavailableError'
+      summary: Change task status
+      tags:
+      - tasks
 swagger: "2.0"

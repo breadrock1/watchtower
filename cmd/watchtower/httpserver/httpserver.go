@@ -3,6 +3,7 @@ package httpserver
 import (
 	"fmt"
 	"log/slog"
+	"watchtower/cmd/watchtower/httpserver/mw"
 
 	"github.com/breadrock1/otlp-go/otlp"
 	"github.com/gofiber/fiber/v2"
@@ -14,7 +15,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/otel/trace"
 
-	"watchtower/cmd/watchtower/httpserver/mw"
 	"watchtower/internal/process"
 	"watchtower/internal/shared/kernel"
 
@@ -83,16 +83,13 @@ func SetupServer(otlpConfig otlp_go.OtlpConfig, state *process.Orchestrator) *Se
 
 	serverApp.initMiddlewares(otlpConfig)
 
-	serverApp.Server.Get("/", serverApp.Home)
+	serverApp.CreateSystemGroup(serverApp.Server)
 	serverApp.Server.Get("/monitor", monitor.New())
-	serverApp.Server.Get("/api/metrics", adaptor.HTTPHandler(promhttp.Handler()))
 
 	api := serverApp.Server.Group("/api")
-
 	api.Get("/swagger/*", swagger.HandlerDefault)
 
 	v1Api := api.Group("/v1", mw.OrganizationContext(), mw.UserContext())
-	serverApp.CreateSystemGroup(v1Api)
 	serverApp.CreateTasksGroup(v1Api)
 	serverApp.CreateStorageBucketsGroup(v1Api)
 	serverApp.CreateStorageObjectsGroup(v1Api)
@@ -117,6 +114,8 @@ func (s *Server) Shutdown(ctx kernel.Ctx) error {
 func (s *Server) initMiddlewares(otlpConfig otlp_go.OtlpConfig) {
 	s.Server.Use(cors.New(cors.Config{}))
 	s.Server.Use(recover.New())
+
+	s.Server.Get("/metrics", adaptor.HTTPHandler(promhttp.Handler()))
 
 	s.Server.Use(otlppfiber.PrometheusMeterMiddleware(s.Server, otlpConfig))
 	s.Server.Use(otlppfiber.OtlpJaegerTracerMiddleware())

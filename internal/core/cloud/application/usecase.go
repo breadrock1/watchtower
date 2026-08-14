@@ -31,6 +31,14 @@ func (p *StoragePool) GetInstance(key kernel.CloudInstanceKey) (*StorageUseCase,
 	return instance, nil
 }
 
+func (p *StoragePool) GetHealthInstances() []kernel.IHealth {
+	instances := make([]kernel.IHealth, 0, len(p.pool))
+	for _, instance := range p.pool {
+		instances = append(instances, instance)
+	}
+	return instances
+}
+
 func (p *StoragePool) SetDefaultInstanceByKey(key kernel.CloudInstanceKey) error {
 	instance, err := p.GetInstance(key)
 	if err != nil {
@@ -48,6 +56,10 @@ type StorageUseCase struct {
 
 func NewStorageUseCase(cloudStorage domain.ICloudStorage) *StorageUseCase {
 	return &StorageUseCase{cloudStorage: cloudStorage}
+}
+
+func (s *StorageUseCase) Health(ctx kernel.Ctx) error {
+	return s.cloudStorage.Health(ctx)
 }
 
 func (s *StorageUseCase) GetAllBuckets(ctx kernel.Ctx) ([]domain.Bucket, error) {

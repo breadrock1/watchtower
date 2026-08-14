@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"strings"
 	"time"
+	"watchtower/internal/shared/metrics"
 
 	"watchtower/internal/shared/kernel"
 	"watchtower/internal/shared/utils"
@@ -17,6 +19,26 @@ const DocumentJsonMime = "application/json"
 
 type DocSearch struct {
 	config Config
+}
+
+func (ds *DocSearch) Health(ctx kernel.Ctx) error {
+	targetURL := ds.config.Address + "/health"
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, targetURL, nil)
+	if err != nil {
+		return fmt.Errorf("docsearch health check: %w", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("docsearch health check: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= http.StatusInternalServerError {
+		return fmt.Errorf("docsearch health check: unexpected status %d", resp.StatusCode)
+	}
+
+	return nil
 }
 
 func New(config Config) docstorage.IDocumentStorage {
@@ -55,7 +77,15 @@ func (ds *DocSearch) StoreDocument(ctx kernel.Ctx, doc *docstorage.Document) (do
 
 	reqBody := bytes.NewBuffer(jsonData)
 	timeoutReq := ds.config.Timeout * time.Second
+
+	start := time.Now()
+
 	respData, err := utils.PUT(ctx, reqBody, targetURL, DocumentJsonMime, timeoutReq)
+
+	metrics.OutgoingHTTPRequestDurationSeconds.
+		WithLabelValues(kernel.AppName, "store-document", "PUT").
+		Observe(time.Since(start).Seconds())
+
 	if err != nil {
 		err = fmt.Errorf("http-request error: %w", err)
 		return "", err

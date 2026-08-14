@@ -77,6 +77,10 @@ func main() {
 	taskUseCase := taskApp.NewTaskUseCase(taskStorage, taskQueue, docParser, docStorage)
 
 	orchestrator := process.NewOrchestrator(servConfig.Orchestrator, storagePool, taskUseCase)
+	if err = orchestrator.Health(ctx); err != nil {
+		slog.Error("establish connection failed", slog.String("err", err.Error()))
+		os.Exit(1)
+	}
 	orchestrator.LaunchListener(cCtx)
 
 	httpServer := httpserver.SetupServer(servConfig.Otlp, orchestrator)

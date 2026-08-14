@@ -1019,6 +1019,75 @@
                         }
                     }
                 }
+            },
+            "patch": {
+                "description": "Change task status of uploaded file processing.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tasks"
+                ],
+                "summary": "Change task status",
+                "operationId": "change-task-by-id",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bucket id of processing task",
+                        "name": "bucket",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Task ID",
+                        "name": "task_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Task status to set",
+                        "name": "status",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Ok",
+                        "schema": {
+                            "$ref": "#/definitions/form.Success"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request error",
+                        "schema": {
+                            "$ref": "#/definitions/form.BadRequestError"
+                        }
+                    },
+                    "404": {
+                        "description": "Task or bucket not found",
+                        "schema": {
+                            "$ref": "#/definitions/form.NotFoundError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/form.InternalServerError"
+                        }
+                    },
+                    "503": {
+                        "description": "Server does not available",
+                        "schema": {
+                            "$ref": "#/definitions/form.ServerUnavailableError"
+                        }
+                    }
+                }
             }
         }
     },

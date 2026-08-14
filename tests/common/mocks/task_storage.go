@@ -11,6 +11,11 @@ type MockTaskStorage struct {
 	mock.Mock
 }
 
+func (m *MockTaskStorage) Health(_ kernel.Ctx) error {
+	args := m.Called()
+	return args.Error(0)
+}
+
 func (m *MockTaskStorage) GetTask(_ kernel.Ctx, bucketID kernel.BucketID, taskID kernel.TaskID) (*domain.Task, error) {
 	args := m.Called(bucketID, taskID)
 	return args.Get(0).(*domain.Task), args.Error(1)
