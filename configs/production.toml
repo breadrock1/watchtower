@@ -9,9 +9,19 @@ endpoint_uri = "/api/metrics"
 
 [otlp.logger]
 level = "info"
-address = "http://loki:3100"
-enable_loki = true
 attributes = ["user_id", "organization_id", "file_path"]
+
+[otlp.logger]
+level = "info"
+attributes = ["user_id", "organization_id", "file_path"]
+
+[otlp.logger.loki]
+address = "http://loki:3100"
+enable = false
+
+[otlp.logger.syslog]
+address = "localhost:514"
+enable = false
 
 [otlp.tracer]
 address = "jaeger:4317"
