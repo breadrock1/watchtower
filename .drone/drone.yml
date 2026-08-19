@@ -63,13 +63,24 @@ steps:
     image: golang:1.25
     depends_on:
       - build
+    commands:
+      - go test -count=1 ./...
+    volumes:
+      - name: go-targets
+        path: /cache
+
+  - name: integration-test
+    image: golang:1.25
+    depends_on:
+      - test
+      - lint
     environment:
       WATCHTOWER__RUN_MODE: integration
     commands:
-      - sleep 15
+      - sleep 5
       - curl -v -u guest:guest -K /drone/src/tests/config/rmq/headers.conf --data-binary '@/drone/src/tests/config/rmq/definitions.json' http://rabbitmq:15672/api/definitions
       - sleep 10
-      - go test watchtower/tests
+      - go test -count=1 -tags=integration ./...
     volumes:
       - name: go-targets
         path: /cache
@@ -148,13 +159,24 @@ steps:
     image: golang:1.25
     depends_on:
       - build
+    commands:
+      - go test -count=1 ./...
+    volumes:
+      - name: go-targets
+        path: /cache
+
+  - name: integration-test
+    image: golang:1.25
+    depends_on:
+      - test
+      - lint
     environment:
       WATCHTOWER__RUN_MODE: integration
     commands:
-      - sleep 15
+      - sleep 5
       - curl -v -u guest:guest -K /drone/src/tests/config/rmq/headers.conf --data-binary '@/drone/src/tests/config/rmq/definitions.json' http://rabbitmq:15672/api/definitions
       - sleep 10
-      - go test watchtower/tests
+      - go test -count=1 -tags=integration ./...
     volumes:
       - name: go-targets
         path: /cache

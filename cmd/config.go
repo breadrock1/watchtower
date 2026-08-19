@@ -20,9 +20,10 @@ import (
 )
 
 const (
-	launchModeEnvKey  = "WATCHTOWER__RUN_MODE"
-	defaultLaunchMode = "development"
-	serviceEnvPrefix  = "WATCHTOWER"
+	launchModeEnvKey      = "WATCHTOWER__RUN_MODE"
+	defaultLaunchMode     = "development"
+	integrationLaunchMode = "integration"
+	serviceEnvPrefix      = "WATCHTOWER"
 )
 
 type Config struct {
@@ -76,7 +77,7 @@ func InitConfig() (*Config, error) {
 	viperInst.AddConfigPath("./configs")
 	viperInst.AddConfigPath("../configs")
 
-	if launchMode == defaultLaunchMode {
+	if launchMode == defaultLaunchMode || launchMode == integrationLaunchMode {
 		// Used to include config from integration tests
 		viperInst.AddConfigPath("../../configs")
 	}

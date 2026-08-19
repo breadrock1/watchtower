@@ -124,7 +124,11 @@ func (s *Server) initMiddlewares(otlpConfig otlp_go.OtlpConfig) {
 	slog.SetDefault(logger)
 
 	s.Server.Use(otlppfiber.StdoutLoggerMiddleware(otlpConfig))
-	if otlpConfig.Logger.EnableLoki {
+	if otlpConfig.Logger.Loki.Enable {
 		s.Server.Use(otlppfiber.RemoteLokiLoggerMiddleware(otlpConfig))
+	}
+
+	if otlpConfig.Logger.Syslog.Enable {
+		s.Server.Use(otlppfiber.SyslogLoggerMiddleware(otlpConfig))
 	}
 }
